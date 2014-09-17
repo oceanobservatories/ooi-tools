@@ -1,0 +1,4 @@
+instrument: adcpa_m_glider_recovered
+resource: moas/gl/adcpa/resource
+endpoint: adcpa_m_glider_recov
+pairs:  [[LB180210_50.PD0 ,LB180210_50_recovered.yml]]

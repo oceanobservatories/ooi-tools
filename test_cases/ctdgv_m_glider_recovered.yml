@@ -1,0 +1,4 @@
+instrument: ctdgv_m_glider_recovered
+resource: moas/gl/ctdgv/resource
+endpoint: ctdgv_m_glider_recov
+pairs: [[single_ctdgv_record.mrg,single_ctdgv_record_recovered.mrg.result.yml],[multiple_ctdgv_record.mrg,multiple_ctdgv_record_recovered.mrg.result.yml]]
