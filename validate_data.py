@@ -191,7 +191,7 @@ def diff(a, b, ignore=None, rename=None):
     :return: list of failures
     """
     if ignore is None:
-        ignore = ['particle_object', 'quality_flag', 'driver_timestamp', 'stream_name']
+        ignore = ['particle_object', 'quality_flag', 'driver_timestamp', 'stream_name', 'preferred_timestamp']
     if rename is None:
         rename = {'particle_type': 'stream_name'}
 
@@ -291,7 +291,23 @@ def test_results(expected):
 def test(test_cases):
     scorecard = {}
     logfile = find_latest_log()
+
+    hdlr = None
     for each in test_cases:
+
+        #create filehandler for each instrument
+        if hdlr is not None:
+            log.removeHandler(hdlr)
+
+        file_path = 'output/' + each.instrument + '.log'
+
+        d = os.path.dirname(file_path)
+        if not os.path.exists(d):
+            os.makedirs(d)
+
+        hdlr = logging.FileHandler(file_path)
+        log.addHandler(hdlr)
+
         log.debug('Processing test case: %s', each)
         for test_file, yaml_file in each.pairs:
             purge_edex()
@@ -300,8 +316,38 @@ def test(test_cases):
             watch_log_for('Ingest: EDEX: Ingest', logfile=logfile)
             time.sleep(1)
             scorecard[each.instrument] = test_results(expected)
-    pprint.pprint(scorecard)
 
+    print('\n------------------------------------------------TEST RESULTS------------------------------------------------')
+
+    total_instrument_count = 0
+    total_yaml_count = 0
+    total_edex_count = 0
+    total_pass_count = 0
+    total_fail_count = 0
+    table_data = [['Instrument','YAML_count','EDEX_count','Pass','Fail']]
+
+    for instrument in scorecard:
+
+        edex_count, yaml_count, fail_count = scorecard[instrument]
+        pass_count = yaml_count - len(fail_count)
+        table_data.append([instrument,yaml_count,edex_count,pass_count,len(fail_count)])
+
+        total_yaml_count += yaml_count
+        total_edex_count += edex_count
+        total_pass_count += pass_count
+        total_fail_count += len(fail_count)
+        total_instrument_count += 1
+
+    for row in table_data:
+        print("{: >40} {: >15} {: >15} {: >15} {: >15}".format(*row))
+
+    print("\n------------------------------------------------------------------------------------------------------------\n")
+    row = ['Total Instrument', 'Total YAML', 'Total EDEX', 'Total Pass', 'Total Fail']
+    print("{: >40} {: >15} {: >15} {: >15} {: >15}".format(*row))
+
+    row = [total_instrument_count, total_yaml_count, total_edex_count, total_pass_count, total_fail_count]
+    print("{: >40} {: >15} {: >15} {: >15} {: >15}".format(*row))
+    print("\n")
 
 def test_bulk(test_cases):
     expected = []
