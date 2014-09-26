@@ -3,12 +3,14 @@
 import pprint
 import time
 import sys
-import yaml
+import json
 import edex_tools
 import logger
 
 
 log = logger.get_logger('validate_instrument', file_output='output/instrument_verify.log')
+
+uframe = 'uframe'
 
 
 def compare(stored, expected):
@@ -21,7 +23,6 @@ def compare(stored, expected):
 
     failures = []
     for record in expected:
-
         preferred_timestamp = record.get('preferred_timestamp')
         timestamp = record.get(preferred_timestamp)
         stream_name = record.get('stream_name')
@@ -61,7 +62,8 @@ def diff(a, b, ignore=None, rename=None):
     :return: list of failures
     """
     if ignore is None:
-        ignore = ['particle_object', 'quality_flag', 'driver_timestamp', 'stream_name', 'preferred_timestamp']
+        ignore = ['particle_object', 'quality_flag', 'driver_timestamp', 'stream_name', 'preferred_timestamp',
+                  'pkt_format_id', 'pkt_version', 'time']
     if rename is None:
         rename = {'particle_type': 'stream_name'}
 
@@ -99,8 +101,8 @@ def diff(a, b, ignore=None, rename=None):
     return failures
 
 
-def test_results(expected):
-    retrieved = edex_tools.get_from_edex()
+def test_results(expected, stream):
+    retrieved = edex_tools.get_from_edex(uframe, stream)
     log.debug('Retrieved %d records from edex:', len(retrieved))
     log.debug(pprint.pformat(retrieved, depth=3))
     log.debug('Retrieved %d records from expected data file:', len(expected))
@@ -108,23 +110,33 @@ def test_results(expected):
     failures = compare(retrieved, expected)
     return len(retrieved), len(expected), failures
 
+
+def flatten(particle):
+    for each in particle.get('values'):
+        id = each.get('value_id')
+        val = each.get('value')
+        particle[id] = val
+    del(particle['values'])
+    return particle
+
+
 def get_expected(filename):
     """
     Loads expected results from the supplied YAML file
     :param filename:
     :return: list of records containing the expected results
     """
-    return_data = []
+    return_data = {}
     for each in open(filename, 'r').read().split('\n\n'):
-
-        data = yaml.load(each)
+        if not each:
+            continue
+        data = json.loads(each)
         if data is not None:
+            particle = flatten(data)
+            stream = particle.get('stream_name')
 
-
-
-            #todo - need to parse data into a structure that may be easier to compare with the edex data
-
-            return_data.append(data)
+            if stream is not None:
+                return_data.setdefault(stream, []).append(particle)
 
     return return_data
 
@@ -134,10 +146,11 @@ def test(file_name):
     scorecard = {}
     log.debug('Processing test case: %s', file_name)
     expected = get_expected(file_name)
-    print expected
-    time.sleep(1)
-    #TODO HOW TO GET INSTRUMENT NAME??? (PARTICLE NAME)
-    test_results(expected)
+
+    for stream in expected:
+        scorecard[stream] = test_results(expected[stream], stream)
+
+    pprint.pprint(scorecard)
 
 
 if __name__ == '__main__':

@@ -244,12 +244,11 @@ def test(test_cases):
     scorecard = {}
     logfile = find_latest_log()
 
-    handler = None
+    last_instrument = None
     for test_case in test_cases:
-        if handler is not None: log.removeHandler(handler)
-        handler = logger.create_handler(test_case.instrument)
-        log.addHandler(handler)
-
+        logger.remove_handler(last_instrument)
+        logger.add_handler(test_case.instrument)
+        last_instrument = test_case.instrument
 
         log.debug('Processing test case: %s', test_case)
         for test_file, yaml_file in test_case.pairs:
@@ -259,9 +258,13 @@ def test(test_cases):
             watch_log_for('Ingest: EDEX: Ingest', logfile=logfile)
             time.sleep(1)
             for stream in expected:
+                results = test_results(expected[stream], stream)
+                log.debug('Results for instrument: %s test_file: %s yaml_file: %s stream: %s',
+                          test_case.instrument, test_file, yaml_file, stream)
+                log.debug(results)
                 scorecard.setdefault(test_case.instrument, {}) \
                          .setdefault(test_file, {}) \
-                         .setdefault(yaml_file, {})[stream] = test_results(expected[stream], stream)
+                         .setdefault(yaml_file, {})[stream] = results
 
     result, table_data = edex_tools.parse_scorecard(scorecard)
     log.info(result)
@@ -290,18 +293,21 @@ def test_bulk(test_cases):
     # sometimes edex needs to catch its breath after so many files... sleep a bit
     time.sleep(5)
 
-    handler = last_instrument = None
+    last_instrument = None
     for k,v in expected.iteritems():
         instrument, test_file, yaml_file, stream = k
         if instrument != last_instrument:
-            if handler is not None:
-                log.removeHandler(handler)
-            log.addHandler(logger.create_handler(instrument))
+            logger.remove_handler(last_instrument)
+            logger.add_handler(instrument)
             last_instrument = instrument
 
+        results = test_results(expected[(instrument,test_file,yaml_file,stream)], stream)
+        log.debug('Results for instrument: %s test_file: %s yaml_file: %s stream: %s',
+                   test_case.instrument, test_file, yaml_file, stream)
+        log.debug(results)
         scorecard.setdefault(instrument, {}) \
                  .setdefault(test_file, {}) \
-                 .setdefault(yaml_file, {})[stream] = test_results(expected[(instrument,test_file,yaml_file,stream)], stream)
+                 .setdefault(yaml_file, {})[stream] = results
 
     result, table_data = edex_tools.parse_scorecard(scorecard)
     log.info(result)

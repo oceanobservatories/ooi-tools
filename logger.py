@@ -13,11 +13,12 @@ def get_formatter():
 def get_logger(name, level=logging.INFO, file_output=None, file_level=logging.DEBUG):
     if not name in _logs:
         logger = logging.getLogger(name)
-        logger.setLevel(level)
+        logger.setLevel(logging.DEBUG)
 
         # create console handler and set level to debug
         ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
+        ch.name = 'console'
+        ch.setLevel(level)
 
         # create formatter
         formatter = get_formatter()
@@ -39,13 +40,22 @@ def get_logger(name, level=logging.INFO, file_output=None, file_level=logging.DE
             logger.addHandler(fh)
 
         _logs[name] = logger
-
     return _logs[name]
 
 
-def create_handler(name):
+def add_handler(name, level=logging.DEBUG):
     #create filehandler for each instrument
     file_path = 'output/%s.log' % name
     fh = logging.FileHandler(file_path)
+    fh.name = name
+    fh.setLevel(level)
     fh.setFormatter(get_formatter())
-    return fh
+    for logger in _logs.values():
+        logger.addHandler(fh)
+
+
+def remove_handler(name):
+    for logger in _logs.values():
+        for handler in logger.handlers:
+            if handler.name == name:
+                logger.removeHandler(handler)

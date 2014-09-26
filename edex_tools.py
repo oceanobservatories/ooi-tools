@@ -8,7 +8,7 @@ import qpid.messaging as qm
 from logger import get_logger
 
 
-log = get_logger('edex_tools')
+log = get_logger('edex_tools', file_output='output/everything.log')
 
 
 def purge_edex():
@@ -40,6 +40,8 @@ def get_from_edex(host, stream_name):
     d = {}
     for record in records:
         timestamp = record.get('internal_timestamp')
+        if timestamp is None:
+            timestamp = record.get('port_timestamp')
         stream_name = record.get('stream_name')
         key = (timestamp, stream_name)
         if key in d:
