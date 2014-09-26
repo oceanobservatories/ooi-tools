@@ -218,7 +218,7 @@ def wait_for_ingest_complete():
 
 
 def test_results(expected, stream_name):
-    retrieved = edex_tools.get_from_edex(stream_name)
+    retrieved = edex_tools.get_from_edex('localhost', stream_name)
     log.debug('Retrieved %d records from edex:', len(retrieved))
     log.debug(pprint.pformat(retrieved, depth=3))
     log.debug('Retrieved %d records from expected data file:', len(expected))
