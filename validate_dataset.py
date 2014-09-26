@@ -1,19 +1,17 @@
 #!/usr/bin/env python
 
 import glob
-import logging
 import shutil
 import pprint
-import urllib2
 import time
 import uuid
-import yaml
-import json
 import sys
 import os
-import qpid.messaging as qm
 
-all_data_url = 'http://localhost:12570/sensor/user/inv/%s/null'
+import yaml
+import logger
+import edex_tools
+
 
 edex_dir = os.getenv('EDEX_HOME')
 if edex_dir is None:
@@ -24,36 +22,8 @@ ingest_dir = os.path.join(edex_dir, 'data', 'ooi')
 log_dir = os.path.join(edex_dir, 'logs')
 output_dir = 'output'
 
-USER = 'guest'
-HOST = 'localhost'
-PORT = 5672
-PURGE_MESSAGE = qm.Message(content='PURGE_ALL_DATA', content_type='text/plain', user_id=USER)
 
-# set up the logger
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)-7s %(message)s')
-log = logging.getLogger('dataset_test')
-log.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
-ch.setFormatter(formatter)
-log.addHandler(ch)
-# output file handler
-if not os.path.exists(output_dir):
-    os.mkdir(output_dir)
-fh = logging.FileHandler(os.path.join(output_dir, 'everything.log'))
-fh.setFormatter(formatter)
-log.addHandler(fh)
-
-
-class FAILURES:
-    MISSING_SAMPLE = 'MISSING_SAMPLE'
-    MISSING_FIELD = 'MISSING_FIELD'
-    BAD_VALUE = 'BAD_VALUE'
-    UNEXPECTED_VALUE = 'UNEXPECTED_VALUE'
-    AMBIGUOUS = 'AMBIGUOUS'
-
-    def __init__(self):
-        pass
+log = logger.get_logger('validate_dataset', file_output=os.path.join(output_dir, 'everything.log'))
 
 
 class TestCase(object):
@@ -80,30 +50,6 @@ def read_test_cases(f):
     elif os.path.isfile(f):
         config = yaml.load(open(f, 'r'))
         yield TestCase(config)
-
-
-def get_from_edex(stream_name):
-    """
-    Retrieve all stored sensor data from edex
-    :return: list of edex records
-    """
-    proxy_handler = urllib2.ProxyHandler({})
-    opener = urllib2.build_opener(proxy_handler)
-    req = urllib2.Request(all_data_url % stream_name)
-    r = opener.open(req)
-    records = json.loads(r.read())
-    log.debug('RETRIEVED:')
-    log.debug(pprint.pformat(records, depth=3))
-    d = {}
-    for record in records:
-        timestamp = record.get('internal_timestamp')
-        stream_name = record.get('stream_name')
-        key = (timestamp, stream_name)
-        if key in d:
-            log.error('Duplicate record found in retrieved values %s', key)
-        else:
-            d[key] = record
-    return d
 
 
 def get_expected(filename):
@@ -165,13 +111,13 @@ def compare(stored, expected):
             if len(keys) == 1:
                 key = (timestamp, keys.pop())
             else:
-                failures.append((FAILURES.AMBIGUOUS, 'Multiple streams in output, no stream in YML'))
+                failures.append((edex_tools.FAILURES.AMBIGUOUS, 'Multiple streams in output, no stream in YML'))
                 log.error('Ambiguous stream information in YML file and unable to infer')
                 continue
         else:
             key = (timestamp, stream_name)
         if key not in stored:
-            failures.append((FAILURES.MISSING_SAMPLE, key))
+            failures.append((edex_tools.FAILURES.MISSING_SAMPLE, key))
             log.error('No matching record found in retrieved data for key %s', key)
         else:
             f = diff(stream_name, record, stored.get(key))
@@ -206,7 +152,7 @@ def diff(stream, a, b, ignore=None, rename=None):
             if v is None:
                 log.info("%s - Soft failure, None value in expected data for: %s", stream, k)
             else:
-                failures.append((FAILURES.MISSING_FIELD, (stream,k)))
+                failures.append((edex_tools.FAILURES.MISSING_FIELD, (stream,k)))
                 log.error('%s - missing key: %s in retrieved record', stream, k)
             continue
         if type(v) == dict:
@@ -217,7 +163,7 @@ def diff(stream, a, b, ignore=None, rename=None):
             value = v
             rvalue = b[k]
         if value != rvalue:
-            failures.append((FAILURES.BAD_VALUE, 'stream=%s key=%s expected=%s retrieved=%s' % (stream, k, v, b[k])))
+            failures.append((edex_tools.FAILURES.BAD_VALUE, 'stream=%s key=%s expected=%s retrieved=%s' % (stream, k, v, b[k])))
             log.error('%s - non-matching value: key=%s expected=%s retrieved=%s', stream, k, v, b[k])
 
     # verify no extra (unexpected) keys present in retrieved data
@@ -225,19 +171,10 @@ def diff(stream, a, b, ignore=None, rename=None):
         if k in ignore:
             continue
         if k not in a:
-            failures.append((FAILURES.UNEXPECTED_VALUE, (stream,k)))
+            failures.append((edex_tools.FAILURES.UNEXPECTED_VALUE, (stream,k)))
             log.error('%s - item in retrieved data not in expected data: %s', stream, k)
 
     return failures
-
-
-def purge_edex(logfile=None):
-    log.info('Purging edex')
-    conn = qm.Connection(host=HOST, port=PORT, username=USER, password=USER)
-    conn.open()
-    conn.session().sender('purgeRequest').send(PURGE_MESSAGE)
-    conn.close()
-    watch_log_for('Purge Operation: PURGE_ALL_DATA completed', logfile=logfile)
 
 
 def copy_file(resource, endpoint, test_file):
@@ -281,90 +218,13 @@ def wait_for_ingest_complete():
 
 
 def test_results(expected, stream_name):
-    retrieved = get_from_edex(stream_name)
+    retrieved = edex_tools.get_from_edex(stream_name)
     log.debug('Retrieved %d records from edex:', len(retrieved))
     log.debug(pprint.pformat(retrieved, depth=3))
     log.debug('Retrieved %d records from expected data file:', len(expected))
     log.debug(pprint.pformat(expected, depth=3))
     failures = compare(retrieved, expected)
     return len(retrieved), len(expected), failures
-
-
-def parse_scorecard(scorecard):
-    result = ['SCORECARD:']
-    format_string = "{: <%d}   {: <%d}   {: <%d}   {: <%d} {: >15} {: >15} {: >15} {: >15}"
-
-    total_instrument_count = 0
-    total_yaml_count = 0
-    total_edex_count = 0
-    total_pass_count = 0
-    total_fail_count = 0
-    table_data = [('Instrument', 'Input File', 'Output File', 'Stream', 'YAML_count', 'EDEX_count', 'Pass', 'Fail')]
-
-    longest = {}
-    last_label = {}
-
-    for instrument in sorted(scorecard.keys()):
-        for test_file in sorted(scorecard[instrument].keys()):
-            for yaml_file in sorted(scorecard[instrument][test_file].keys()):
-                for stream in sorted(scorecard[instrument][test_file][yaml_file].keys()):
-                    results = scorecard[instrument][test_file][yaml_file][stream]
-
-                    edex_count, yaml_count, fail_count = results
-                    pass_count = yaml_count - len(fail_count)
-
-                    labels = {}
-
-                    for name in 'stream instrument test_file yaml_file'.split():
-                        val = locals().get(name)
-                        if last_label.get(name) == val:
-                            labels[name] = '---'
-                        else:
-                            labels[name] = val
-                            last_label[name] = val
-                        longest[name] = max((len(val), longest.get(name, 0)))
-
-                    table_data.append((instrument,
-                                       test_file,
-                                       yaml_file,
-                                       stream,
-                                       yaml_count,
-                                       edex_count,
-                                       pass_count,
-                                       len(fail_count)))
-
-                    total_yaml_count += yaml_count
-                    total_edex_count += edex_count
-                    total_pass_count += pass_count
-                    total_fail_count += len(fail_count)
-                    total_instrument_count += 1
-
-    format_string = format_string % (longest['instrument'], longest['test_file'], longest['yaml_file'], longest['stream'])
-
-    banner = format_string.format(*table_data[0])
-    half_banner = len(banner)/2
-    result.append('-' * half_banner + 'TEST RESULTS' + '-' * half_banner)
-    result.append(banner)
-
-    for row in table_data[1:]:
-        result.append(format_string.format(*row))
-
-    result.append('')
-    result.append('-' * (len(banner)+12))
-    row = ['Total Instrument', '', '', '', 'Total YAML', 'Total EDEX', 'Total Pass', 'Total Fail']
-    result.append(format_string.format(*row))
-
-    row = [total_instrument_count, '', '', '', total_yaml_count, total_edex_count, total_pass_count, total_fail_count]
-    result.append(format_string.format(*row))
-    return '\n'.join(result), table_data
-
-
-def create_handler(instrument):
-    #create filehandler for each instrument
-    file_path = 'output/%s.log' % instrument
-    fh = logging.FileHandler(file_path)
-    fh.setFormatter(formatter)
-    return fh
 
 
 def dump_csv(table_data):
@@ -375,6 +235,11 @@ def dump_csv(table_data):
     fh.close()
 
 
+def purge_edex(logfile=None):
+    edex_tools.purge_edex()
+    watch_log_for('Purge Operation: PURGE_ALL_DATA completed', logfile=logfile)
+
+
 def test(test_cases):
     scorecard = {}
     logfile = find_latest_log()
@@ -382,7 +247,7 @@ def test(test_cases):
     handler = None
     for test_case in test_cases:
         if handler is not None: log.removeHandler(handler)
-        handler = create_handler(test_case.instrument)
+        handler = logger.create_handler(test_case.instrument)
         log.addHandler(handler)
 
 
@@ -398,7 +263,7 @@ def test(test_cases):
                          .setdefault(test_file, {}) \
                          .setdefault(yaml_file, {})[stream] = test_results(expected[stream], stream)
 
-    result, table_data = parse_scorecard(scorecard)
+    result, table_data = edex_tools.parse_scorecard(scorecard)
     log.info(result)
     dump_csv(table_data)
 
@@ -431,14 +296,14 @@ def test_bulk(test_cases):
         if instrument != last_instrument:
             if handler is not None:
                 log.removeHandler(handler)
-            log.addHandler(create_handler(instrument))
+            log.addHandler(logger.create_handler(instrument))
             last_instrument = instrument
 
         scorecard.setdefault(instrument, {}) \
                  .setdefault(test_file, {}) \
                  .setdefault(yaml_file, {})[stream] = test_results(expected[(instrument,test_file,yaml_file,stream)], stream)
 
-    result, table_data = parse_scorecard(scorecard)
+    result, table_data = edex_tools.parse_scorecard(scorecard)
     log.info(result)
     dump_csv(table_data)
 
