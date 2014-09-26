@@ -13,7 +13,7 @@ import sys
 import os
 import qpid.messaging as qm
 
-all_data_url = 'http://localhost:12570/sensor/user/inv/null/null'
+all_data_url = 'http://localhost:12570/sensor/user/inv/%s/null'
 
 edex_dir = os.getenv('EDEX_HOME')
 if edex_dir is None:
@@ -22,11 +22,27 @@ startdir = os.path.join(edex_dir, 'data/utility/edex_static/base/ooi/parsers/mi-
 drivers_dir = os.path.join(startdir, 'dataset/driver')
 ingest_dir = os.path.join(edex_dir, 'data', 'ooi')
 log_dir = os.path.join(edex_dir, 'logs')
+output_dir = 'output'
 
 USER = 'guest'
 HOST = 'localhost'
 PORT = 5672
 PURGE_MESSAGE = qm.Message(content='PURGE_ALL_DATA', content_type='text/plain', user_id=USER)
+
+# set up the logger
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)-7s %(message)s')
+log = logging.getLogger('dataset_test')
+log.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+ch.setFormatter(formatter)
+log.addHandler(ch)
+# output file handler
+if not os.path.exists(output_dir):
+    os.mkdir(output_dir)
+fh = logging.FileHandler(os.path.join(output_dir, 'everything.log'))
+fh.setFormatter(formatter)
+log.addHandler(fh)
 
 
 class FAILURES:
@@ -38,28 +54,6 @@ class FAILURES:
 
     def __init__(self):
         pass
-
-
-def get_logger():
-    logger = logging.getLogger('dataset_test')
-    logger.setLevel(logging.DEBUG)
-
-    # create console handler and set level to debug
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-
-    # create formatter
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)-7s %(message)s')
-
-    # add formatter to ch
-    ch.setFormatter(formatter)
-
-    # add ch to logger
-    logger.addHandler(ch)
-    return logger
-
-
-log = get_logger()
 
 
 class TestCase(object):
@@ -88,14 +82,14 @@ def read_test_cases(f):
         yield TestCase(config)
 
 
-def get_from_edex():
+def get_from_edex(stream_name):
     """
     Retrieve all stored sensor data from edex
     :return: list of edex records
     """
     proxy_handler = urllib2.ProxyHandler({})
     opener = urllib2.build_opener(proxy_handler)
-    req = urllib2.Request(all_data_url)
+    req = urllib2.Request(all_data_url % stream_name)
     r = opener.open(req)
     records = json.loads(r.read())
     log.debug('RETRIEVED:')
@@ -141,7 +135,12 @@ def get_expected(filename):
             timestamp = timestamp + millis / divisor + 2208988800l - time.timezone
             record['internal_timestamp'] = timestamp
 
-    return data
+    expected_dictionary = {}
+
+    for record in data:
+        expected_dictionary.setdefault(record.get('particle_type'), []).append(record)
+
+    return expected_dictionary
 
 
 def compare(stored, expected):
@@ -175,13 +174,13 @@ def compare(stored, expected):
             failures.append((FAILURES.MISSING_SAMPLE, key))
             log.error('No matching record found in retrieved data for key %s', key)
         else:
-            f = diff(record, stored.get(key))
+            f = diff(stream_name, record, stored.get(key))
             if f:
                 failures.append(f)
     return failures
 
 
-def diff(a, b, ignore=None, rename=None):
+def diff(stream, a, b, ignore=None, rename=None):
     """
     Compare two data records
     :param a:
@@ -204,8 +203,11 @@ def diff(a, b, ignore=None, rename=None):
         if k in rename:
             k = rename[k]
         if k not in b:
-            failures.append((FAILURES.MISSING_FIELD, k))
-            log.error('missing key: %s in retrieved record', k)
+            if v is None:
+                log.info("%s - Soft failure, None value in expected data for: %s", stream, k)
+            else:
+                failures.append((FAILURES.MISSING_FIELD, (stream,k)))
+                log.error('%s - missing key: %s in retrieved record', stream, k)
             continue
         if type(v) == dict:
             _round = v.get('round')
@@ -215,16 +217,16 @@ def diff(a, b, ignore=None, rename=None):
             value = v
             rvalue = b[k]
         if value != rvalue:
-            failures.append((FAILURES.BAD_VALUE, 'expected=%s retrieved=%s' % (v, b[k])))
-            log.error('non-matching value: expected=%s retrieved=%s', v, b[k])
+            failures.append((FAILURES.BAD_VALUE, 'stream=%s key=%s expected=%s retrieved=%s' % (stream, k, v, b[k])))
+            log.error('%s - non-matching value: key=%s expected=%s retrieved=%s', stream, k, v, b[k])
 
     # verify no extra (unexpected) keys present in retrieved data
     for k in b:
         if k in ignore:
             continue
         if k not in a:
-            failures.append((FAILURES.UNEXPECTED_VALUE, k))
-            log.error('item in retrieved data not in expected data: %s', k)
+            failures.append((FAILURES.UNEXPECTED_VALUE, (stream,k)))
+            log.error('%s - item in retrieved data not in expected data: %s', stream, k)
 
     return failures
 
@@ -278,8 +280,8 @@ def wait_for_ingest_complete():
     watch_log_for('Ingest: EDEX: Ingest')
 
 
-def test_results(expected):
-    retrieved = get_from_edex()
+def test_results(expected, stream_name):
+    retrieved = get_from_edex(stream_name)
     log.debug('Retrieved %d records from edex:', len(retrieved))
     log.debug(pprint.pformat(retrieved, depth=3))
     log.debug('Retrieved %d records from expected data file:', len(expected))
@@ -288,89 +290,158 @@ def test_results(expected):
     return len(retrieved), len(expected), failures
 
 
-def test(test_cases):
-    scorecard = {}
-    logfile = find_latest_log()
-
-    hdlr = None
-    for each in test_cases:
-
-        #create filehandler for each instrument
-        if hdlr is not None:
-            log.removeHandler(hdlr)
-
-        file_path = 'output/' + each.instrument + '.log'
-
-        d = os.path.dirname(file_path)
-        if not os.path.exists(d):
-            os.makedirs(d)
-
-        hdlr = logging.FileHandler(file_path)
-        log.addHandler(hdlr)
-
-        log.debug('Processing test case: %s', each)
-        for test_file, yaml_file in each.pairs:
-            purge_edex()
-            copy_file(each.resource, each.endpoint, test_file)
-            expected = get_expected(os.path.join(drivers_dir, each.resource, yaml_file))
-            watch_log_for('Ingest: EDEX: Ingest', logfile=logfile)
-            time.sleep(1)
-            scorecard[each.instrument] = test_results(expected)
-
-    print('\n------------------------------------------------TEST RESULTS------------------------------------------------')
+def parse_scorecard(scorecard):
+    result = ['SCORECARD:']
+    format_string = "{: <%d}   {: <%d}   {: <%d}   {: <%d} {: >15} {: >15} {: >15} {: >15}"
 
     total_instrument_count = 0
     total_yaml_count = 0
     total_edex_count = 0
     total_pass_count = 0
     total_fail_count = 0
-    table_data = [['Instrument','YAML_count','EDEX_count','Pass','Fail']]
+    table_data = [('Instrument', 'Input File', 'Output File', 'Stream', 'YAML_count', 'EDEX_count', 'Pass', 'Fail')]
 
-    for instrument in scorecard:
+    longest = {}
+    last_label = {}
 
-        edex_count, yaml_count, fail_count = scorecard[instrument]
-        pass_count = yaml_count - len(fail_count)
-        table_data.append([instrument,yaml_count,edex_count,pass_count,len(fail_count)])
+    for instrument in sorted(scorecard.keys()):
+        for test_file in sorted(scorecard[instrument].keys()):
+            for yaml_file in sorted(scorecard[instrument][test_file].keys()):
+                for stream in sorted(scorecard[instrument][test_file][yaml_file].keys()):
+                    results = scorecard[instrument][test_file][yaml_file][stream]
 
-        total_yaml_count += yaml_count
-        total_edex_count += edex_count
-        total_pass_count += pass_count
-        total_fail_count += len(fail_count)
-        total_instrument_count += 1
+                    edex_count, yaml_count, fail_count = results
+                    pass_count = yaml_count - len(fail_count)
 
+                    labels = {}
+
+                    for name in 'stream instrument test_file yaml_file'.split():
+                        val = locals().get(name)
+                        if last_label.get(name) == val:
+                            labels[name] = '---'
+                        else:
+                            labels[name] = val
+                            last_label[name] = val
+                        longest[name] = max((len(val), longest.get(name, 0)))
+
+                    table_data.append((instrument,
+                                       test_file,
+                                       yaml_file,
+                                       stream,
+                                       yaml_count,
+                                       edex_count,
+                                       pass_count,
+                                       len(fail_count)))
+
+                    total_yaml_count += yaml_count
+                    total_edex_count += edex_count
+                    total_pass_count += pass_count
+                    total_fail_count += len(fail_count)
+                    total_instrument_count += 1
+
+    format_string = format_string % (longest['instrument'], longest['test_file'], longest['yaml_file'], longest['stream'])
+
+    banner = format_string.format(*table_data[0])
+    half_banner = len(banner)/2
+    result.append('-' * half_banner + 'TEST RESULTS' + '-' * half_banner)
+    result.append(banner)
+
+    for row in table_data[1:]:
+        result.append(format_string.format(*row))
+
+    result.append('')
+    result.append('-' * (len(banner)+12))
+    row = ['Total Instrument', '', '', '', 'Total YAML', 'Total EDEX', 'Total Pass', 'Total Fail']
+    result.append(format_string.format(*row))
+
+    row = [total_instrument_count, '', '', '', total_yaml_count, total_edex_count, total_pass_count, total_fail_count]
+    result.append(format_string.format(*row))
+    return '\n'.join(result), table_data
+
+
+def create_handler(instrument):
+    #create filehandler for each instrument
+    file_path = 'output/%s.log' % instrument
+    fh = logging.FileHandler(file_path)
+    fh.setFormatter(formatter)
+    return fh
+
+
+def dump_csv(table_data):
+    fh = open(os.path.join(output_dir, 'results.csv'), 'w')
     for row in table_data:
-        print("{: >40} {: >15} {: >15} {: >15} {: >15}".format(*row))
+        row = [str(x) for x in row]
+        fh.write(','.join(row) + '\n')
+    fh.close()
 
-    print("\n------------------------------------------------------------------------------------------------------------\n")
-    row = ['Total Instrument', 'Total YAML', 'Total EDEX', 'Total Pass', 'Total Fail']
-    print("{: >40} {: >15} {: >15} {: >15} {: >15}".format(*row))
 
-    row = [total_instrument_count, total_yaml_count, total_edex_count, total_pass_count, total_fail_count]
-    print("{: >40} {: >15} {: >15} {: >15} {: >15}".format(*row))
-    print("\n")
+def test(test_cases):
+    scorecard = {}
+    logfile = find_latest_log()
+
+    handler = None
+    for test_case in test_cases:
+        if handler is not None: log.removeHandler(handler)
+        handler = create_handler(test_case.instrument)
+        log.addHandler(handler)
+
+
+        log.debug('Processing test case: %s', test_case)
+        for test_file, yaml_file in test_case.pairs:
+            purge_edex()
+            copy_file(test_case.resource, test_case.endpoint, test_file)
+            expected = get_expected(os.path.join(drivers_dir, test_case.resource, yaml_file))
+            watch_log_for('Ingest: EDEX: Ingest', logfile=logfile)
+            time.sleep(1)
+            for stream in expected:
+                scorecard.setdefault(test_case.instrument, {}) \
+                         .setdefault(test_file, {}) \
+                         .setdefault(yaml_file, {})[stream] = test_results(expected[stream], stream)
+
+    result, table_data = parse_scorecard(scorecard)
+    log.info(result)
+    dump_csv(table_data)
+
 
 def test_bulk(test_cases):
-    expected = []
+    expected = {}
+    scorecard = {}
     num_files = 0
 
     purge_edex()
     logfile = find_latest_log()
 
-    for each in test_cases:
+    for test_case in test_cases:
         num_files += 1
-        log.debug('Processing test case: %s', each)
+        log.debug('Processing test case: %s', test_case)
 
-        for test_file, yaml_file in each.pairs:
-            copy_file(each.resource, each.endpoint, test_file)
-            expected.extend(get_expected(os.path.join(drivers_dir, each.resource, yaml_file)))
+        for test_file, yaml_file in test_case.pairs:
+            copy_file(test_case.resource, test_case.endpoint, test_file)
+            this_expected = get_expected(os.path.join(drivers_dir, test_case.resource, yaml_file))
+            for stream in this_expected:
+                expected[(test_case.instrument, test_file, yaml_file, stream)] = this_expected[stream]
 
     watch_log_for('Ingest: EDEX: Ingest', logfile=logfile, expected_count=num_files, timeout=600)
-    time.sleep(1)
-    results = test_results(expected)
+    # sometimes edex needs to catch its breath after so many files... sleep a bit
+    time.sleep(5)
 
-    log.info('records: %d', len(get_from_edex()))
+    handler = last_instrument = None
+    for k,v in expected.iteritems():
+        instrument, test_file, yaml_file, stream = k
+        if instrument != last_instrument:
+            if handler is not None:
+                log.removeHandler(handler)
+            log.addHandler(create_handler(instrument))
+            last_instrument = instrument
 
-    log.info('edex_count: %d yaml_count: %d failures: %s', *results)
+        scorecard.setdefault(instrument, {}) \
+                 .setdefault(test_file, {}) \
+                 .setdefault(yaml_file, {})[stream] = test_results(expected[(instrument,test_file,yaml_file,stream)], stream)
+
+    result, table_data = parse_scorecard(scorecard)
+    log.info(result)
+    dump_csv(table_data)
+
 
 if __name__ == '__main__':
     test_cases = []
@@ -380,4 +451,4 @@ if __name__ == '__main__':
         for each in sys.argv[1:]:
             test_cases.extend(list(read_test_cases(each)))
 
-    test(test_cases)
+    test_bulk(test_cases)
