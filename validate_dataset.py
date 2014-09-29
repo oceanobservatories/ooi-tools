@@ -58,16 +58,19 @@ def get_expected(filename):
     :param filename:
     :return: list of records containing the expected results
     """
-    fh = open(filename, 'r')
-    data = yaml.load(fh)
-    log.debug('Raw data from YAML: %s', data)
-    header = data.get('header')
-    data = data.get('data')
-    particle_type = header.get('particle_type')
-    if particle_type is not None:
-        if particle_type != 'MULTIPLE':
-            for record in data:
-                record['particle_type'] = particle_type
+    try:
+        fh = open(filename, 'r')
+        data = yaml.load(fh)
+        log.debug('Raw data from YAML: %s', data)
+        header = data.get('header')
+        data = data.get('data')
+        particle_type = header.get('particle_type')
+        if particle_type is not None:
+            if particle_type != 'MULTIPLE':
+                for record in data:
+                    record['particle_type'] = particle_type
+    except:
+        data = []
 
     for record in data:
         timestamp = record.get('internal_timestamp')
@@ -98,7 +101,7 @@ def compare(stored, expected):
     """
     failures = []
     for record in expected:
-        timestamp = record.get('internal_timestamp')
+        timestamp = '%12.3f' % record.get('internal_timestamp')
         stream_name = record.get('particle_type')
         # Not all YAML files contain the particle type
         # if we don't find it, let's check the stored data
@@ -161,10 +164,29 @@ def diff(stream, a, b, ignore=None, rename=None):
             rvalue = round(b[k], _round)
         else:
             value = v
+            if type(value) == str:
+                value = value.strip()
             rvalue = b[k]
+            if type(rvalue) == str:
+                rvalue = rvalue.strip()
         if value != rvalue:
-            failures.append((edex_tools.FAILURES.BAD_VALUE, 'stream=%s key=%s expected=%s retrieved=%s' % (stream, k, v, b[k])))
-            log.error('%s - non-matching value: key=%s expected=%s retrieved=%s', stream, k, v, b[k])
+            failed = False
+            if 'timestamp' in k:
+                # try rounding...
+                try:
+                    value = '%12.3f' % float(value)
+                except:
+                    pass
+                try:
+                    rvalue = '%12.3f' % float(value)
+                except Exception as e:
+                   log.error('Exception massaging timestamp to string: %s', e) 
+                if value != rvalue: failed = True
+            else:
+                failed = True
+            if failed:
+                failures.append((edex_tools.FAILURES.BAD_VALUE, 'stream=%s key=%s expected=%s retrieved=%s' % (stream, k, v, b[k])))
+                log.error('%s - non-matching value: key=%r expected=%r retrieved=%r', stream, k, value, rvalue)
 
     # verify no extra (unexpected) keys present in retrieved data
     for k in b:
@@ -181,7 +203,10 @@ def copy_file(resource, endpoint, test_file):
     log.info('copy test file %s into endpoint %s from %s', test_file, endpoint, resource)
     source_file = os.path.join(drivers_dir, resource, test_file)
     destination_file = os.path.join(ingest_dir, endpoint, str(uuid.uuid4()))
-    shutil.copy(source_file, destination_file)
+    try:
+        shutil.copy(source_file, destination_file)
+    except IOError as e:
+        log.error('Exception copying input file to endpoint: %s', e)
 
 
 def find_latest_log():
