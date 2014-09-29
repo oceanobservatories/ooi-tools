@@ -1,4 +1,4 @@
-instrument: mopak_o_dcl_telemetered
+instrument: mopak_o_dcl_recovered
 resource: cg_stc_eng/stc/resource
 endpoint: cgStcEng/mopakRecovered
 pairs:

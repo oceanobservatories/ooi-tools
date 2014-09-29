@@ -1,0 +1,4 @@
+instrument: adcps_jln_recovered
+resource: adcps_jln/stc/resource
+endpoint: adcps/jln
+pairs:  [[ADCP_CCE1T_20.000,ADCP_CCE1T_20.yml]]
