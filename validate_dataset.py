@@ -316,7 +316,7 @@ def test_bulk(test_cases):
 
     watch_log_for('Ingest: EDEX: Ingest', logfile=logfile, expected_count=num_files, timeout=600)
     # sometimes edex needs to catch its breath after so many files... sleep a bit
-    time.sleep(5)
+    time.sleep(15)
 
     last_instrument = None
     for k,v in expected.iteritems():
