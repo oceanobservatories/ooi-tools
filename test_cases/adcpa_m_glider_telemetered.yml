@@ -1,4 +1,4 @@
 instrument: adcpa_m_glider_telemetered
 resource: moas/gl/adcpa/resource
 endpoint: adcpa_m_glider_telem 
-pairs:  [[LA101636_20.PD0 ,LA101636_20.yml]]
+pairs:  [[ND072023.PD0 ,ND072023_telem.yml]]
