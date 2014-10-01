@@ -202,7 +202,7 @@ def diff(stream, a, b, ignore=None, rename=None):
 def copy_file(resource, endpoint, test_file):
     log.info('copy test file %s into endpoint %s from %s', test_file, endpoint, resource)
     source_file = os.path.join(drivers_dir, resource, test_file)
-    destination_file = os.path.join(ingest_dir, endpoint, str(uuid.uuid4()))
+    destination_file = os.path.join(ingest_dir, endpoint, test_file)
     try:
         shutil.copy(source_file, destination_file)
     except IOError as e:
@@ -243,7 +243,7 @@ def wait_for_ingest_complete():
 
 
 def test_results(expected, stream_name):
-    retrieved = edex_tools.get_from_edex('localhost', stream_name)
+    retrieved = edex_tools.get_from_edex('localhost', stream_name, timestamp_as_string=True)
     log.debug('Retrieved %d records from edex:', len(retrieved))
     log.debug(pprint.pformat(retrieved, depth=3))
     log.debug('Retrieved %d records from expected data file:', len(expected))
@@ -280,8 +280,13 @@ def test(test_cases):
             purge_edex()
             copy_file(test_case.resource, test_case.endpoint, test_file)
             expected = get_expected(os.path.join(drivers_dir, test_case.resource, yaml_file))
-            watch_log_for('Ingest: EDEX: Ingest', logfile=logfile)
-            time.sleep(1)
+            try:
+                watch_log_for('Ingest: EDEX: Ingest', logfile=logfile)
+                time.sleep(1)
+            except:
+                # didn't see any ingest, proceed, results should be all failed
+                log.error('Timed out waiting for ingest complete message')
+
             for stream in expected:
                 results = test_results(expected[stream], stream)
                 log.debug('Results for instrument: %s test_file: %s yaml_file: %s stream: %s',
@@ -290,6 +295,7 @@ def test(test_cases):
                 scorecard.setdefault(test_case.instrument, {}) \
                          .setdefault(test_file, {}) \
                          .setdefault(yaml_file, {})[stream] = results
+
 
     result, table_data = edex_tools.parse_scorecard(scorecard)
     log.info(result)
@@ -328,7 +334,7 @@ def test_bulk(test_cases):
 
         results = test_results(expected[(instrument,test_file,yaml_file,stream)], stream)
         log.debug('Results for instrument: %s test_file: %s yaml_file: %s stream: %s',
-                   test_case.instrument, test_file, yaml_file, stream)
+                   instrument, test_file, yaml_file, stream)
         log.debug(results)
         scorecard.setdefault(instrument, {}) \
                  .setdefault(test_file, {}) \
@@ -347,4 +353,4 @@ if __name__ == '__main__':
         for each in sys.argv[1:]:
             test_cases.extend(list(read_test_cases(each)))
 
-    test_bulk(test_cases)
+    test(test_cases)
