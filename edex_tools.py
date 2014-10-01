@@ -24,7 +24,7 @@ def purge_edex():
     conn.close()
 
 
-def get_from_edex(host, stream_name):
+def get_from_edex(host, stream_name, timestamp_as_string=False):
     """
     Retrieve all stored sensor data from edex
     :return: list of edex records
@@ -42,7 +42,9 @@ def get_from_edex(host, stream_name):
         timestamp = record.get('internal_timestamp')
         if timestamp is None:
             timestamp = record.get('port_timestamp')
-        timestamp = '%12.3f' % timestamp
+        if timestamp_as_string:
+            timestamp = '%12.3f' % timestamp
+
         stream_name = record.get('stream_name')
         key = (timestamp, stream_name)
         if key in d:
