@@ -1,0 +1,18 @@
+instrument: parad
+module: mi.instrument.satlantic.par_ser_600m.ooicore.driver
+klass: InstrumentDriver
+command_port: 10001
+event_port: 10002
+port_agent_config:
+  addr: 69.196.58.141
+  port: 13009
+  cmd_port: 12009
+startup_config:
+  parameters:
+starting_state: DRIVER_STATE_COMMAND
+script:
+- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+- [execute, DRIVER_EVENT_ACQUIRE_SAMPLE]
+- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+- [sleep, 5]
+- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

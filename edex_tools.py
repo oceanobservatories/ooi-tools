@@ -3,8 +3,10 @@
 import pprint
 import urllib2
 import json
+import ntplib
 
 import qpid.messaging as qm
+import time
 from logger import get_logger
 
 
@@ -24,15 +26,30 @@ def purge_edex():
     conn.close()
 
 
-def get_from_edex(host, stream_name, timestamp_as_string=False):
+def ntptime_to_string(t):
+    t = ntplib.ntp_to_system_time(t)
+    millis = '%f' % (t-int(t))
+    millis = millis[1:5]
+    return time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime(t)) + millis + 'Z'
+
+
+def get_from_edex(host, stream_name, sensor=None, timestamp_as_string=False, start_time=None, stop_time=None):
     """
     Retrieve all stored sensor data from edex
     :return: list of edex records
     """
-    all_data_url = 'http://%s:12570/sensor/user/inv/%s/null'
+    if sensor is None:
+        sensor = 'null'
+    all_data_url = 'http://%s:12570/sensor/m2m/inv/%s/%s'
     proxy_handler = urllib2.ProxyHandler({})
     opener = urllib2.build_opener(proxy_handler)
-    req = urllib2.Request(all_data_url % (host, stream_name))
+    url = all_data_url % (host, stream_name, sensor)
+    if start_time and stop_time:
+        start_time = ntptime_to_string(start_time)
+        stop_time = ntptime_to_string(stop_time)
+        url = url + '/%s/%s' % (start_time, stop_time)
+    log.debug('Request url: %s', url)
+    req = urllib2.Request(url)
     r = opener.open(req)
     records = json.loads(r.read())
     log.debug('RETRIEVED:')
