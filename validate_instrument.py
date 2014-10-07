@@ -1,17 +1,78 @@
 #!/usr/bin/env python
+"""Instrument Control
 
+Usage:
+  validate_instrument.py <host>
+  validate_instrument.py <host> <test_cases>...
+"""
+
+import os
 import pprint
-import time
-import sys
+import docopt
+import yaml
 import json
 import edex_tools
 import logger
+import instrument_control
 
 
-log = logger.get_logger('validate_instrument', file_output='output/instrument_verify.log')
+log = logger.get_logger('validate_instrument', file_output='output/validate_instrument.log')
 
-uframe = 'uframe'
 
+class TestCase(object):
+    def __init__(self, config):
+        self.config = config
+        self.instrument = config.get('instrument')
+        self.module = config.get('module')
+        self.klass = config.get('klass')
+        self.command_port = config.get('command_port')
+        self.event_port = config.get('event_port')
+        self.port_agent_config = config.get('port_agent_config')
+        self.startup_config = config.get('startup_config')
+        self.script = config.get('script')
+        self.expected_particles = config.get('expected_particles')
+        self.starting_state = config.get('starting_state')
+
+    def __str__(self):
+        return pprint.pformat(self.config)
+
+    def __repr__(self):
+        return self.config.__repr__()
+
+    @staticmethod
+    def read_test_cases(f):
+        log.info('Finding test cases in: %s', f)
+        if os.path.isdir(f):
+            for filename in os.listdir(f):
+                config = yaml.load(open(os.path.join(f, filename), 'r'))
+                yield TestCase(config)
+        elif os.path.isfile(f):
+            config = yaml.load(open(f, 'r'))
+            yield TestCase(config)
+
+
+class Scorecard(object):
+    def __init__(self):
+        self.results = {}
+
+    def init_stream(self, stream):
+        if stream not in self.results:
+            self.results[stream] = {
+                'pass': 0,
+                'fail': 0,
+                'failures': []
+            }
+
+    def record(self, stream, failures):
+        self.init_stream(stream)
+        if failures:
+            self.results[stream]['fail'] += 1
+            self.results[stream]['failures'].extend(failures)
+        else:
+            self.results[stream]['pass'] += 1
+
+    def __str__(self):
+        return pprint.pformat(self.results)
 
 def compare(stored, expected):
     """
@@ -101,14 +162,27 @@ def diff(a, b, ignore=None, rename=None):
     return failures
 
 
-def test_results(expected, stream):
-    retrieved = edex_tools.get_from_edex(uframe, stream)
-    log.debug('Retrieved %d records from edex:', len(retrieved))
-    log.debug(pprint.pformat(retrieved, depth=3))
-    log.debug('Retrieved %d records from expected data file:', len(expected))
-    log.debug(pprint.pformat(expected, depth=3))
-    failures = compare(retrieved, expected)
-    return len(retrieved), len(expected), failures
+def test_results(hostname, instrument, results):
+    scorecard = Scorecard()
+    for sample in results:
+        log.debug('Expected: %s', sample)
+        sample = flatten(sample)
+        stream = sample.get('stream_name')
+        ts = sample.get(sample.get('preferred_timestamp'))
+        result = edex_tools.get_from_edex(hostname,
+                                          stream_name=stream,
+                                          sensor=instrument,
+                                          start_time=ts,
+                                          stop_time=ts)
+        log.debug('Expected: %s', sample)
+        log.debug('Retrieved: %s', result)
+        retrieved = result.values()
+        if len(result.values()) == 0:
+            scorecard.record(stream, ['Missing sample: '])
+        else:
+            scorecard.record(stream, diff(sample, result.values()[0]))
+
+    print scorecard
 
 
 def flatten(particle):
@@ -141,22 +215,32 @@ def get_expected(filename):
     return return_data
 
 
-def test(file_name):
+def test(test_case, hostname):
 
     scorecard = {}
-    log.debug('Processing test case: %s', file_name)
-    expected = get_expected(file_name)
-
-    for stream in expected:
-        scorecard[stream] = test_results(expected[stream], stream)
-
-    pprint.pprint(scorecard)
+    log.debug('Processing test case: %s', test_case)
+    controller = instrument_control.Controller(hostname,
+                                               test_case.instrument,
+                                               test_case.module,
+                                               test_case.klass,
+                                               test_case.command_port,
+                                               test_case.event_port)
+    controller.initialize_driver(test_case.starting_state,
+                                 test_case.port_agent_config,
+                                 test_case.startup_config)
+    controller.run_script(test_case.script)
+    test_results(hostname, test_case.instrument, controller.samples)
 
 
 if __name__ == '__main__':
+    options = docopt.docopt(__doc__)
+    hostname = options.get('<host>')
     test_cases = []
-    if len(sys.argv) <= 1:
-        print('useage: ./validate_instrument [file1] [file2] ...')
+    if len(options['<test_cases>']) == 0:
+        test_cases = list(TestCase.read_test_cases('instrument_test_cases'))
     else:
-        for each in sys.argv[1:]:
-            test(each)
+        for each in options['<test_cases>']:
+            test_cases.extend(list(TestCase.read_test_cases(each)))
+
+    for test_case in test_cases:
+        test(test_case, hostname)
