@@ -60,57 +60,42 @@ class Scorecard(object):
             self.results[stream] = {
                 'pass': 0,
                 'fail': 0,
+                'expected': 0,
+                'retrieved': 0,
                 'failures': []
             }
 
     def record(self, stream, failures):
+        failure_types = [x[0] for x in failures]
         self.init_stream(stream)
         if failures:
             self.results[stream]['fail'] += 1
             self.results[stream]['failures'].extend(failures)
         else:
             self.results[stream]['pass'] += 1
+        self.results[stream]['expected'] += 1
+        if not edex_tools.FAILURES.MISSING_SAMPLE in failure_types:
+            self.results[stream]['retrieved'] += 1
+
+    def __repr__(self):
+        return repr(self.results)
 
     def __str__(self):
-        return pprint.pformat(self.results)
-
-def compare(stored, expected):
-    """
-    Compares a set of expected results against the retrieved values
-    :param stored:
-    :param expected:
-    :return: list of failures
-    """
-
-    failures = []
-    for record in expected:
-        preferred_timestamp = record.get('preferred_timestamp')
-        timestamp = record.get(preferred_timestamp)
-        stream_name = record.get('stream_name')
-        # Not all YAML files contain the particle type
-        # if we don't find it, let's check the stored data
-        # if all particles are the same type, then we'll proceed
-        if stream_name is None:
-            log.warn('Missing stream name from YML file, attempting to infer')
-            keys = stored.keys()
-            keys = [x[1] for x in keys]
-            keys = set(keys)
-            if len(keys) == 1:
-                key = (timestamp, keys.pop())
-            else:
-                failures.append((edex_tools.FAILURES.AMBIGUOUS, 'Multiple streams in output, no stream in YML'))
-                log.error('Ambiguous stream information in YML file and unable to infer')
-                continue
-        else:
-            key = (timestamp, stream_name)
-        if key not in stored:
-            failures.append((edex_tools.FAILURES.MISSING_SAMPLE, key))
-            log.error('No matching record found in retrieved data for key %s', key)
-        else:
-            f = diff(record, stored.get(key))
-            if f:
-                failures.append(f)
-    return failures
+        base_format_string = "{: <%d} {: >15} {: >15} {: >15} {: >15}"
+        result = []
+        streams = self.results.keys()
+        longest = max([len(x) for x in streams])
+        format_string = base_format_string % longest
+        banner = format_string.format('Stream', 'Expected', 'Retrieved', 'Pass', 'Fail')
+        result.append(banner)
+        for stream in sorted(streams):
+            my_score = self.results[stream]
+            result.append(format_string.format(stream,
+                                               my_score['expected'],
+                                               my_score['retrieved'],
+                                               my_score['pass'],
+                                               my_score['fail']))
+        return '\n'.join(result)
 
 
 def diff(a, b, ignore=None, rename=None):
@@ -124,7 +109,7 @@ def diff(a, b, ignore=None, rename=None):
     """
     if ignore is None:
         ignore = ['particle_object', 'quality_flag', 'driver_timestamp', 'stream_name', 'preferred_timestamp',
-                  'pkt_format_id', 'pkt_version', 'time']
+                  'pkt_format_id', 'pkt_version', 'time', 'internal_timestamp']
     if rename is None:
         rename = {'particle_type': 'stream_name'}
 
@@ -138,7 +123,7 @@ def diff(a, b, ignore=None, rename=None):
             k = rename[k]
         if k not in b:
             failures.append((edex_tools.FAILURES.MISSING_FIELD, k))
-            log.error('missing key: %s in retrieved record', k)
+            log.error('missing key: %r in retrieved record', k)
             continue
         if type(v) == dict:
             _round = v.get('round')
@@ -146,10 +131,14 @@ def diff(a, b, ignore=None, rename=None):
             rvalue = round(b[k], _round)
         else:
             value = v
+            if type(value) in [str, unicode]:
+                value = value.strip()
             rvalue = b[k]
+            if type(rvalue) in [str, unicode]:
+                rvalue = rvalue.strip()
         if value != rvalue:
-            failures.append((edex_tools.FAILURES.BAD_VALUE, 'expected=%s retrieved=%s' % (v, b[k])))
-            log.error('non-matching value: expected=%s retrieved=%s', v, b[k])
+            failures.append((edex_tools.FAILURES.BAD_VALUE, 'expected=%r retrieved=%r' % (v, b[k])))
+            log.error('non-matching value: expected=%r retrieved=%r', v, b[k])
 
     # verify no extra (unexpected) keys present in retrieved data
     for k in b:
@@ -157,7 +146,7 @@ def diff(a, b, ignore=None, rename=None):
             continue
         if k not in a:
             failures.append((edex_tools.FAILURES.UNEXPECTED_VALUE, k))
-            log.error('item in retrieved data not in expected data: %s', k)
+            log.error('item in retrieved data not in expected data: %r', k)
 
     return failures
 
@@ -178,11 +167,11 @@ def test_results(hostname, instrument, results):
         log.debug('Retrieved: %s', result)
         retrieved = result.values()
         if len(result.values()) == 0:
-            scorecard.record(stream, ['Missing sample: '])
+            scorecard.record(stream, [(edex_tools.FAILURES.MISSING_SAMPLE, (ts, stream))])
         else:
             scorecard.record(stream, diff(sample, result.values()[0]))
 
-    print scorecard
+    return scorecard
 
 
 def flatten(particle):
@@ -190,7 +179,7 @@ def flatten(particle):
         id = each.get('value_id')
         val = each.get('value')
         particle[id] = val
-    del(particle['values'])
+    del (particle['values'])
     return particle
 
 
@@ -216,7 +205,6 @@ def get_expected(filename):
 
 
 def test(test_case, hostname):
-
     scorecard = {}
     log.debug('Processing test case: %s', test_case)
     controller = instrument_control.Controller(hostname,
@@ -229,7 +217,13 @@ def test(test_case, hostname):
                                  test_case.port_agent_config,
                                  test_case.startup_config)
     controller.run_script(test_case.script)
-    test_results(hostname, test_case.instrument, controller.samples)
+    scorecard[test_case.instrument] = test_results(hostname, test_case.instrument, controller.samples)
+
+    for instrument, card in scorecard.iteritems():
+        print
+        print instrument
+        print
+        print card
 
 
 if __name__ == '__main__':
