@@ -81,6 +81,8 @@ class Scorecard(object):
         return repr(self.results)
 
     def __str__(self):
+        if not self.results:
+            return ''
         base_format_string = "{: <%d} {: >15} {: >15} {: >15} {: >15}"
         result = []
         streams = self.results.keys()

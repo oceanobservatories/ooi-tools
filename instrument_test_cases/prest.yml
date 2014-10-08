@@ -1,0 +1,25 @@
+instrument: prest
+module: mi.instrument.seabird.sbe54tps.ooicore.driver 
+klass: InstrumentDriver
+command_port: 10001
+event_port: 10002
+port_agent_config:
+  addr: 69.196.58.141
+  port: 13012
+  cmd_port: 12012
+startup_config:
+  parameters:
+expected_particles:
+-[prest_real_time, pres_reference_oscillator, prest_configuration_data, prest_device_status, prest_event_counter, prest_hardware_data]
+starting_state: DRIVER_STATE_COMMAND
+script:
+- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+- [execute, DRIVER_EVENT_ACQUIRE_SAMPLE]
+- [execute, PROTOCOL_EVENT_SAMPLE_REFERENCE_OSCILLATOR]
+- [execute, PROTOCOL_EVENT_TEST_EEPROM]
+- [execute, PROTOCOL_EVENT_GET_STATUS]
+- [execute, PROTOCOL_EVENT_GET_EVENT_COUNTER]
+- [execute, PROTOCOL_EVENT_GET_HARDWARE]
+- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+- [sleep, 10]
+- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

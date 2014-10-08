@@ -1,0 +1,29 @@
+instrument: vel3d_cd 
+module: mi.instrument.nortek.vector.ooicore.driver 
+klass: InstrumentDriver
+command_port: 10001
+event_port: 10002
+port_agent_config:
+  addr: 69.196.58.141
+  port: 13017
+  cmd_port: 12017
+startup_config:
+  parameters:
+    deployment_name: 'test'
+    wrap_moder: 0
+    analog_input_address: 0
+    software_version: 13702
+    velocity_adjustment_factor: 'Aj0ePTk9Uz1uPYg9oj27PdQ97T0GPh4+Nj5OPmU+fT6TPqo+wD7WPuw+Aj8XPyw/QT9VP2k/fT+RP6Q/uD/KP90/8D8CQBRAJkA3QElAWkBrQHxAjECcQKxAvEDMQNtA6kD5QAhBF0ElQTNBQkFPQV1BakF4QYVBkkGeQatBt0HDQc9B20HnQfJB/UEIQhNCHkIoQjNCPUJHQlFCW0JkQm5Cd0KAQolCkUKaQqJCqkKyQrpC'
+    file_comments: 'this is a test'
+    filter_constants: 'Cv/N/4sA5QDuAAsAhP89/w=='
+expected_particles:
+- vel3d_cd_velocity_data
+- vel3d_cd_data_header
+- vel3d_cd_system_data
+starting_state: DRIVER_STATE_COMMAND
+script:
+- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+- [execute, DRIVER_EVENT_ACQUIRE_SAMPLE]
+- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+- [sleep, 5]
+- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
