@@ -13,5 +13,6 @@ startup_config:
 starting_state: DRIVER_STATE_COMMAND
 script:
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+- [wait_state, [DRIVER_STATE_AUTOSAMPLE, 10]]
 - [sleep, 20]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

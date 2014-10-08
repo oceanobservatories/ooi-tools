@@ -3,6 +3,12 @@
 
 Usage:
   instrument_control.py <host> <name> [options]
+  instrument_control.py <host> <name> start [options]
+  instrument_control.py <host> <name> stop
+  instrument_control.py <host> <name> connect
+  instrument_control.py <host> <name> discover
+  instrument_control.py <host> <name> configure <config_file>
+  instrument_control.py <host> <name> execute <capability>
 
 Options:
   --module=<module>               The module containing the driver class   [default: mi.instrument.virtual.driver]
@@ -12,14 +18,18 @@ Options:
 
 """
 import threading
+import logger
 import requests
 import docopt
 import json
 import time
+import yaml
 import zmq
 
 instrument_agent_port = 12572
 base_api_url = 'instrument/api'
+
+log = logger.get_logger('instrument_control', file_output='output/instrument_control.log')
 
 
 class Controller(object):
@@ -56,7 +66,6 @@ class Controller(object):
         evt_socket.setsockopt(zmq.SUBSCRIBE, '')
 
         def loop():
-
             while self.keeprunning:
                 try:
                     evt = evt_socket.recv_json(flags=zmq.NOBLOCK)
@@ -67,7 +76,24 @@ class Controller(object):
                 except zmq.ZMQError as e:
                     time.sleep(.1)
 
-        threading.Thread(target=loop).start()
+        t = threading.Thread(target=loop)
+        t.setDaemon(True)
+        t.start()
+
+    def start_state_thread(self):
+        def loop():
+            self.get_state()
+            while self.keeprunning:
+                try:
+                    r = self.get_state(True)
+                    log.info('State updated: %s', r.json()['value']['state'])
+                except Exception as e:
+                    log.info('Exception: %s', e)
+                    time.sleep(.1)
+
+        t = threading.Thread(target=loop)
+        t.setDaemon(True)
+        t.start()
 
     def stop_driver(self):
         self.keeprunning = False
@@ -88,9 +114,10 @@ class Controller(object):
     def set_resource(self, **kwargs):
         return requests.post(self.base_url + '/resource', data={'resource': json.dumps(kwargs)})
 
-    def get_state(self):
-        r = requests.get(self.base_url)
-        self.state = r.json()['value']
+    def get_state(self, blocking=False):
+        r = requests.get(self.base_url, params={'blocking': blocking})
+        reply = r.json()
+        self.state = reply['value']
         return r
 
     def execute(self, command):
@@ -100,15 +127,19 @@ class Controller(object):
         self.start_driver()
         self.start_event_thread()
         self.get_state()
+        self.start_state_thread()
         end_time = time.time() + timeout
 
         while self.state['state'] != target_state:
             if self.state['state'] == 'DRIVER_STATE_UNCONFIGURED':
+                log.info('Configuring driver: %r %r', port_config, init_config)
                 self.configure(port_config)
                 self.set_init_params(init_config)
             elif self.state['state'] == 'DRIVER_STATE_DISCONNECTED':
+                log.info('Connecting to instrument')
                 self.connect()
             elif self.state['state'] == 'DRIVER_STATE_UNKNOWN':
+                log.info('Calling discover')
                 self.discover()
             elif self.state['state'] == 'DRIVER_STATE_COMMAND':
                 if target_state == 'DRIVER_STATE_AUTOSAMPLE':
@@ -120,13 +151,27 @@ class Controller(object):
             if time.time() > end_time:
                 raise Exception('Timed out transitioning to target state: %s' % target_state)
 
+    def wait_state(self, state, length):
+        log.info('Enter wait_state: %s, %s', state, length)
+        end_time = time.time() + length
+        while time.time() < end_time:
+            if self.state['state'] == state:
+                log.info('Target state found')
+                return
+        raise Exception('Timed out waiting for state: %s' % state)
+
     def run_script(self, script):
         self.samples = []
         try:
             for command, args in script:
                 if command == 'sleep':
+                    log.info('Sleep %d seconds', args)
                     time.sleep(args)
+                elif command == 'wait_state':
+                    state, length = args
+                    self.wait_state(state, length)
                 elif hasattr(self, command):
+                    log.info('Sending command: %r with args: %r', command, args)
                     reply = getattr(self, command)(args)
                     try:
                         reply = json.loads(reply)
@@ -136,9 +181,8 @@ class Controller(object):
                         if reply.get('type') == 'DRIVER_EXCEPTION_EVENT':
                             raise Exception('Exception from driver: %s' % reply['value'])
 
-            self.stop_driver()
         finally:
-            self.keeprunning = False
+            self.stop_driver()
 
 def main():
     options = docopt.docopt(__doc__)
@@ -148,6 +192,20 @@ def main():
                    options['--klass'],
                    options['--command_port'],
                    options['--event_port'])
+    if options['start']:
+        c.start_driver()
+    elif options['stop']:
+        c.stop_driver()
+    elif options['configure']:
+        config = yaml.load(open(options['<config_file>']))
+        c.configure(config['port_agent_config'])
+        c.set_init_params(config['startup_config'])
+    elif options['connect']:
+        c.connect()
+    elif options['discover']:
+        c.discover()
+    elif options['execute']:
+        c.execute(options['<capability>'])
 
 if __name__ == '__main__':
-    main()
+    c = main()
