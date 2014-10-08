@@ -17,7 +17,6 @@ import docopt
 import json
 import time
 import zmq
-import IPython
 
 instrument_agent_port = 12572
 base_api_url = 'instrument/api'
@@ -149,7 +148,6 @@ def main():
                    options['--klass'],
                    options['--command_port'],
                    options['--event_port'])
-    IPython.embed()
 
 if __name__ == '__main__':
     main()
