@@ -1,20 +1,23 @@
-instrument: trhph 
-module: mi.instrument.uw.bars.ooicore.driver 
+instrument: pco2w_a 
+module: mi.instrument.sunburst.sami2_pco2.pco2a.driver 
 klass: InstrumentDriver
 command_port: 10001
 event_port: 10002
 port_agent_config:
   addr: 69.196.58.141
-  port: 13008
-  cmd_port: 12008
+  port: 13030
+  cmd_port: 12030
 expected_particles:
-- trhph_sample 
-- trhph_status
+- pco2w_a_configuration
+- pco2w_a_regular_status
+- pco2w_a_control_record
+- pco2w_a_battery_voltage
+- pco2w_a_thermistor_voltage
+- pco2w_a_sami_data_record
 startup_config:
   parameters:
 starting_state: DRIVER_STATE_COMMAND
 script:
-- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
-- [sleep, 5]
+- [sleep, 20]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

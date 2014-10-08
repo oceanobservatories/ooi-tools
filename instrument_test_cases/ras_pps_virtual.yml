@@ -1,16 +1,15 @@
-instrument: thsph 
-module: mi.instrument.um.thsph.ooicore.driver 
+instrument: ras_pps_virtual 
+module: mi.instrument.virtual.driver
 klass: InstrumentDriver
-command_port: 10001
-event_port: 10002
-port_agent_config:
-  addr: 69.196.58.141
-  port: 13022
-  cmd_port: 12022
-expected_particles:
-- thsph_sample
+command_port: 10000
+event_port: 10001
+port_agent_config: {}
 startup_config:
   parameters:
+expected_particles:
+- rasfl_parsed
+- ppsdn_parsed
+- D1000_sample 
 starting_state: DRIVER_STATE_COMMAND
 script:
 - [execute, DRIVER_EVENT_ACQUIRE_SAMPLE]

@@ -1,0 +1,23 @@
+instrument: vadcp_virtual 
+module: mi.instrument.virtual.driver
+klass: InstrumentDriver
+command_port: 10000
+event_port: 10001
+port_agent_config: {}
+startup_config:
+  parameters:
+expected_particles:
+- vadcp_4beam_system_configuration
+- vadcp_5thbeam_system_configuration
+- vadcp_ancillary_system_data
+- vadcp_transmit_path
+- vadcp_5thbeam_pd0_beam_parsed
+- vadcp_5thbeam_pd0_earth_parsed
+- vadcp_5thbeam_compass_calibration
+starting_state: DRIVER_STATE_COMMAND
+script:
+- [execute, PROTOCOL_EVENT_GET_CALIBRATION]
+- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+- [sleep, 20]
+- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

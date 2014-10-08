@@ -1,20 +1,25 @@
-instrument: trhph 
-module: mi.instrument.uw.bars.ooicore.driver 
+instrument: ctdbp 
+module: mi.instrument.seabird.sbe16plus_v2.ctdbp_no
 klass: InstrumentDriver
 command_port: 10001
 event_port: 10002
 port_agent_config:
   addr: 69.196.58.141
-  port: 13008
-  cmd_port: 12008
+  port: 13023
+  cmd_port: 12023
 expected_particles:
-- trhph_sample 
-- trhph_status
+- ctdbp_no_sample
+- ctdbp_no_status
+- ctdbp_no_calibration_coefficients
+- ctdbp_no_hardware
+- ctdbp_no_configuration
+- ctdbp_no_optode_settings
 startup_config:
   parameters:
 starting_state: DRIVER_STATE_COMMAND
 script:
 - [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+- [execute, PROTOCOL_EVENT_GET_CONFIGURATION]
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
-- [sleep, 5]
+- [sleep, 20]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

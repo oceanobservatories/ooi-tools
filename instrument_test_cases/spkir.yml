@@ -10,7 +10,8 @@ port_agent_config:
 startup_config:
   parameters:
 expected_particles:
-- [spkir_data_record, spkir_a_configuration_record]
+- spkir_data_record
+- spkir_a_configuration_record
 starting_state: DRIVER_STATE_COMMAND
 script:
 - [execute, DRIVER_EVENT_ACQUIRE_STATUS]

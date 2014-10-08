@@ -1,0 +1,29 @@
+instrument: adcps
+module: mi.instrument.teledyne.workhorse.adcp.driver
+klass: InstrumentDriver
+command_port: 10001
+event_port: 10002
+port_agent_config:
+  addr: 69.196.58.141
+  port: 13024
+  cmd_port: 12024
+startup_config:
+  parameters:
+expected_particles:
+- adcp_pd0_beam_parsed
+- adcp_pd0_earth_parsed
+- adcp_system_configuration
+- adcp_compass_calibration
+- adcp_ancillary_system_data
+- adcp_transmit_path
+starting_state: DRIVER_STATE_COMMAND
+script:
+- [execute, PROTOCOL_EVENT_GET_CALIBRATION]
+- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+- [sleep, 20]
+- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+~                                                                                                                       
+~                                                                                                                       
+~                                                                                                                       
+~                                                          

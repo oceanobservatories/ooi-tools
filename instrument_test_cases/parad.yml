@@ -9,6 +9,9 @@ port_agent_config:
   cmd_port: 12009
 startup_config:
   parameters:
+expected_particles:
+- parad_sa_sample
+- parad_sa_config
 starting_state: DRIVER_STATE_COMMAND
 script:
 - [execute, DRIVER_EVENT_ACQUIRE_STATUS]
