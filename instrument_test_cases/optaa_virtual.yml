@@ -1,18 +1,15 @@
-instrument: virtual_botpt
+instrument: virtual_optaa
 module: mi.instrument.virtual.driver
 klass: InstrumentDriver
-command_port: 20000
-event_port: 20001
+command_port: 10000
+event_port: 10001
 port_agent_config: {}
 startup_config:
   parameters:
-    botpt_nano_sample: 40
-    botpt_lily_sample: 1
-    botpt_iris_sample: 1
-    botpt_heat_sample: .1
+expected_particles:
+- [optaa_sample, optaa_status]
 starting_state: DRIVER_STATE_COMMAND
 script:
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
-- [wait_state, [DRIVER_STATE_AUTOSAMPLE, 10]]
 - [sleep, 20]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
