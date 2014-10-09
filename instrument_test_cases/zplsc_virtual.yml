@@ -1,4 +1,4 @@
-instrument: virtual_botpt
+instrument: zplsc_virtual
 module: mi.instrument.virtual.driver
 klass: InstrumentDriver
 command_port: 20000
@@ -6,12 +6,11 @@ event_port: 20001
 port_agent_config: {}
 startup_config:
   parameters:
-    botpt_nano_sample: 40
-    botpt_lily_sample: 1
-    botpt_iris_sample: 1
-    botpt_heat_sample: .1
+expected_particles:
+- zplsc_status
 starting_state: DRIVER_STATE_COMMAND
 script:
+- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
 - [wait_state, [DRIVER_STATE_AUTOSAMPLE, 10]]
 - [sleep, 20]
