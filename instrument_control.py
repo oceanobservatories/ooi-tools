@@ -109,7 +109,7 @@ class Controller(object):
         return requests.post(self.base_url + '/connect')
 
     def discover(self):
-        return requests.post(self.base_url + '/discover')
+        return requests.post(self.base_url + '/discover', data={'timeout': 300000})
 
     def set_resource(self, **kwargs):
         return requests.post(self.base_url + '/resource', data={'resource': json.dumps(kwargs)})
@@ -123,7 +123,7 @@ class Controller(object):
     def execute(self, command):
         return requests.post(self.base_url + '/execute', data={'command': json.dumps(command)})
 
-    def initialize_driver(self, target_state, port_config, init_config, timeout=60):
+    def initialize_driver(self, target_state, port_config, init_config, timeout=300):
         self.start_driver()
         self.start_event_thread()
         self.get_state()
