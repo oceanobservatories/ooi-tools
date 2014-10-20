@@ -32,6 +32,18 @@ base_api_url = 'instrument/api'
 log = logger.get_logger('instrument_control', file_output='output/instrument_control.log')
 
 
+def flatten(particle):
+    try:
+        for each in particle.get('values'):
+            id = each.get('value_id')
+            val = each.get('value')
+            particle[id] = val
+        del (particle['values'])
+    except:
+        log.error('Exception flattening particle: %s', particle)
+    return particle
+
+
 class Controller(object):
     def __init__(self, host, name, module, klass, command_port, event_port):
         self.host = host
@@ -44,7 +56,7 @@ class Controller(object):
         self.event_url = 'tcp://%s:%d' % (self.host, self.event_port)
         self.state = None
         self.keeprunning = True
-        self.samples = []
+        self.samples = {}
 
     def start_driver(self):
         payload = {
@@ -70,10 +82,12 @@ class Controller(object):
                 try:
                     evt = evt_socket.recv_json(flags=zmq.NOBLOCK)
                     if evt.get('type') == 'DRIVER_ASYNC_EVENT_SAMPLE':
-                        sample = json.loads(evt.get('value'))
-                        if sample.get('stream_name') != 'raw':
-                            self.samples.append(sample)
-                except zmq.ZMQError as e:
+                        sample = evt.get('value')
+                        stream_name = sample.get('stream_name')
+                        ts = sample.get(sample.get('preferred_timestamp', {}), 0)
+                        if stream_name != 'raw' and ts > 0:
+                            self.samples.setdefault(stream_name, {})[ts] = flatten(sample)
+                except zmq.ZMQError:
                     time.sleep(.1)
 
         t = threading.Thread(target=loop)
@@ -161,7 +175,7 @@ class Controller(object):
         raise Exception('Timed out waiting for state: %s' % state)
 
     def run_script(self, script):
-        self.samples = []
+        self.samples = {}
         try:
             for command, args in script:
                 if command == 'sleep':
