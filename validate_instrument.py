@@ -7,6 +7,7 @@ Usage:
 """
 
 import os
+import time
 import pprint
 import docopt
 import yaml
@@ -17,6 +18,9 @@ import instrument_control
 
 
 log = logger.get_logger('validate_instrument', file_output='output/validate_instrument.log')
+
+MAX_ATTEMPTS = 5
+RECORDS_PER_REQUEST = 1000
 
 
 class TestCase(object):
@@ -153,57 +157,36 @@ def diff(a, b, ignore=None, rename=None):
     return failures
 
 
-def test_results(hostname, instrument, results):
-    scorecard = Scorecard()
-    for sample in results:
-        log.debug('Expected: %s', sample)
-        sample = flatten(sample)
-        stream = sample.get('stream_name')
-        ts = sample.get(sample.get('preferred_timestamp'))
-        result = edex_tools.get_from_edex(hostname,
-                                          stream_name=stream,
-                                          sensor=instrument,
-                                          start_time=ts,
-                                          stop_time=ts)
-        log.debug('Expected: %s', sample)
-        log.debug('Retrieved: %s', result)
-        retrieved = result.values()
-        if len(result.values()) == 0:
-            scorecard.record(stream, [(edex_tools.FAILURES.MISSING_SAMPLE, (ts, stream))])
-        else:
-            scorecard.record(stream, diff(sample, result.values()[0]))
+def test_results(hostname, instrument, expected_results, scorecard=None, attempts=0):
+    num_items = sum([len(x) for x in expected_results.values()])
+    log.info('testing %d results (%s), attempt # %d', num_items, type(expected_results), attempts)
+    if scorecard is None:
+        scorecard = Scorecard()
+    not_found = {}
+    count = 0
+    for stream in expected_results:
+        times = sorted(expected_results[stream].keys())[:RECORDS_PER_REQUEST]
+        retrieved = edex_tools.get_from_edex(hostname,
+                                             stream_name=stream,
+                                             sensor=instrument,
+                                             start_time=times[0],
+                                             stop_time=times[-1])
+
+        for ts, particle in expected_results[stream].iteritems():
+            if (ts, stream) not in retrieved:
+                if attempts > MAX_ATTEMPTS:
+                    scorecard.record(stream, [(edex_tools.FAILURES.MISSING_SAMPLE, (ts, stream))])
+                else:
+                    not_found.setdefault(stream, {})[ts] = particle
+            else:
+                scorecard.record(stream, diff(particle, retrieved[(ts,stream)]))
+
+    attempts += 1
+    if not_found:
+        time.sleep(1)
+        test_results(hostname, instrument, not_found, scorecard=scorecard, attempts=attempts)
 
     return scorecard
-
-
-def flatten(particle):
-    for each in particle.get('values'):
-        id = each.get('value_id')
-        val = each.get('value')
-        particle[id] = val
-    del (particle['values'])
-    return particle
-
-
-def get_expected(filename):
-    """
-    Loads expected results from the supplied YAML file
-    :param filename:
-    :return: list of records containing the expected results
-    """
-    return_data = {}
-    for each in open(filename, 'r').read().split('\n\n'):
-        if not each:
-            continue
-        data = json.loads(each)
-        if data is not None:
-            particle = flatten(data)
-            stream = particle.get('stream_name')
-
-            if stream is not None:
-                return_data.setdefault(stream, []).append(particle)
-
-    return return_data
 
 
 def test(test_case, hostname):
@@ -219,6 +202,8 @@ def test(test_case, hostname):
                                  test_case.port_agent_config,
                                  test_case.startup_config)
     controller.run_script(test_case.script)
+    # ensure ALL particles have been persisted (accumulator currently configured to publish every 5s)
+    time.sleep(5)
     scorecard[test_case.instrument] = test_results(hostname, test_case.instrument, controller.samples)
 
     for instrument, card in scorecard.iteritems():
