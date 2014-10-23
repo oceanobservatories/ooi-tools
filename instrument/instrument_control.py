@@ -17,8 +17,15 @@ Options:
   --event_port=<event_port>       The port to host the event interface     [default: 10001]
 
 """
+import os
+import sys
+
+instrument_dir = os.path.dirname(os.path.realpath('__file__'))
+tools_dir = os.path.dirname(instrument_dir)
+
+sys.path.append(tools_dir)
+
 import threading
-import logger
 import requests
 import docopt
 import json
@@ -26,10 +33,13 @@ import time
 import yaml
 import zmq
 
+from common import logger
+
 instrument_agent_port = 12572
 base_api_url = 'instrument/api'
 
-log = logger.get_logger('instrument_control', file_output='output/instrument_control.log')
+log_dir = os.path.join(instrument_dir, 'output_%s' % time.strftime('%Y%m%d-%H%M%S'))
+log = logger.get_logger(file_output=os.path.join(log_dir, 'instrument_control.log'))
 
 
 def flatten(particle):

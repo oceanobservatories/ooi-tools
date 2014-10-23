@@ -1,4 +1,4 @@
-output/
+output*
 preload.db
 .idea
 *.xml

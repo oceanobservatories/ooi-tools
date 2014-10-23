@@ -10,7 +10,7 @@ import time
 from logger import get_logger
 
 
-log = get_logger('edex_tools', file_output='output/everything.log')
+log = get_logger()
 
 
 def purge_edex():
