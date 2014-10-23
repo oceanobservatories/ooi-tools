@@ -224,7 +224,7 @@ if __name__ == '__main__':
     hostname = options.get('<host>')
     test_cases = []
     if len(options['<test_cases>']) == 0:
-        test_cases = list(TestCase.read_test_cases('instrument_test_cases'))
+        test_cases = list(TestCase.read_test_cases('test_cases'))
     else:
         for each in options['<test_cases>']:
             test_cases.extend(list(TestCase.read_test_cases(each)))
