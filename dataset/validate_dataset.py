@@ -1,17 +1,21 @@
 #!/usr/bin/env python
 
+import os
+import sys
+
+dataset_dir = os.path.dirname(os.path.realpath('__file__'))
+tools_dir = os.path.dirname(dataset_dir)
+
+sys.path.append(tools_dir)
+
+import time
 import glob
+import yaml
 import shutil
 import pprint
-import time
-import uuid
-import sys
-import os
 
-import yaml
-import logger
-import edex_tools
-
+from common import logger
+from common import edex_tools
 
 edex_dir = os.getenv('EDEX_HOME')
 if edex_dir is None:
@@ -20,10 +24,11 @@ startdir = os.path.join(edex_dir, 'data/utility/edex_static/base/ooi/parsers/mi-
 drivers_dir = os.path.join(startdir, 'dataset/driver')
 ingest_dir = os.path.join(edex_dir, 'data', 'ooi')
 log_dir = os.path.join(edex_dir, 'logs')
-output_dir = 'output'
+
+output_dir = os.path.join(dataset_dir, 'output_%s' % time.strftime('%Y%m%d-%H%M%S'))
 
 
-log = logger.get_logger('validate_dataset', file_output=os.path.join(output_dir, 'everything.log'))
+log = logger.get_logger(file_output=os.path.join(output_dir, 'everything.log'))
 
 
 class TestCase(object):
@@ -272,7 +277,7 @@ def test(test_cases):
     last_instrument = None
     for test_case in test_cases:
         logger.remove_handler(last_instrument)
-        logger.add_handler(test_case.instrument)
+        logger.add_handler(test_case.instrument, dir=output_dir)
         last_instrument = test_case.instrument
 
         log.debug('Processing test case: %s', test_case)

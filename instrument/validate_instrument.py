@@ -5,19 +5,25 @@ Usage:
   validate_instrument.py <host>
   validate_instrument.py <host> <test_cases>...
 """
-
 import os
+import sys
+
+instrument_dir = os.path.dirname(os.path.realpath('__file__'))
+tools_dir = os.path.dirname(instrument_dir)
+
+sys.path.append(tools_dir)
+
 import time
+import yaml
 import pprint
 import docopt
-import yaml
-import json
-import edex_tools
-import logger
 import instrument_control
 
+from common import edex_tools
+from common import logger
 
-log = logger.get_logger('validate_instrument', file_output='output/validate_instrument.log')
+log_dir = os.path.join(instrument_dir, 'output_%s' % time.strftime('%Y%m%d-%H%M%S'))
+log = logger.get_logger(file_output=os.path.join(log_dir, 'validate_instrument.log'))
 
 MAX_ATTEMPTS = 5
 RECORDS_PER_REQUEST = 1000

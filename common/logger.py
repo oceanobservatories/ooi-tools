@@ -7,10 +7,10 @@ _logs = {}
 
 
 def get_formatter():
-    return logging.Formatter('%(asctime)s - %(name)s - %(levelname)-7s %(message)s')
+    return logging.Formatter('%(asctime)s - %(levelname)-7s %(message)s')
 
 
-def get_logger(name, level=logging.INFO, file_output=None, file_level=logging.DEBUG):
+def get_logger(name='logger', level=logging.INFO, file_output=None, file_level=logging.DEBUG):
     if not name in _logs:
         logger = logging.getLogger(name)
         logger.setLevel(logging.DEBUG)
@@ -43,9 +43,12 @@ def get_logger(name, level=logging.INFO, file_output=None, file_level=logging.DE
     return _logs[name]
 
 
-def add_handler(name, level=logging.DEBUG):
+def add_handler(name, dir=".", level=logging.DEBUG):
     #create filehandler for each instrument
-    file_path = 'output/%s.log' % name
+    file_path = os.path.join(dir, '%s.log' % name)
+    parent_dir = os.path.dirname(file_path)
+    if not os.path.exists(parent_dir):
+        os.makedirs(parent_dir)
     fh = logging.FileHandler(file_path)
     fh.name = name
     fh.setLevel(level)
