@@ -1,11 +1,15 @@
 instrument: massp_virtual
 module: mi.instrument.virtual.driver
 klass: InstrumentDriver
-command_port: 10000
-event_port: 10001
+command_port: 10017
+event_port: 10018
 port_agent_config: {}
 startup_config:
   parameters:
+   massp_mcu_status: 1
+   massp_turbo_status: 1
+   massp_rga_status: 1
+   massp_rga_sample: 1
 expected_particles:
 - massp_mc_status
 - massp_turbo_status
@@ -16,3 +20,4 @@ script:
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
 - [sleep, 5]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+- [sleep, 5]

@@ -1,17 +1,18 @@
 instrument: virtual_botpt
 module: mi.instrument.virtual.driver
 klass: InstrumentDriver
-command_port: 10000
-event_port: 10001
+command_port: 10004
+event_port: 10005
 port_agent_config: {}
 startup_config:
   parameters:
-    botpt_nano_sample: 40
+    botpt_nano_sample: 1
     botpt_lily_sample: 1
     botpt_iris_sample: 1
-    botpt_heat_sample: .1
+    botpt_heat_sample: 1
 starting_state: DRIVER_STATE_COMMAND
 script:
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
-- [sleep, 20]
+- [sleep, 5]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+- [sleep, 5]

@@ -1,8 +1,8 @@
 instrument: spkir 
 module: mi.instrument.satlantic.ocr_507_icsw.ooicore.driver
 klass: SatlanticOCR507InstrumentDriver
-command_port: 10001
-event_port: 10002
+command_port: 10037
+event_port: 10038
 port_agent_config:
   addr: 69.196.58.141
   port: 13031
@@ -15,6 +15,7 @@ expected_particles:
 starting_state: DRIVER_STATE_COMMAND
 script:
 - [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+- [sleep, 20]
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
-- [sleep, 5]
+- [sleep, 2]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

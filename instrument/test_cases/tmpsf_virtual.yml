@@ -1,20 +1,18 @@
-instrument: flord_virtual
+instrument: virtual_tmpsf 
 module: mi.instrument.virtual.driver
 klass: InstrumentDriver
-command_port: 10014
-event_port: 10015
+command_port: 10041
+event_port: 10042
 port_agent_config: {}
 startup_config:
   parameters:
-   flort_d_status: 1
-   flort_d_data_record: 1
+   tmpsf_sample: 1
+   tmpsf_engineering: 1
 expected_particles:
-- flort_d_status
-- flort_d_data_record
+- tmpsf_sample
+- tmpsf_engineering
 starting_state: DRIVER_STATE_COMMAND
 script:
-- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
-- [execute, DRIVER_EVENT_ACQUIRE_SAMPLE]
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
 - [sleep, 5]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

@@ -1,0 +1,27 @@
+instrument: ctdpf_optode_virtual
+module: mi.instrument.virtual.driver 
+klass: InstrumentDriver
+command_port: 10010
+event_port: 10011
+port_agent_config: {}
+startup_config:
+  parameters:
+   ctdpf_optode_sample: 1
+   ctdpf_optode_status: 1
+   ctdpf_optode_calibration_coefficients: 1
+   ctdpf_optode_hardware: 1
+   ctdpf_optode_configuration: 1
+   ctdpf_optode_settings: 1
+expected_particles:
+- ctdpf_optode_sample
+- ctdpf_optode_status
+- ctdpf_optode_calibration_coefficients
+- ctdpf_optode_hardware
+- ctdpf_optode_configuration
+- ctdpf_optode_settings
+starting_state: DRIVER_STATE_COMMAND
+script:
+- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+- [sleep, 10]
+- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+- [sleep, 10]

@@ -1,8 +1,8 @@
 instrument: trhph 
 module: mi.instrument.uw.bars.ooicore.driver 
 klass: InstrumentDriver
-command_port: 10001
-event_port: 10002
+command_port: 10043
+event_port: 10044
 port_agent_config:
   addr: 69.196.58.141
   port: 13008
@@ -14,7 +14,9 @@ startup_config:
   parameters:
 starting_state: DRIVER_STATE_COMMAND
 script:
+- [sleep, 10]
 - [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+- [sleep, 20]
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
-- [sleep, 5]
+- [sleep, 20]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

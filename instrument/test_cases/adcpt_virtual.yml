@@ -1,11 +1,17 @@
 instrument: adcpt_virtual
 module: mi.instrument.virtual.driver
 klass: InstrumentDriver
-command_port: 10000
-event_port: 10001
+command_port: 10002
+event_port: 10003
 port_agent_config: {}
 startup_config:
   parameters:
+    adcp_pd0_beam_parsed: 1
+    adcp_pd0_earth_parsed: 1
+    adcp_system_configuration: 1
+    adcp_compass_calibration: 1
+    adcp_ancillary_system_data: 1
+    adcp_transmit_path: 1
 expected_particles:
 - adcp_pd0_beam_parsed
 - adcp_pd0_earth_parsed
@@ -15,9 +21,7 @@ expected_particles:
 - adcp_transmit_path
 starting_state: DRIVER_STATE_COMMAND
 script:
-- [execute, PROTOCOL_EVENT_GET_CALIBRATION]
-- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
-- [sleep, 20]
+- [sleep, 8]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
-
+- [sleep, 5]
