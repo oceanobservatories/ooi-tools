@@ -1,11 +1,14 @@
 instrument: nutnr_virtual
 module: mi.instrument.virtual.driver
 klass: InstrumentDriver
-command_port: 10000
-event_port: 10001
+command_port: 10020
+event_port: 10021
 port_agent_config: {}
 startup_config:
   parameters:
+   nutnr_a_sample: 1
+   nutnr_a_status: 1
+   nutnr_a_test: 1
 expected_particles:
 - nutnr_a_sample
 - nutnr_a_status
@@ -16,5 +19,5 @@ script:
 - [execute, DRIVER_EVENT_ACQUIRE_STATE]
 - [execute, DRIVER_EVENT_TEST]
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
-- [sleep, 20]
+- [sleep, 5]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

@@ -1,11 +1,15 @@
 instrument: camds_virtual 
 module: mi.instrument.virtual.driver
 klass: InstrumentDriver
-command_port: 10000
-event_port: 10001
+command_port: 10006
+event_port: 10007
 port_agent_config: {}
 startup_config:
   parameters:
+   camds_video: 1
+   camds_image_metadata: 1
+   camds_health_status: 1
+   camds_disk_status: 1
 expected_particles:
 - camds_video
 - camds_image_metadata
@@ -13,8 +17,6 @@ expected_particles:
 - camds_disk_status
 starting_state: DRIVER_STATE_COMMAND
 script:
-- [execute, DRIVER_EVENT_ACQUIRE_SAMPLE]
-- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
-- [sleep, 20]
+- [sleep, 5]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

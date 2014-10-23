@@ -1,14 +1,17 @@
 instrument: ras_pps_virtual 
 module: mi.instrument.virtual.driver
 klass: InstrumentDriver
-command_port: 10000
-event_port: 10001
+command_port: 10035
+event_port: 10036
 port_agent_config: {}
 startup_config:
   parameters:
+   rasfl_sample_result: 1
+   ppsdn_sample_result: 1
+   D1000_sample: 1
 expected_particles:
-- rasfl_parsed
-- ppsdn_parsed
+- rasfl_sample_result
+- ppsdn_sample_result
 - D1000_sample 
 starting_state: DRIVER_STATE_COMMAND
 script:

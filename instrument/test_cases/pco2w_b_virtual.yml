@@ -1,11 +1,18 @@
 instrument: pco2w_b_virtual 
 module: mi.instrument.virtual.driver
 klass: InstrumentDriver
-command_port: 10000
-event_port: 10001
+command_port: 10029
+event_port: 10030
 port_agent_config: {}
 startup_config:
   parameters:
+   pco2w_b_dev1_data_record: 1
+   pco2w_b_configuration: 1
+   pco2w_b_regular_status: 1
+   pco2w_b_control_record: 1
+   pco2w_b_battery_voltage: 2
+   pco2w_b_thermistor_voltage: 2
+   pco2w_b_sami_data_record: 1
 expected_particles:
 - pco2w_b_dev1_data_record 
 - pco2w_b_configuration
@@ -17,5 +24,6 @@ expected_particles:
 starting_state: DRIVER_STATE_COMMAND
 script:
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
-- [sleep, 20]
+- [sleep, 5]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+- [sleep, 5]

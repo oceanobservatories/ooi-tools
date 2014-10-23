@@ -1,12 +1,9 @@
-instrument: phsen 
-module: mi.instrument.sunburst.sami2_ph.ooicore.driver
+instrument: phsen_virtual
+module: mi.instrument.virtual.driver
 klass: InstrumentDriver
 command_port: 10031
 event_port: 10032
-port_agent_config:
-  addr: 69.196.58.141
-  port: 13029
-  cmd_port: 12029
+port_agent_config: {}
 expected_particles:
 - phsen_configuration
 - phsen_regular_status
@@ -15,9 +12,13 @@ expected_particles:
 - phsen_data_record
 startup_config:
   parameters:
+   phsen_configuration: 1
+   phsen_regular_status: 1
+   phsen_battery_voltage: 1
+   phsen_thermistor_voltage: 1
+   phsen_data_record: 1
 starting_state: DRIVER_STATE_COMMAND
 script:
-- [execute, DRIVER_EVENT_SEAWATER_FLUSH]
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
 - [sleep, 20]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

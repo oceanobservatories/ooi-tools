@@ -1,12 +1,9 @@
-instrument: pco2w_a 
-module: mi.instrument.sunburst.sami2_pco2.pco2a.driver 
+instrument: pco2w_a_virtual 
+module: mi.instrument.virtual.driver 
 klass: InstrumentDriver
 command_port: 10026
 event_port: 10027
-port_agent_config:
-  addr: 69.196.58.141
-  port: 13030
-  cmd_port: 12030
+port_agent_config: {}
 expected_particles:
 - pco2w_a_configuration
 - pco2w_a_regular_status
@@ -16,8 +13,14 @@ expected_particles:
 - pco2w_a_sami_data_record
 startup_config:
   parameters:
+   pco2w_a_configuration: 1
+   pco2w_a_regular_status: 1
+   pco2w_a_control_record: 1
+   pco2w_a_battery_voltage: 1
+   pco2w_a_thermistor_voltage: 1
+   pco2w_a_sami_data_record: 1
 starting_state: DRIVER_STATE_COMMAND
 script:
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
-- [sleep, 20]
+- [sleep, 10]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

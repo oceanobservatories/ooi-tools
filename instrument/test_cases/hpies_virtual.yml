@@ -1,0 +1,30 @@
+instrument: hpies_virtual 
+module: mi.instrument.virtual.driver 
+klass: InstrumentDriver
+command_port: 10111
+event_port: 10112
+port_agent_config: {}
+expected_particles:
+- hpies_data_header
+- horizontal_electric_field
+- motor_current
+- calibration_status
+- hpies_status
+- echo_sounding
+- ies_status
+- stm_timestamp
+startup_config:
+  parameters:
+    hpies_data_header: 1
+    horizontal_electric_field: 1
+    motor_current: 1
+    calibration_status: 1
+    hpies_status: 1
+    echo_sounding: 1
+    ies_status: 1
+    stm_timestamp: 1
+starting_state: DRIVER_STATE_COMMAND
+script:
+- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+- [sleep, 20]
+- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
