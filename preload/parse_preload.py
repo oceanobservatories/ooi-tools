@@ -86,18 +86,21 @@ def xlsx_to_dictionary(workbook):
     for sheet in workbook.worksheets:
         if sheet.title == 'Info':
             continue
-        rows = [[cell.value for cell in row] for row in sheet.rows]
-        if len(rows) <= 1: continue
-        keys = rows[0]
-        while keys[-1] is None:
-            keys = keys[:-1]
-        #log.debug('sheet: %s keys: %s', sheet.title, keys)
-        parsed[sheet.title] = [keys]
-        for row in rows[1:]:
-            row_set = set(row)
-            if len(row_set) == 1 and None in row_set: continue
-            #log.debug('sheet: %s keys: %s', sheet.title, row[:len(keys)])
-            parsed[sheet.title].append(row[:len(keys)])
+        try:
+            rows = [[cell.value for cell in row] for row in sheet.rows]
+            if len(rows) <= 1: continue
+            keys = rows[0]
+            while keys[-1] is None:
+                keys = keys[:-1]
+            #log.debug('sheet: %s keys: %s', sheet.title, keys)
+            parsed[sheet.title] = [keys]
+            for row in rows[1:]:
+                row_set = set(row)
+                if len(row_set) == 1 and None in row_set: continue
+                #log.debug('sheet: %s keys: %s', sheet.title, row[:len(keys)])
+                parsed[sheet.title].append(row[:len(keys)])
+        except:
+            log.error("unable to parse sheet: %s", sheet.title)
     return parsed
 
 def get_parameters(param_list, param_dict):
