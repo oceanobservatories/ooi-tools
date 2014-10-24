@@ -2,4 +2,4 @@ instrument: mopak_o_dcl_telemetered
 resource: cg_stc_eng/stc/resource
 endpoint: cgStcEng/mopakTelemetered
 pairs:
-  - [first.mopak.log,first_mopak.result.yml]
+  - [20140120_140004.mopak.log,first_mopak.result.yml]

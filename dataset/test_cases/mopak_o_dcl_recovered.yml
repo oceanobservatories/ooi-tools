@@ -2,4 +2,4 @@ instrument: mopak_o_dcl_recovered
 resource: cg_stc_eng/stc/resource
 endpoint: cgStcEng/mopakRecovered
 pairs:
-  - [first.mopak.log, first_mopak_recov.result.yml]
+  - [20140120_140004.mopak.log, first_mopak_recov.result.yml]
