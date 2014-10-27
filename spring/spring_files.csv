@@ -1,6 +1,0 @@
-camel_context,driver_name,sensor_id,suffix,driver_location
-adcpa-m-glider-decode-camel,adcpa-m-glider,XX00XXXX-XX00X-00-ADCPMR000,telemetered,/mi/dataset/driver/moas/gl/adcpa//adcpa_m_glider_telemetered_driver.py
-adcpa-m-glider-decode-camel,adcpa-m-glider,XX00XXXX-XX00X-00-ADCPMR000,recovered,/mi/dataset/driver/moas/gl/adcpa//adcpa_m_glider_recovered_driver.py
-ctdpf-ckl-mmp-cds-decode-camel,ctdpf_ckl_mmp_cds,XX00XXXX-XX00X-00-CTDPFM000,both,/mi/dataset/driver/ctdpf_ckl/mmp_cds/ctdpf_ckl_mmp_cds_driver.py
-flort-dj-decode-camel,flort_dj,XX00XXXX-XX00X-00-FLORTDJT0,telemetered,/mi/dataset/driver/flort_dj/dcl/flort_dj_dcl_telemetered_driver.py
-flort-dj-decode-camel,flort_dj,XX00XXXX-XX00X-00-FLORTDJT0,recovered,/mi/dataset/driver/flort_dj/dcl/flort_dj_dcl_recovered_driver.py
