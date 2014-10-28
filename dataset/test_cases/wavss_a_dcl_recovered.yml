@@ -1,0 +1,5 @@
+instrument: wavss_a_dcl_recovered 
+resource: wavss_a/dcl
+endpoint: wavss_a_dcl_rec
+pairs:
+  - [20140825.wavss.log, 20140825_recov.yml]

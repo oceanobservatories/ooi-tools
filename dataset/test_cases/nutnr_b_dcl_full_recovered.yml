@@ -1,0 +1,5 @@
+instrument: nutnr_b_dcl_full_recovered 
+resource: nutnr_b/dcl_full
+endpoint: nutnr_b_dcl_full/recovered
+pairs:
+  - [20020125.nutnr_b_dcl_full.log, rec_20020125.nutnr_b_dcl_full.yml]
