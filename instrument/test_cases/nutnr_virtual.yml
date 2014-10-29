@@ -15,9 +15,6 @@ expected_particles:
 - nutnr_a_test
 starting_state: DRIVER_STATE_COMMAND
 script:
-- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
-- [execute, DRIVER_EVENT_ACQUIRE_STATE]
-- [execute, DRIVER_EVENT_TEST]
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
 - [sleep, 5]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

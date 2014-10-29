@@ -1,0 +1,5 @@
+instrument: phsen_abcdef_dcl_recovered 
+resource: phsen_abcdef/dcl/resource
+endpoint: phsen_abcdef_dcl_recov
+pairs:  
+ - [CE01ISSM-D00001-dcl35-phsen2_20140424.phsen2.log, CE01ISSM-D00001-dcl35-phsen2_20140424.phsen2-RECOVERED.yml]

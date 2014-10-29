@@ -1,5 +1,5 @@
 instrument: metbk_a_dcl_telemetered
-resource: metbk_a/dcl/
+resource: metbk_a/dcl/resource
 endpoint: metbk_a/telemetered
 pairs:
-  - [20140901.metbk2_no_sensor.log, tel_20140901.metbk2.yml]
+  - [20140805.metbk2.log, tel_20140805.metbk2.yml]

@@ -1,5 +1,5 @@
 instrument: metbk_a_dcl_recovered
-resource: metbk_a/dcl/
+resource: metbk_a/dcl/resource
 endpoint: metbk_a/recovered
 pairs:
   - [20140902.metbk2.log, rec_20140902.metbk2.yml]
