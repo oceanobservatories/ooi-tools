@@ -1,0 +1,5 @@
+instrument: phsen_abcdef_dcl_telemetered
+resource: phsen_abcdef/dcl/resource
+endpoint: phsen_abcdef_dcl_telem
+pairs:
+  - [phsen_dcl_large.log, phsen_dcl_large-TELEMETERED.yml]
