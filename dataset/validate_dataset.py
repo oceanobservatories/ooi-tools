@@ -171,9 +171,13 @@ def diff(stream, a, b, ignore=None, rename=None):
             value = v
             if type(value) == str:
                 value = value.strip()
+            elif type(value) == float:
+                value = round(value, 3)
             rvalue = b[k]
             if type(rvalue) == str:
                 rvalue = rvalue.strip()
+            elif type(rvalue) == float:
+                rvalue = round(rvalue, 3)
         if value != rvalue:
             failed = False
             if 'timestamp' in k:
