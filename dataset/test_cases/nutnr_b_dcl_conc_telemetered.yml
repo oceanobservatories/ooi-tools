@@ -1,4 +1,4 @@
-instrument: nutnr_b_dcl_conc_telemetered 
+instrument: nutnr_b_dcl_conc 
 resource: nutnr_b/dcl_conc/resource
 endpoint: nutnr_b_dcl_conc/telemetered
 pairs:
