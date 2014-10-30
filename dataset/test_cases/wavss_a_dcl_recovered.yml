@@ -1,4 +1,4 @@
-instrument: wavss_a_dcl_recovered 
+instrument: wavss_a_dcl
 resource: wavss_a/dcl/resource
 endpoint: wavss_a_dcl_recov 
 pairs:
