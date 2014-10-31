@@ -30,6 +30,8 @@ output_dir = os.path.join(dataset_dir, 'output_%s' % time.strftime('%Y%m%d-%H%M%
 
 log = logger.get_logger(file_output=os.path.join(output_dir, 'everything.log'))
 
+DEFAULT_STANDARD_TIMEOUT = 60
+
 
 class TestCase(object):
     def __init__(self, config):
@@ -38,6 +40,9 @@ class TestCase(object):
         self.resource = os.path.join(drivers_dir, config.get('resource'))
         self.endpoint = os.path.join(ingest_dir, config.get('endpoint'))
         self.pairs = config.get('pairs', [])
+        # Attempt to obtain a timeout value from the test_case yml.  Default it to 
+        # DEFAULT_STANDARD_TIMEOUT if no yml value was provided.
+        self.timeout = config.get('timeout', DEFAULT_STANDARD_TIMEOUT)
 
     def __str__(self):
         return pprint.pformat(self.config)
@@ -228,7 +233,7 @@ def find_latest_log():
     return fh
 
 
-def watch_log_for(expected_string, logfile=None, expected_count=1, timeout=60):
+def watch_log_for(expected_string, logfile=None, expected_count=1, timeout=DEFAULT_STANDARD_TIMEOUT):
     if logfile is None:
         logfile = find_latest_log()
     log.info('waiting for %s in logfile: %s', expected_string, logfile.name)
@@ -290,7 +295,7 @@ def test(test_cases):
             copy_file(test_case.resource, test_case.endpoint, test_file)
             expected = get_expected(os.path.join(drivers_dir, test_case.resource, yaml_file))
             try:
-                watch_log_for('Ingest: EDEX: Ingest', logfile=logfile)
+                watch_log_for('Ingest: EDEX: Ingest', logfile=logfile, timeout=test_case.timeout)
                 time.sleep(1)
             except:
                 # didn't see any ingest, proceed, results should be all failed
