@@ -174,21 +174,20 @@ def diff(stream, a, b, ignore=None, rename=None):
             value = v.get('value')
             rvalue = round(b[k], _round)
         else:
-            value = v
-            if type(value) == str:
-                value = value.strip()
-            elif type(value) == float:
-                if math.isnan(value):
-                    value = 'NaN'
-                else:
-                    value = round(value, 3)
-            elif type(value) == list:
-                convertNan(value)
-            rvalue = b[k]
-            if type(rvalue) == str:
-                rvalue = rvalue.strip()
-            elif type(rvalue) == float:
-                rvalue = round(rvalue, 3)
+
+            value = recursiveMethod(v)
+            # value = v
+            # if type(value) == str:
+            #     value = value.strip()
+            # elif type(value) == float:
+            #     value = round(value, 3)
+
+            rvalue = recursiveMethod(b[k])
+            # rvalue = b[k]
+            # if type(rvalue) == str:
+            #     rvalue = rvalue.strip()
+            # elif type(rvalue) == float:
+            #     rvalue = round(rvalue, 3)
         if value != rvalue:
             failed = False
             if 'timestamp' in k:
@@ -200,7 +199,7 @@ def diff(stream, a, b, ignore=None, rename=None):
                 try:
                     rvalue = '%12.3f' % float(value)
                 except Exception as e:
-                   log.error('Exception massaging timestamp to string: %s', e) 
+                   log.error('Exception massaging timestamp to string: %s', e)
                 if value != rvalue: failed = True
             else:
                 failed = True
@@ -217,6 +216,20 @@ def diff(stream, a, b, ignore=None, rename=None):
             log.error('%s - item in retrieved data not in expected data: %s', stream, k)
 
     return failures
+
+
+
+def recursiveMethod(value):
+
+    if type(value) == str:
+        return value.strip()
+    elif type(value) == float and math.isnan(value):
+        return 'NaN'
+    elif type(value) == float:
+        return round(value, 3)
+    elif type(value) == list:
+        for i, item in enumerate(value):
+            value[i] = recursiveMethod(item)
 
 def convertNan(x):
     for i, item in enumerate(x):
