@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import codecs
 
 import os
 import sqlite3
@@ -47,7 +48,7 @@ log = get_logger()
 def massage_value(x):
     if x is None:
         return ''
-    return unicode(x)
+    return unicode(x.strip())
 
 
 def streams_to_xml(stream_dict, param_dict, outputfile):
@@ -60,9 +61,9 @@ def streams_to_xml(stream_dict, param_dict, outputfile):
         for param_id in params:
             param = param_dict.get(param_id.strip())
             if param is None:
-                rendered_params.append(stream_param_template % (param_id, "NOT FOUND"))
+                rendered_params.append(stream_param_template % (param_id.strip(), "NOT FOUND"))
             else:
-                rendered_params.append(stream_param_template % (param.id, param.name))
+                rendered_params.append(stream_param_template % (param.id.strip(), param.name.strip()))
         rendered_streams.append(stream_template % (stream.name, '\n'.join(rendered_params)))
     output = streams_template % '\n'.join(rendered_streams)
     outputfile.write(output)
@@ -83,7 +84,7 @@ def params_to_xml(param_dict, outputfile):
                            'precision': massage_value(param.precision)}
         )
     outputfile.write(
-        minidom.parseString(tostring(root, encoding='UTF-8')).toprettyxml(encoding='UTF-8'))
+        minidom.parseString(tostring(root, encoding='UTF-8')).toprettyxml())
 
 def main():
     if not os.path.exists(dbfile):
@@ -93,8 +94,8 @@ def main():
     conn = sqlite3.connect(dbfile)
     stream_dict = load_paramdicts(conn)[1]
     param_dict = load_paramdefs(conn)
-    streams_to_xml(stream_dict, param_dict, open('streams.xml', 'w'))
-    params_to_xml(param_dict, open('params.xml', 'w'))
+    streams_to_xml(stream_dict, param_dict, codecs.open('streams.xml', 'w', encoding='utf-8'))
+    params_to_xml(param_dict, codecs.open('params.xml', 'w', encoding='utf-8'))
 
 
 main()
