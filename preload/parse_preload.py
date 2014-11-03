@@ -2,12 +2,6 @@
 """
     Usage:
         ./parse_preload.py [--rebuild]
-
-    To run:
-        create virtenv
-        pip install openpyxl
-        pip install docopt
-        run as above...
 """
 from collections import namedtuple, Counter
 import json
@@ -15,42 +9,34 @@ import json
 import os
 import sqlite3
 import logging
-import urllib2
-
-try:
-    import openpyxl
-    import docopt
-except:
-    import sys
-    sys.stderr.write(__doc__)
-    sys.exit(1)
+import gdata.spreadsheet.service
+import docopt
 
 __author__ = 'pcable'
 
-preload_path="https://docs.google.com/spreadsheet/pub?key=0AttCeOvLP6XMdG82NHZfSEJJOGdQTkgzb05aRjkzMEE&output=xls"
-assetmappings_path="https://docs.google.com/spreadsheet/pub?key=0AttCeOvLP6XMdFVUeDdoUTU0b0NFQ1dCVDhuUjY0THc&output=xls"
+key = '1jIiBKpVRBMU5Hb1DJqyR16XCkiX-CuTsn1Z1VnlRV4I'
 
 IA_SELECT = """
-SELECT id, scenario, ia_driver_uri, ia_driver_module, ia_driver_class, stream_configurations, agent_default_config
+SELECT id, scenario, iadriveruri, iadrivermodule, iadriverclass, streamconfigurations, agentdefaultconfig
 FROM instrumentagent
 WHERE id like 'IA%%'
 """
 
 STREAM_SELECT = """
-SELECT id, scenario, cfg_stream_type, cfg_stream_name, cfg_parameter_dictionary_name
+SELECT id, scenario, cfgstreamtype, cfgstreamname, cfgparameterdictionaryname
 FROM streamconfiguration
 WHERE id like 'SC%'
 """
 
 PARAMDICT_SELECT = """
-SELECT id, scenario, name, parameter_ids, temporal_parameter
+SELECT id, scenario, name, parameterids, temporalparameter
 FROM parameterdictionary
 WHERE id like 'DICT%'
 """
 
 PARAMDEF_SELECT = """
-SELECT id, scenario, name, hid, parameter_type, value_encoding, unit_of_measure, fill_value, display_name,
-        precision, parameter_function_id, parameter_function_map, data_product_identifier
+SELECT id, scenario, name, hid, parametertype, valueencoding, unitofmeasure, fillvalue, displayname,
+        precision, parameterfunctionid, parameterfunctionmap, dataproductidentifier
 FROM parameterdefs
 WHERE id like 'PD%'
 """
@@ -78,30 +64,18 @@ def get_logger():
 
 log = get_logger()
 
-def load(f):
-    return openpyxl.load_workbook(f, data_only=True)
+def sheet_generator():
+    client = gdata.spreadsheet.service.SpreadsheetsService()
+    sheets = {}
+    for sheet in client.GetWorksheetsFeed(key, visibility='public', projection='basic').entry:
+        title = sheet.title.text
+        id = sheet.id.text.split('/')[-1]
 
-def xlsx_to_dictionary(workbook):
-    parsed = {}
-    for sheet in workbook.worksheets:
-        if sheet.title == 'Info':
-            continue
-        try:
-            rows = [[cell.value for cell in row] for row in sheet.rows]
-            if len(rows) <= 1: continue
-            keys = rows[0]
-            while keys[-1] is None:
-                keys = keys[:-1]
-            #log.debug('sheet: %s keys: %s', sheet.title, keys)
-            parsed[sheet.title] = [keys]
-            for row in rows[1:]:
-                row_set = set(row)
-                if len(row_set) == 1 and None in row_set: continue
-                #log.debug('sheet: %s keys: %s', sheet.title, row[:len(keys)])
-                parsed[sheet.title].append(row[:len(keys)])
-        except:
-            log.error("unable to parse sheet: %s", sheet.title)
-    return parsed
+        log.debug('Fetching sheet %s from googles', title)
+        rows = []
+        for x in client.GetListFeed(key, id, visibility='public', projection='values').entry:
+           rows.append({k:v.text for k,v in x.custom.items()})
+        yield title, rows
 
 def get_parameters(param_list, param_dict):
     params = {}
@@ -110,32 +84,6 @@ def get_parameters(param_list, param_dict):
         if param is None: return
         params[param['Name']] = param
     return params
-
-def deunicode(orig):
-    if type(orig) == dict:
-        d = {}
-        for key, value in orig.iteritems():
-            if type(value) in [dict, list]:
-                value = deunicode(value)
-            elif type(value) == unicode:
-                try:
-                    value = str(value)
-                except:
-                    pass
-            d[str(key)] = value
-        return d
-    elif type(orig) == list:
-        l = []
-        for each in orig:
-            l.append(deunicode(each))
-        return l
-    elif type(orig)== unicode:
-        try:
-            return str(orig)
-        except:
-            return orig
-    else:
-        return orig
 
 def sanitize_for_sql(row):
     subs = {
@@ -171,27 +119,22 @@ def create_table(conn, name, row):
 
 def populate_table(conn, name, rows):
     log.debug('POPULATE TABLE: %s NUM ROWS: %d', name, len(rows))
+    keys = rows[0].keys()
+    values = [[r[k] for k in keys] for r in rows]
     c = conn.cursor()
-    c.executemany('INSERT INTO %s VALUES (%s)' % (name, ','.join(['?']*len(rows[0]))), rows)
+    c.executemany('INSERT INTO %s (%s) VALUES (%s)' % (name, ','.join(keys), ','.join(['?']*len(keys))), values)
     conn.commit()
 
 def create_db(conn):
-    for path in [preload_path, assetmappings_path]:
-        log.debug('Fetching file from %s', path)
-        urlhandle = urllib2.urlopen(path)
-        open(temp, 'w').write(urlhandle.read())
-        log.debug('Parsing excel file')
-        workbook = deunicode(xlsx_to_dictionary(load(temp)))
-        for sheet in workbook:
-            log.debug('Creating table: %s', sheet)
-            name = sanitize_names(sheet)
-            create_table(conn, name, workbook[sheet][0])
-            populate_table(conn, name, workbook[sheet][1:])
-    os.unlink(temp)
+    for name, sheet in sheet_generator():
+        log.debug('Creating table: %s', name)
+        name = sanitize_names(name)
+        create_table(conn, name, sheet[0].keys())
+        populate_table(conn, name, sheet[1:])
 
 def test_param_function_map(conn):
     c = conn.cursor()
-    c.execute("select id,parameter_function_map from parameterdefs where parameter_function_map not like ''")
+    c.execute("select id,parameterfunctionmap from parameterdefs where parameterfunctionmap not like ''")
     for row in c:
         try:
             if row[0].startswith('PD'):
@@ -245,42 +188,6 @@ def load_streams(conn):
     stream_dict = {stream.id:stream for stream in streams}
     check_for_dupes(streams, 'id')
     return stream_dict
-
-InstrumentAgent = namedtuple('InstrumentAgent', 'id, scenario, uri, module, driver_class, streams, config')
-# CREATE TABLE InstrumentAgent (Scenario, ID, owner_id, lcstate, org_ids, instrument_model_ids,
-# ia_name, ia_description, ia_agent_version, ia_driver_uri, ia_driver_module, ia_driver_class,
-# stream_configurations, agent_default_config);
-# MASSP_A|IA_MASSP_A||DEPLOYED_AVAILABLE|MF_RSN|MASSPA|MASSP Agent|MASSP Agent||
-# http://sddevrepo.oceanobservatories.org/releases/harvard_massp_ooicore-0.0.3-py2.7.egg|
-# mi.instrument.harvard.massp.ooicore.driver|InstrumentDriver|SC1,SC330,SC331,SC332,SC333|
-# aparam_pubrate_config.raw:5,
-# aparam_pubrate_config.massp_mcu_status:5,
-# aparam_pubrate_config.massp_turbo_status:5,
-# aparam_pubrate_config.massp_rga_status:5,
-# aparam_pubrate_config.massp_rga_sample:5
-def load_agents(conn):
-    log.debug('Loading Instrument Agents')
-    c = conn.cursor()
-    c.execute(IA_SELECT)
-    agents = map(InstrumentAgent._make, c.fetchall())
-    agent_dict = {agent.id:agent for agent in agents}
-    check_for_dupes(agents, 'id')
-    return agent_dict
-
-def test_stream_configs(conn):
-    c = conn.cursor()
-    instrument_agents = load_agents(conn)
-    streams = load_streams(conn)
-    paramdicts_byid, paramdicts_byname = load_paramdicts(conn)
-    paramdefs = load_paramdefs(conn)
-    for agent in instrument_agents.itervalues():
-        #log.debug('Checking %s', agent)
-        check_for_missing_values(agent)
-        # each agent should have just one scenario, verify
-        assert len(agent.scenario.split(',')) == 1
-        if agent.streams is not None:
-            stream_names = check_streams(agent, streams, paramdicts_byname, paramdefs)
-            check_agent_config(agent, stream_names)
 
 def check_streams(agent, streams, dicts, defs):
     stream_names = []
@@ -356,7 +263,6 @@ def main():
 
     conn = sqlite3.connect(dbfile)
     test_param_function_map(conn)
-    test_stream_configs(conn)
 
 if __name__ == '__main__':
     main()
