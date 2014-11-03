@@ -13,6 +13,7 @@ import glob
 import yaml
 import shutil
 import pprint
+import math
 
 from common import logger
 from common import edex_tools
@@ -177,7 +178,12 @@ def diff(stream, a, b, ignore=None, rename=None):
             if type(value) == str:
                 value = value.strip()
             elif type(value) == float:
-                value = round(value, 3)
+                if math.isnan(value):
+                    value = 'NaN'
+                else:
+                    value = round(value, 3)
+            elif type(value) == list:
+                convertNan(value)
             rvalue = b[k]
             if type(rvalue) == str:
                 rvalue = rvalue.strip()
@@ -211,6 +217,10 @@ def diff(stream, a, b, ignore=None, rename=None):
             log.error('%s - item in retrieved data not in expected data: %s', stream, k)
 
     return failures
+
+def convertNan(x):
+    for i, item in enumerate(x):
+        x[i] = 'NaN' if type(item) == float and math.isnan(item) else item
 
 
 def copy_file(resource, endpoint, test_file):
