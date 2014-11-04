@@ -174,21 +174,8 @@ def diff(stream, a, b, ignore=None, rename=None):
             value = v.get('value')
             rvalue = round(b[k], _round)
         else:
-            value = v
-            if type(value) == str:
-                value = value.strip()
-            elif type(value) == float:
-                if math.isnan(value):
-                    value = 'NaN'
-                else:
-                    value = round(value, 3)
-            elif type(value) == list:
-                convertNan(value)
-            rvalue = b[k]
-            if type(rvalue) == str:
-                rvalue = rvalue.strip()
-            elif type(rvalue) == float:
-                rvalue = round(rvalue, 3)
+            value = recursiveMethod(v)
+            rvalue = recursiveMethod(b[k])
         if value != rvalue:
             failed = False
             if 'timestamp' in k:
@@ -218,10 +205,20 @@ def diff(stream, a, b, ignore=None, rename=None):
 
     return failures
 
-def convertNan(x):
-    for i, item in enumerate(x):
-        x[i] = 'NaN' if type(item) == float and math.isnan(item) else item
 
+def recursiveMethod(value):
+
+    if type(value) == str:
+        return value.strip()
+    elif type(value) == float and math.isnan(value):
+        return 'NaN'
+    elif type(value) == float:
+        return round(value, 3)
+    elif type(value) == list:
+        for i, item in enumerate(value):
+            value[i] = recursiveMethod(item)
+    else:
+        return value
 
 def copy_file(resource, endpoint, test_file):
     log.info('copy test file %s into endpoint %s from %s', test_file, endpoint, resource)
