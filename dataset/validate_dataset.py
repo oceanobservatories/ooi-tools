@@ -187,7 +187,7 @@ def diff(stream, a, b, ignore=None, rename=None):
                 try:
                     rvalue = '%12.3f' % float(value)
                 except Exception as e:
-                   log.error('Exception massaging timestamp to string: %s', e) 
+                   log.error('Exception massaging timestamp to string: %s', e)
                 if value != rvalue: failed = True
             else:
                 failed = True
@@ -204,7 +204,6 @@ def diff(stream, a, b, ignore=None, rename=None):
             log.error('%s - item in retrieved data not in expected data: %s', stream, k)
 
     return failures
-
 
 def recursiveMethod(value):
 
