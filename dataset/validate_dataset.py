@@ -8,12 +8,15 @@ tools_dir = os.path.dirname(dataset_dir)
 
 sys.path.append(tools_dir)
 
-import time
+import calendar
+from datetime import datetime
 import glob
 import yaml
 import shutil
+import time
 import pprint
 import math
+import ntplib
 
 from common import logger
 from common import edex_tools
@@ -86,13 +89,19 @@ def get_expected(filename):
     for record in data:
         timestamp = record.get('internal_timestamp')
         if type(timestamp) == str:
-            timestamp, millis = timestamp.split('.')
-            timestamp = time.mktime(time.strptime(timestamp + 'GMT', '%Y-%m-%dT%H:%M:%S%Z'))
-            if millis.endswith('Z'):
-                millis = millis[:-1]
-            divisor = 10 ** len(millis)
-            millis = float(millis)
-            timestamp = timestamp + millis / divisor + 2208988800l - time.timezone
+            if not timestamp.endswith('Z'):
+                timestamp += 'Z'
+            split_fields = timestamp.split('.')
+            if len(split_fields) == 2:
+                timestamp, millis = split_fields
+            else:
+                timestamp = split_fields[0]
+                millis = '0'
+
+            dt = datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
+            timestamp = ntplib.system_to_ntp_time(
+                    calendar.timegm(dt.timetuple()) + (dt.microsecond / 1000000.0))
+
             record['internal_timestamp'] = timestamp
 
     expected_dictionary = {}
