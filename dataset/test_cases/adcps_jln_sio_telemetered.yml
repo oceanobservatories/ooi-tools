@@ -1,0 +1,6 @@
+instrument: adcps_jln_sio_telemetered
+resource: adcps_jln/sio/resource
+endpoint: adcpsJlnSioTelem
+pairs:
+  - [node59p1_2.adcps.dat, adcps_telem_2.yml]
+
