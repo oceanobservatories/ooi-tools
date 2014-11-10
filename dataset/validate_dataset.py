@@ -91,14 +91,15 @@ def get_expected(filename):
         if type(timestamp) == str:
             if not timestamp.endswith('Z'):
                 timestamp += 'Z'
-            split_fields = timestamp.split('.')
-            if len(split_fields) == 2:
-                timestamp, millis = split_fields
+            # Check to see if we have a timestamp with a decimal point which
+            # means we have the millis included
+            if '.' in timestamp:
+		timestamp_to_use = timestamp
             else:
-                timestamp = split_fields[0]
-                millis = '0'
-
-            dt = datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
+                # So now we will add the millis, eliminating the Z (i.e. [:-1]) 
+                # and reappend the Z
+                timestamp_to_use = timestamp[:-1] + '.0Z'
+            dt = datetime.strptime(timestamp_to_use, '%Y-%m-%dT%H:%M:%S.%fZ')
             timestamp = ntplib.system_to_ntp_time(
                     calendar.timegm(dt.timetuple()) + (dt.microsecond / 1000000.0))
 
