@@ -184,8 +184,9 @@ def diff(stream, a, b, ignore=None, rename=None):
             value = v.get('value')
             rvalue = round(b[k], _round)
         else:
-            value = recursiveMethod(v)
-            rvalue = recursiveMethod(b[k])
+            value = massage_data(v)
+            rvalue = massage_data(b[k])
+
         if value != rvalue:
             failed = False
             if 'timestamp' in k:
@@ -215,8 +216,8 @@ def diff(stream, a, b, ignore=None, rename=None):
 
     return failures
 
-def recursiveMethod(value):
 
+def massage_data(value):
     if type(value) == str:
         return value.strip()
     elif type(value) == float and math.isnan(value):
@@ -224,10 +225,12 @@ def recursiveMethod(value):
     elif type(value) == float:
         return round(value, 3)
     elif type(value) == list:
-        for i, item in enumerate(value):
-            value[i] = recursiveMethod(item)
+        return [massage_data(x) for x in value]
+    elif type(value) == dict:
+        return {massage_data(k):massage_data(v) for k,v in value.items()}
     else:
         return value
+
 
 def copy_file(resource, endpoint, test_file):
     log.info('copy test file %s into endpoint %s from %s', test_file, endpoint, resource)
