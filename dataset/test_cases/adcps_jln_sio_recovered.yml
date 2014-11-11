@@ -1,0 +1,4 @@
+instrument: adcps_jln_sio
+resource: adcps_jln/stc/resource
+endpoint: adcps_jln_sio_recov
+pairs:  [[ADCP_data_20130702.000,ADCP_data_20130702.yml]]
