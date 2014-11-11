@@ -1,0 +1,50 @@
+the8x3_filename:    00490000
+full_filename:    unit_363-2013-205-4-0
+filename_extension:    mdd
+fileopen_time:    Thu_Jul_25_21:37:48_2013
+mission_name:    DRIFT59.MI
+transaction_id: 16
+NODE: 59
+PORT: 1
+STARTOFFSET: 4096
+ENDOFFSET: 4351
+<ERROR type='FAILED' msg='No reply from remote device'/>
+CT1237100_0000b51EF1AB5_13_0000CS1237101_0014u51EF1B95_14_C795
+18.88 18.5 206 6 0
+AD1237111_003Au51EF1DBB_15_36BC<ERROR type='FAILED' msg='No reply from remote device'/>
+<ERROR type='FAI
+the8x3_filename:    00490000
+full_filename:    unit_363-2013-205-4-0
+filename_extension:    mdd
+fileopen_time:    Thu_Jul_25_21:39:47_2013
+mission_name:    DRIFT59.MI
+transaction_id: 16
+NODE: 59
+PORT: 1
+STARTOFFSET: 8192
+ENDOFFSET: 8703
+end_period       = 3
+   adcps_send_period       = 1
+   status_send_period      = 24
+   imm_id                  = 1
+   wfp_eng_decimation      = 1
+   wfp_ctd_decimation      = 1
+   wfp_acm_decimation      = 1
+   wfp_acomm_decimation    = 1
+
+   CTD ID's stored: 
+
+   ADCPS ID's stored: 
+
+   SSIOC ID's stored: 
+
+   WFP 0 has done 0 profile(s) so far
+
+   WFP 1 has done 0 profile(s) so far
+
+   WFP 2 has done 0 profile(s) so far
+
+
+Deploy loop started on Tue Jul 23 23:11:12 2013
+CS1236501_0012u51EF0DA6_04_C5D1
+1
