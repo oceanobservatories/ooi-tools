@@ -1,0 +1,2 @@
+context,name,suffix,driver,sensor,regex,resourcedir,input1,output1,input2,output2
+adcps-jln,adcps-jln,recovered,/adcps_jln/stc/adcps_jln_driver.py,XX00XXXX-XX00X-00-ADCPSJ000

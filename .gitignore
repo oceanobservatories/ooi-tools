@@ -3,3 +3,6 @@ preload.db
 .idea
 *.xml
 *.pyc
+xml_files
+yml_files
+csv_files

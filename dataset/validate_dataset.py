@@ -238,8 +238,10 @@ def copy_file(resource, endpoint, test_file):
     destination_file = os.path.join(ingest_dir, endpoint, test_file)
     try:
         shutil.copy(source_file, destination_file)
+        return True
     except IOError as e:
         log.error('Exception copying input file to endpoint: %s', e)
+        return False
 
 
 def find_latest_log():
@@ -311,14 +313,15 @@ def test(test_cases):
         log.debug('Processing test case: %s', test_case)
         for test_file, yaml_file in test_case.pairs:
             purge_edex()
-            copy_file(test_case.resource, test_case.endpoint, test_file)
             expected = get_expected(os.path.join(drivers_dir, test_case.resource, yaml_file))
-            try:
-                watch_log_for('Ingest: EDEX: Ingest', logfile=logfile, timeout=test_case.timeout)
-                time.sleep(1)
-            except:
-                # didn't see any ingest, proceed, results should be all failed
-                log.error('Timed out waiting for ingest complete message')
+
+            if copy_file(test_case.resource, test_case.endpoint, test_file):
+                try:
+                    watch_log_for('Ingest: EDEX: Ingest', logfile=logfile, timeout=test_case.timeout)
+                    time.sleep(1)
+                except:
+                    # didn't see any ingest, proceed, results should be all failed
+                    log.error('Timed out waiting for ingest complete message')
 
             for stream in expected:
                 results = test_results(expected[stream], stream)
@@ -328,7 +331,6 @@ def test(test_cases):
                 scorecard.setdefault(test_case.instrument, {}) \
                          .setdefault(test_file, {}) \
                          .setdefault(yaml_file, {})[stream] = results
-
 
     result, table_data = edex_tools.parse_scorecard(scorecard)
     log.info(result)
