@@ -1,0 +1,35 @@
+the8x3_filename:    00690000
+full_filename:    unit_363-2013-216-1-0
+filename_extension:    mdd
+fileopen_time:    Mon_Aug__5_23:41:52_2013
+mission_name:    DRIFT59.MI
+transaction_id: 16
+NODE: 59
+PORT: 1
+STARTOFFSET: 7452
+ENDOFFSET: 8219
+----------------------------------
+   Actual deployment parameters
+-----------------------------------------------------------------------------------
+
+
+   batt1_volt_cal          = 10.9
+   low_batt_volt           =  10.0
+   ctd_period              = 0
+   flord_period            = 900
+   dosta_period            = 900
+   phsen_period            = 7200
+   adcps_period            = 0
+   ssioc_period            = 0
+   status_period           = 3600
+   ctd_delay               = 0
+   flord_delay             = 0
+   dosta_delay             = 0
+   phsen_delay             = 0
+   adcps_delay             = 0
+   ssioc_delay             = 0
+   ctd_send_period         = 1
+   flord_send_period       = 24
+   dosta_send_period       = 24
+   phsen_send_period       = 3
+   adcp
