@@ -24,6 +24,7 @@ from common import edex_tools
 edex_dir = os.getenv('EDEX_HOME')
 if edex_dir is None:
     edex_dir = os.path.join(os.getenv('HOME'), 'uframes', 'ooi', 'uframe-1.0', 'edex')
+hdf5dir = os.path.join(edex_dir, 'data', 'hdf5', 'sensorreading')
 startdir = os.path.join(edex_dir, 'data/utility/edex_static/base/ooi/parsers/mi-dataset/mi')
 drivers_dir = os.path.join(startdir, 'dataset/driver')
 ingest_dir = os.path.join(edex_dir, 'data', 'ooi')
@@ -44,7 +45,8 @@ class TestCase(object):
         self.resource = os.path.join(drivers_dir, config.get('resource'))
         self.endpoint = os.path.join(ingest_dir, config.get('endpoint'))
         self.pairs = config.get('pairs', [])
-        # Attempt to obtain a timeout value from the test_case yml.  Default it to 
+        self.rename = config.get('rename', True)
+        # Attempt to obtain a timeout value from the test_case yml.  Default it to
         # DEFAULT_STANDARD_TIMEOUT if no yml value was provided.
         self.timeout = config.get('timeout', DEFAULT_STANDARD_TIMEOUT)
 
@@ -53,6 +55,11 @@ class TestCase(object):
 
     def __repr__(self):
         return self.config.__repr__()
+
+
+def clear_hdf5():
+    for fname in os.listdir(hdf5dir):
+        os.remove(os.path.join(hdf5dir, fname))
 
 
 def read_test_cases(f):
@@ -94,14 +101,14 @@ def get_expected(filename):
             # Check to see if we have a timestamp with a decimal point which
             # means we have the millis included
             if '.' in timestamp:
-		timestamp_to_use = timestamp
+                timestamp_to_use = timestamp
             else:
-                # So now we will add the millis, eliminating the Z (i.e. [:-1]) 
+                # So now we will add the millis, eliminating the Z (i.e. [:-1])
                 # and reappend the Z
                 timestamp_to_use = timestamp[:-1] + '.0Z'
             dt = datetime.strptime(timestamp_to_use, '%Y-%m-%dT%H:%M:%S.%fZ')
             timestamp = ntplib.system_to_ntp_time(
-                    calendar.timegm(dt.timetuple()) + (dt.microsecond / 1000000.0))
+                calendar.timegm(dt.timetuple()) + (dt.microsecond / 1000000.0))
 
             record['internal_timestamp'] = timestamp
 
@@ -232,9 +239,11 @@ def massage_data(value):
         return value
 
 
-def copy_file(resource, endpoint, test_file):
+def copy_file(resource, endpoint, test_file, rename=False):
     log.info('copy test file %s into endpoint %s from %s', test_file, endpoint, resource)
     source_file = os.path.join(drivers_dir, resource, test_file)
+    if rename:
+        test_file = '%s.%.2f' % (test_file, time.time())
     destination_file = os.path.join(ingest_dir, endpoint, test_file)
     try:
         shutil.copy(source_file, destination_file)
@@ -331,10 +340,7 @@ def test(test_cases):
                 scorecard.setdefault(test_case.instrument, {}) \
                          .setdefault(test_file, {}) \
                          .setdefault(yaml_file, {})[stream] = results
-
-    result, table_data = edex_tools.parse_scorecard(scorecard)
-    log.info(result)
-    dump_csv(table_data)
+    return scorecard
 
 
 def test_bulk(test_cases):
@@ -350,7 +356,7 @@ def test_bulk(test_cases):
         log.debug('Processing test case: %s', test_case)
 
         for test_file, yaml_file in test_case.pairs:
-            copy_file(test_case.resource, test_case.endpoint, test_file)
+            copy_file(test_case.resource, test_case.endpoint, test_file, rename=True)
             this_expected = get_expected(os.path.join(drivers_dir, test_case.resource, yaml_file))
             for stream in this_expected:
                 expected[(test_case.instrument, test_file, yaml_file, stream)] = this_expected[stream]
@@ -364,7 +370,7 @@ def test_bulk(test_cases):
         instrument, test_file, yaml_file, stream = k
         if instrument != last_instrument:
             logger.remove_handler(last_instrument)
-            logger.add_handler(instrument)
+            logger.add_handler(instrument, dir=output_dir)
             last_instrument = instrument
 
         results = test_results(expected[(instrument,test_file,yaml_file,stream)], stream)
@@ -375,9 +381,7 @@ def test_bulk(test_cases):
                  .setdefault(test_file, {}) \
                  .setdefault(yaml_file, {})[stream] = results
 
-    result, table_data = edex_tools.parse_scorecard(scorecard)
-    log.info(result)
-    dump_csv(table_data)
+    return scorecard
 
 
 if __name__ == '__main__':
@@ -387,5 +391,14 @@ if __name__ == '__main__':
     else:
         for each in sys.argv[1:]:
             test_cases.extend(list(read_test_cases(each)))
+    bulk_test_cases = [tc for tc in test_cases if tc.rename]
+    single_test_cases = [tc for tc in test_cases if not tc.rename]
 
-    test(test_cases)
+    clear_hdf5()
+
+    scorecard = test_bulk(bulk_test_cases)
+    scorecard.update(test(single_test_cases))
+
+    result, table_data = edex_tools.parse_scorecard(scorecard)
+    log.info(result)
+    dump_csv(table_data)
