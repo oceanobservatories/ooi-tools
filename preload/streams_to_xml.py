@@ -60,10 +60,12 @@ def streams_to_xml(stream_dict, param_dict, outputfile):
         params = params.split(',')
         for param_id in params:
             param = param_dict.get(param_id.strip())
+
             if param is None:
                 rendered_params.append(stream_param_template % (param_id.strip(), "NOT FOUND"))
             else:
-                rendered_params.append(stream_param_template % (param.id.strip(), param.name.strip()))
+                if not param.name.strip() in ['time', 'ingestion_timestamp']:
+                    rendered_params.append(stream_param_template % (param.id.strip(), param.name.strip()))
         rendered_streams.append(stream_template % (stream.name, '\n'.join(rendered_params)))
     output = streams_template % '\n'.join(rendered_streams)
     outputfile.write(output)
