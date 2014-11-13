@@ -1,4 +1,0 @@
-instrument: adcps_jln_stc
-resource: adcps_jln/stc/resource
-endpoint: adcps_jln_stc_recov
-pairs:  [[ADCP_CCE1T_20.000,ADCP_CCE1T_20.yml]]

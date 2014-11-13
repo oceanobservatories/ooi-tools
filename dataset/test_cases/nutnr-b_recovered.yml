@@ -1,0 +1,5 @@
+endpoint: nutnr-b_recovered
+instrument: nutnr-b_recovered
+pairs:
+- [SCH14178.DAT, SCH14178.yml]
+resource: nutnr_b/resource

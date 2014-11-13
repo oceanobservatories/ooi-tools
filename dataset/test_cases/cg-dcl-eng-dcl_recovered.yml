@@ -1,0 +1,5 @@
+endpoint: cg-dcl-eng-dcl_recovered
+instrument: cg-dcl-eng-dcl_recovered
+pairs:
+- [20140915.syslog.log, recov.20140915.syslog.yml]
+resource: cg_dcl_eng/dcl/resource

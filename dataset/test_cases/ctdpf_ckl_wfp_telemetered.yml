@@ -1,5 +1,0 @@
-instrument: ctdpf_ckl_wfp_telemetered
-resource: ctdpf_ckl/wfp/resource
-endpoint: ctdpf/ckl/wfp/telemetered
-pairs:
-  - [first.DAT, tel_first.result.yml]

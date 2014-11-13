@@ -1,5 +1,0 @@
-instrument: optaa_ac_mmp_cds_recovered
-resource: optaa_ac/mmp_cds/resource
-endpoint: optaa_ac_mmp_cds
-pairs:
-  - [get_many.mpk, get_many.yml]

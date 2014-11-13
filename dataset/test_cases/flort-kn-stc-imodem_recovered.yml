@@ -1,0 +1,5 @@
+endpoint: flort-kn-stc-imodem_recovered
+instrument: flort-kn-stc-imodem_recovered
+pairs:
+- [second.DAT, secondRecovered.result.yml]
+resource: FLORT_KN/STC_IMODEM/resource

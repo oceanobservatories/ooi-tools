@@ -1,0 +1,5 @@
+endpoint: flort-dj-dcl_recovered
+instrument: flort-dj-dcl_recovered
+pairs:
+- [20020215.flort2.log, rec_20020215.flort2.yml]
+resource: flort_dj/dcl/resource

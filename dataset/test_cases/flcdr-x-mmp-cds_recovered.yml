@@ -1,0 +1,5 @@
+endpoint: flcdr-x-mmp-cds_recovered
+instrument: flcdr-x-mmp-cds_recovered
+pairs:
+- [flcdr_1_20131124T005004_459.mpk, first_four_cdr.yml]
+resource: flntu_x/mmp_cds/resource

@@ -1,4 +1,0 @@
-instrument: vel3d_k_wfp_stc_telemetered
-resource: vel3d_k/wfp/resource
-endpoint: vel3d_k/telemetered
-pairs: [[valid_A0000004.DEC,valid_A0000004.yml]]

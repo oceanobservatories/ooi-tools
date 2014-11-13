@@ -1,8 +1,0 @@
-instrument: ctdpf_ckl_mmp_cds_recovered
-resource: ctdpf_ckl/mmp_cds/resource
-endpoint: ctdpf_ckl_mmp_cds_recov
-pairs:
-  - [large_import.mpk, large_import.yml]
-  - [ctd_1_20131124T005004_458.mpk, first_three.yml]
-timeout: 300
-

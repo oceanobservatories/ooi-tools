@@ -1,0 +1,5 @@
+endpoint: flort-m-glider_telemetered
+instrument: flort-m-glider_telemetered
+pairs:
+- [single_glider_record.mrg, single_flort_record.mrg.result.yml]
+resource: moas/gl/flort_m/resource

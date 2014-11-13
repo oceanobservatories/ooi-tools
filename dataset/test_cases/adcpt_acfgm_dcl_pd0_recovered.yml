@@ -1,4 +1,0 @@
-instrument: adcpt_acfgm_dcl_pd0_recovered
-resource: adcpt_acfgm/dcl/pd0/resource
-endpoint: adcpt_acfgm_dcl_pd0_recov
-pairs:  [[20140424.adcpt.log , 20140424.recov.adcpt.yml]]

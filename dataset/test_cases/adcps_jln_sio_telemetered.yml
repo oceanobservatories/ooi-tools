@@ -1,6 +1,0 @@
-instrument: adcps_jln_sio
-resource: adcps_jln/sio/resource
-endpoint: adcps_jln_sio_telem
-pairs:
-  - [node59p1_2.adcps.dat, adcps_telem_2.yml]
-

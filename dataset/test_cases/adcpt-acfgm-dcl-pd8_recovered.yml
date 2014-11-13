@@ -1,0 +1,5 @@
+endpoint: adcpt-acfgm-dcl-pd8_recovered
+instrument: adcpt-acfgm-dcl-pd8_recovered
+pairs:
+- [20131201.adcp_mod.log, 20131201.adcp_mod_recov.yml]
+resource: adcpt_acfgm/dcl/pd8/resource

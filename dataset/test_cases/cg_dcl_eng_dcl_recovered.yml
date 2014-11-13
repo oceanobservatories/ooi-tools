@@ -1,5 +1,0 @@
-instrument: cg_dcl_eng_dcl_recovered
-resource: cg_dcl_eng/dcl/resource
-endpoint: cg_dcl_eng_dcl_recovered
-pairs: [[20140915.syslog.log,recov.20140915.syslog.yml]]
-tmieout: 300

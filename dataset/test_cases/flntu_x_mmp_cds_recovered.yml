@@ -1,5 +1,0 @@
-instrument: flntu_x_mmp_cds_recovered
-resource: flntu_x/mmp_cds/resource
-endpoint: flntu_x_mmp_cds
-pairs:
-  - [flntu_1_20131124T005004_459.mpk, first_four.yml]

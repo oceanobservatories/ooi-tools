@@ -1,6 +1,0 @@
-instrument: dosta_abcdjm_sio_telemetered
-resource: dosta_abcdjm/sio/resource
-endpoint: dosta_abcdjm_sio_telem
-pairs:
-  - [node59p1_1.dosta.dat, dosta_telem_1.yml]
-

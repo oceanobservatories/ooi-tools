@@ -1,0 +1,5 @@
+endpoint: cg-stc-eng-stc_recovered
+instrument: cg-stc-eng-stc_recovered
+pairs:
+- [stc_status.txt, stc_first_recov.result.yml]
+resource: cg_stc_eng/stc/resource

@@ -1,4 +1,0 @@
-instrument: phsen_abcdef_recovered
-resource: mflm/phsen/resource
-endpoint: phsen_abcdef_recov
-pairs: [[SAMI_P0080_180713_integration_control_ph.txt,SAMI_P0080_180713_control_ph.yml]]

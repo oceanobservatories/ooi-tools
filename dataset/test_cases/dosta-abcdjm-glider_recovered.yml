@@ -1,0 +1,6 @@
+endpoint: dosta-abcdjm-glider_recovered
+instrument: dosta-abcdjm-glider_recovered
+pairs:
+- [single_dosta_record_recovered.mrg, single_dosta_record_recovered.mrg.result.yml]
+- [multiple_dosta_record_recovered.mrg, multiple_dosta_record_recovered.mrg.result.yml]
+resource: moas/gl/dosta/resource

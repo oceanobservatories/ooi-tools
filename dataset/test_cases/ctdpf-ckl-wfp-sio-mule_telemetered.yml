@@ -1,0 +1,5 @@
+endpoint: ctdpf-ckl-wfp-sio-mule_telemetered
+instrument: ctdpf-ckl-wfp-sio-mule_telemetered
+pairs:
+- [first.DAT, tel_first.result.yml]
+resource: ctdpf_ckl/wfp/resource

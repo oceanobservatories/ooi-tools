@@ -1,5 +1,0 @@
-instrument: wfp_eng_wfp_sio
-resource: WFP_ENG/STC_IMODEM/resource
-endpoint: wfp_eng_wfp_sio_recov 
-pairs:
-  - [second.DAT, recovered_second.result.yml]

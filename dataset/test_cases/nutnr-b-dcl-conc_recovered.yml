@@ -1,0 +1,5 @@
+endpoint: nutnr-b-dcl-conc_recovered
+instrument: nutnr-b-dcl-conc_recovered
+pairs:
+- [20020125.nutnr_b_dcl_conc.log, rec_20020125.nutnr_b_dcl_conc.yml]
+resource: nutnr_b/dcl_conc/resource

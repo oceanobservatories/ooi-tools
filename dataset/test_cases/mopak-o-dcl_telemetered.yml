@@ -1,0 +1,5 @@
+endpoint: mopak-o-dcl_telemetered
+instrument: mopak-o-dcl_telemetered
+pairs:
+- [20140120_140004.mopak.log, first_mopak.result.yml]
+resource: cg_stc_eng/stc/resource

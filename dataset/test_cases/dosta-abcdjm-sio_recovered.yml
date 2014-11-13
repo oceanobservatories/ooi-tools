@@ -1,0 +1,5 @@
+endpoint: dosta-abcdjm-sio_recovered
+instrument: dosta-abcdjm-sio_recovered
+pairs:
+- [DOS15908_1st7.DAT, dosta_recov_1.yml]
+resource: dosta_abcdjm/sio/resource

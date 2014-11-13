@@ -1,4 +1,0 @@
-instrument: dofst_k_wfp_telemetered
-resource: dofst_k/wfp/resource
-endpoint: dofst_k/telemetered
-pairs: [[first.DAT,tel_first.result.yml]]

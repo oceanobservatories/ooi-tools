@@ -1,0 +1,5 @@
+endpoint: dofst-k-wfp_telemetered
+instrument: dofst-k-wfp_telemetered
+pairs:
+- [first.DAT, tel_first.result.yml]
+resource: dofst_k/wfp/resource

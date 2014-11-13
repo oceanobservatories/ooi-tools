@@ -1,6 +1,0 @@
-instrument: pco2w_abc_dcl_telemetered
-resource: pco2w_abc/dcl/resource
-endpoint: pco2w_abc_dcl_telem
-pairs:
-  - [happy_path.log, happy_path_tel.yml]
-

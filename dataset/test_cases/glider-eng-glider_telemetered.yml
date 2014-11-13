@@ -1,0 +1,5 @@
+endpoint: glider-eng-glider_telemetered
+instrument: glider-eng-glider_telemetered
+pairs:
+- [single_glider_record-engDataOnly.mrg, single_glider_record-engDataOnly.mrg.result.yml]
+resource: moas/gl/engineering/resource

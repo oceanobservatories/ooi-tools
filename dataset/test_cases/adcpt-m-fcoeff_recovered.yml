@@ -1,0 +1,5 @@
+endpoint: adcpt-m-fcoeff_recovered
+instrument: adcpt-m-fcoeff_recovered
+pairs:
+- [FCoeff1404180021.txt, FCoeff1404180021.yml]
+resource: adcpt_m/resource

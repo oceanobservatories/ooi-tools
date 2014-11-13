@@ -1,0 +1,5 @@
+endpoint: cg-cpm-eng-cpm_telemetered
+instrument: cg-cpm-eng-cpm_telemetered
+pairs:
+- [cpm_status.20140817_1255.txt, cpm_status.20140817_1255_telem.yml]
+resource: cg_cpm_eng/cpm/resource

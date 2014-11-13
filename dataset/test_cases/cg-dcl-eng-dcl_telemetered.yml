@@ -1,0 +1,5 @@
+endpoint: cg-dcl-eng-dcl_telemetered
+instrument: cg-dcl-eng-dcl_telemetered
+pairs:
+- [20140915.syslog.log, telem.20140915.syslog.yml]
+resource: cg_dcl_eng/dcl/resource

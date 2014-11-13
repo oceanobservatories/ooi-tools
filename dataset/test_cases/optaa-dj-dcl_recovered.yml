@@ -1,0 +1,5 @@
+endpoint: optaa-dj-dcl_recovered
+instrument: optaa-dj-dcl_recovered
+pairs:
+- [20010314_010314.optaa1.log, rec_20010314_010314.optaa1.yml]
+resource: optaa_dj/dcl/resource

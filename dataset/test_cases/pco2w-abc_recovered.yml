@@ -1,0 +1,5 @@
+endpoint: pco2w-abc_recovered
+instrument: pco2w-abc_recovered
+pairs:
+- [happy_path.txt, happy_path.yml]
+resource: pco2w_abc/resource

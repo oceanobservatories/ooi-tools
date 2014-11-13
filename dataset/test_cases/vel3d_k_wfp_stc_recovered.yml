@@ -1,4 +1,0 @@
-instrument: vel3d_k_wfp_recovered
-resource: vel3d_k/wfp/resource
-endpoint: vel3d_k/recovered
-pairs: [[A0000010_5.DAT,A0000010_5_1_5.yml]]

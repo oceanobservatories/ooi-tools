@@ -1,5 +1,0 @@
-instrument: wfp_eng_wfp_sio
-resource: WFP_ENG/wfp_sio/resource
-endpoint: wfp_eng_wfp_sio_telem 
-pairs:
-  - [node58p1_0.we_wfp.dat, node58p1_0.we_wfp.yml]

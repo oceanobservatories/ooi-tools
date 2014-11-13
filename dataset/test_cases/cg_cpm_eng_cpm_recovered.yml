@@ -1,4 +1,0 @@
-instrument: cg_cpm_eng_cpm_recovered
-resource: cg_cpm_eng/cpm/resource
-endpoint: cg_cpm_eng_cpm_recovered
-pairs: [[cpm_status.20140817_1255.txt,cpm_status.20140817_1255.yml]]

@@ -1,6 +1,0 @@
-instrument: flort_m_glider_recovered
-resource: moas/gl/flort_m/resource
-endpoint: flort_m_glider_recovered
-pairs:
-  - [single_glider_record.mrg,single_flort_record_recovered.mrg.result.yml]
-  - [multiple_glider_record.mrg,multiple_flort_record_recovered.mrg.result.yml]

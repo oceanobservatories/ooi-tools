@@ -1,0 +1,6 @@
+endpoint: ctdpf-ckl-mmp-cds_recovered
+instrument: ctdpf-ckl-mmp-cds_recovered
+pairs:
+- [large_import.mpk, large_import.yml]
+- [ctd_1_20131124T005004_458.mpk, first_three.yml]
+resource: ctdpf_ckl/mmp_cds/resource

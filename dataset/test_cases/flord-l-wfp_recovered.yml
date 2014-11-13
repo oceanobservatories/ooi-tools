@@ -1,0 +1,5 @@
+endpoint: flord-l-wfp_recovered
+instrument: flord-l-wfp_recovered
+pairs:
+- [E0000001.DAT, E0000001_50.yml]
+resource: flord_l_wfp/sio_mule/resource

@@ -1,0 +1,6 @@
+endpoint: dosta-abcdjm-glider_telemetered
+instrument: dosta-abcdjm-glider_telemetered
+pairs:
+- [single_dosta_record.mrg, single_dosta_record.mrg.result.yml]
+- [multiple_dosta_record.mrg, multiple_dosta_record.mrg.result.yml]
+resource: moas/gl/dosta/resource

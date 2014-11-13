@@ -1,6 +1,0 @@
-instrument: dosta_ln_wfp_recovered
-resource: dosta_ln/wfp_sio_mule/resource
-endpoint: dosta_ln_wfp/recovered
-pairs:
-  - [small.DAT, six_samples.yml]
-  - [E0000001.DAT, E0000001.yml]
