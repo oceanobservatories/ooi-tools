@@ -189,7 +189,7 @@ def diff(stream, a, b, ignore=None, rename=None):
         if type(v) == dict:
             _round = v.get('round')
             value = v.get('value')
-            rvalue = round(b[k], _round)
+            rvalue = massage_data(b[k], _round)
         else:
             value = massage_data(v)
             rvalue = massage_data(b[k])
@@ -224,17 +224,17 @@ def diff(stream, a, b, ignore=None, rename=None):
     return failures
 
 
-def massage_data(value):
+def massage_data(value, _round=3):
     if type(value) == str:
         return value.strip()
     elif type(value) == float and math.isnan(value):
         return 'NaN'
     elif type(value) == float:
-        return round(value, 3)
+        return round(value, _round)
     elif type(value) == list:
-        return [massage_data(x) for x in value]
+        return [massage_data(x, _round) for x in value]
     elif type(value) == dict:
-        return {massage_data(k):massage_data(v) for k,v in value.items()}
+        return {massage_data(k, _round):massage_data(v, _round) for k,v in value.items()}
     else:
         return value
 
