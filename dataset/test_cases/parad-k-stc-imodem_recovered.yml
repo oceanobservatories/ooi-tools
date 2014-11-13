@@ -1,0 +1,5 @@
+endpoint: parad-k-stc-imodem_recovered
+instrument: parad-k-stc-imodem_recovered
+pairs:
+- [second.DAT, rec_second.result.yml]
+resource: PARAD_K/STC_IMODEM/resource

@@ -1,4 +1,0 @@
-instrument: dofst_k_wfp_recovered
-resource: dofst_k/wfp/resource
-endpoint: dofst_k/recovered
-pairs: [[first.DAT,rec_first.result.yml]]

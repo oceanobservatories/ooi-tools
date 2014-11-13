@@ -1,0 +1,5 @@
+endpoint: ctdbp-cdef-cp_recovered
+instrument: ctdbp-cdef-cp_recovered
+pairs:
+- [data1.log, data1.yml]
+resource: ctdbp_cdef/cp/resource

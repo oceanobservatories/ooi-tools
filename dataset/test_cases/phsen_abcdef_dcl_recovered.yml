@@ -1,5 +1,0 @@
-instrument: phsen_abcdef_dcl_recovered
-resource: phsen_abcdef/dcl/resource
-endpoint: phsen_abcdef_dcl_recov
-pairs:
-  - [phsen_dcl_large.log, phsen_dcl_large-RECOVERED.yml]

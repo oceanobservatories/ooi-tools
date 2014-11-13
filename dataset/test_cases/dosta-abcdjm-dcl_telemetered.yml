@@ -1,0 +1,5 @@
+endpoint: dosta-abcdjm-dcl_telemetered
+instrument: dosta-abcdjm-dcl_telemetered
+pairs:
+- [20010121.dosta1.log, tel_20010121.dosta1.yml]
+resource: dosta_abcdjm/dcl/resource

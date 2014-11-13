@@ -1,0 +1,5 @@
+endpoint: spkir-abj-dcl_recovered
+instrument: spkir-abj-dcl_recovered
+pairs:
+- [20020113.spkir2.log, rec_20020113.spkir2.yml]
+resource: spkir_abj/dcl/resource

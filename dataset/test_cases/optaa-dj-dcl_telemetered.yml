@@ -1,0 +1,5 @@
+endpoint: optaa-dj-dcl_telemetered
+instrument: optaa-dj-dcl_telemetered
+pairs:
+- [20010314_010314.optaa1.log, tel_20010314_010314.optaa1.yml]
+resource: optaa_dj/dcl/resource

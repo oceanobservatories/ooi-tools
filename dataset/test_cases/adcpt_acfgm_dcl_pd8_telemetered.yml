@@ -1,4 +1,0 @@
-instrument: adcpt_acfgm_dcl_pd8_telemetered
-resource: adcpt_acfgm/dcl/pd8/resource
-endpoint: adcpt_acfgm_dcl_pd8_telem
-pairs:  [[20131201.adcp_mod.log, 20131201.adcp_mod.yml]]

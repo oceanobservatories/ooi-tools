@@ -1,5 +1,0 @@
-instrument: parad_k_stc_imodem_telemetered
-resource: PARAD_K/STC_IMODEM/resource 
-endpoint: parad_k/telemetered
-pairs:
-  - [second.DAT, second.result.yml]

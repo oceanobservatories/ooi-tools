@@ -1,0 +1,5 @@
+endpoint: flort-dj-dcl_telemetered
+instrument: flort-dj-dcl_telemetered
+pairs:
+- [20020215.flort2.log, tel_20020215.flort2.yml]
+resource: flort_dj/dcl/resource

@@ -1,5 +1,0 @@
-instrument: nutnr_b_dcl_full_telemetered 
-resource: nutnr_b/dcl_full/resource
-endpoint: nutnr_b_dcl_full/telemetered
-pairs:
-  - [20031129.nutnr_b_dcl_full.log, tel_20031129.nutnr_b_dcl_full.yml]

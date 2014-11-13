@@ -1,0 +1,5 @@
+endpoint: adcpt-acfgm-dcl-pd0_telemetered
+instrument: adcpt-acfgm-dcl-pd0_telemetered
+pairs:
+- [20140424.adcpt.log, 20140424.telem.adcpt.yml]
+resource: adcpt_acfgm/dcl/pd0/resource

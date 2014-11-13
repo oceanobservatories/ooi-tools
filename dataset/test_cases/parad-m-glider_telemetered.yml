@@ -1,0 +1,6 @@
+endpoint: parad-m-glider_telemetered
+instrument: parad-m-glider_telemetered
+pairs:
+- [single_glider_record.mrg, single_parad_record_telemetered.mrg.result.yml]
+- [multiple_glider_record.mrg, multiple_parad_record_telemetered.mrg.result.yml]
+resource: moas/gl/parad/resource

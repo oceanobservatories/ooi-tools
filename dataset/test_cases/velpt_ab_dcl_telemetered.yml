@@ -1,6 +1,0 @@
-instrument: velpt_ab_dcl_telemetered
-resource: velpt_ab/dcl/resource
-endpoint: velpt_ab_dcl_telem
-pairs:
-  - [20140813.velpt.log, 20140813.velpt.yml]
-

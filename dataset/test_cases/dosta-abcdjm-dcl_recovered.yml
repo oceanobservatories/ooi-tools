@@ -1,0 +1,5 @@
+endpoint: dosta-abcdjm-dcl_recovered
+instrument: dosta-abcdjm-dcl_recovered
+pairs:
+- [20010121.dosta1.log, rec_20010121.dosta1.yml]
+resource: dosta_abcdjm/dcl/resource

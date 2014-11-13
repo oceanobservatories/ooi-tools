@@ -1,7 +1,0 @@
-instrument: dosta_abcdjm_mmp_cds_recovered
-resource: dosta_abcdjm/mmp_cds/resource
-endpoint: dosta_abcdjm_mmp_cds_recov
-pairs:
-  - [large_import.mpk, large_import.yml]
-timeout: 300
-

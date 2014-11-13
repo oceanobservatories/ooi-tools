@@ -1,6 +1,0 @@
-instrument: glider_eng_glider_recovered
-resource: moas/gl/engineering/resource
-endpoint: glider_eng_glider/recovered 
-pairs:
-  - [single_glider_record-engDataOnly.mrg, single_glider_record_recovered-engDataOnly.mrg.result.yml]
-#  - [multiple_glider_record-engDataOnly.mrg, multiple_glider_record_recovered-engDataOnly.mrg.result.yml]

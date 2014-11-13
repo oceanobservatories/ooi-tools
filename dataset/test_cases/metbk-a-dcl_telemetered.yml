@@ -1,0 +1,5 @@
+endpoint: metbk-a-dcl_telemetered
+instrument: metbk-a-dcl_telemetered
+pairs:
+- [20140805.metbk2.log, tel_20140805.metbk2.yml]
+resource: metbk_a/dcl/resource

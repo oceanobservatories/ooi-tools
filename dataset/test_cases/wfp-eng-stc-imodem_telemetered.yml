@@ -1,0 +1,5 @@
+endpoint: wfp-eng-stc-imodem_telemetered
+instrument: wfp-eng-stc-imodem_telemetered
+pairs:
+- [second.DAT, telemetered_second.result.yml]
+resource: WFP_ENG/STC_IMODEM/resource

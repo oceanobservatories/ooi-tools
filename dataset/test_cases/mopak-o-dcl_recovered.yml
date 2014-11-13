@@ -1,0 +1,6 @@
+endpoint: mopak-o-dcl_recovered
+instrument: mopak-o-dcl_recovered
+pairs:
+- [20140120_140004.mopak.log, first_mopak_recov.result.yml]
+rename: false
+resource: cg_stc_eng/stc/resource

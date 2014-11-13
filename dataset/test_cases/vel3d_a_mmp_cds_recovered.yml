@@ -1,5 +1,0 @@
-instrument: vel3d_a_mmp_cds_recovered
-resource: vel3d_a/mmp_cds/resource
-endpoint: vel3d_a_mmp_cds
-pairs:
-  - [first_data.mpk, first_data.yml]

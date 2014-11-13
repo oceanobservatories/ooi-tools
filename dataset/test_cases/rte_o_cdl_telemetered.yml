@@ -1,5 +1,0 @@
-instrument: rte_o_dcl_telemetered
-resource: cg_stc_eng/stc/resource
-endpoint: rte_o_dcl_telem
-pairs:
-  - [first.rte.log, first_rte.result.yml]

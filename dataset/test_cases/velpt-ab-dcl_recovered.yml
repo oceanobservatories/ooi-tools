@@ -1,0 +1,5 @@
+endpoint: velpt-ab-dcl_recovered
+instrument: velpt-ab-dcl_recovered
+pairs:
+- [20140813.velpt.log, recovered_20140813.velpt.yml]
+resource: velpt_ab/dcl/resource

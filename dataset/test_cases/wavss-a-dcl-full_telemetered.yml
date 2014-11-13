@@ -1,0 +1,5 @@
+endpoint: wavss-a-dcl-full_telemetered
+instrument: wavss-a-dcl-full_telemetered
+pairs:
+- [20140825.wavss.log, 20140825_telem.yml]
+resource: wavss_a/dcl/resource

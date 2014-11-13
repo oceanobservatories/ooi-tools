@@ -1,0 +1,5 @@
+endpoint: rte-o-dcl_recovered
+instrument: rte-o-dcl_recovered
+pairs:
+- [first.rte.log, first_rte_recov.result.yml]
+resource: cg_stc_eng/stc/resource

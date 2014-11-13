@@ -1,0 +1,5 @@
+endpoint: spkir-abj-dcl_telemetered
+instrument: spkir-abj-dcl_telemetered
+pairs:
+- [20020113.spkir2.log, tel_20020113.spkir2.yml]
+resource: spkir_abj/dcl/resource

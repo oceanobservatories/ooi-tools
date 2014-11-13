@@ -1,0 +1,5 @@
+endpoint: adcpa-m-glider_recovered
+instrument: adcpa-m-glider_recovered
+pairs:
+- [ND072023.PD0, ND072023_recov.yml]
+resource: moas/gl/adcpa/resource

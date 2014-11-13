@@ -1,0 +1,5 @@
+endpoint: pco2a-a-dcl_telemetered
+instrument: pco2a-a-dcl_telemetered
+pairs:
+- [20140217.pco2a.log, rec_20140217_pco2a.yml]
+resource: pco2a_a/dcl/resource

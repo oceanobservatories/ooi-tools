@@ -1,0 +1,5 @@
+endpoint: pco2w-abc-dcl_recovered
+instrument: pco2w-abc-dcl_recovered
+pairs:
+- [happy_path.log, happy_path_rec.yml]
+resource: pco2w_abc/dcl/resource

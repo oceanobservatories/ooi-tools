@@ -1,0 +1,5 @@
+endpoint: presf-abc-dcl_recovered
+instrument: presf-abc-dcl_recovered
+pairs:
+- [20140105_trim.presf.log, 20140105_trim.presf_recov.yml]
+resource: presf_abc/dcl/resource

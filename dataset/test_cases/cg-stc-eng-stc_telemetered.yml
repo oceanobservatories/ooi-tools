@@ -1,0 +1,5 @@
+endpoint: cg-stc-eng-stc_telemetered
+instrument: cg-stc-eng-stc_telemetered
+pairs:
+- [stc_status.txt, stc_first.result.yml]
+resource: cg_stc_eng/stc/resource

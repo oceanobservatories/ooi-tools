@@ -1,0 +1,5 @@
+endpoint: flort-kn-stc-imodem_telemetered
+instrument: flort-kn-stc-imodem_telemetered
+pairs:
+- [second.DAT, second.result.yml]
+resource: FLORT_KN/STC_IMODEM/resource

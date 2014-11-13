@@ -1,0 +1,5 @@
+endpoint: ctdgv-m-glider_recovered
+instrument: ctdgv-m-glider_recovered
+pairs:
+- [single_ctdgv_record.mrg, single_ctdgv_record_recovered.mrg.result.yml]
+resource: moas/gl/ctdgv/resource

@@ -1,5 +1,0 @@
-instrument: pco2a_a_dcl 
-resource: pco2a_a/dcl/resource
-endpoint: pco2a_a/pco2a_a_dcl_recovered
-pairs:
-- [20140217.pco2a.log,rec_20140217_pco2a_rec.yml]

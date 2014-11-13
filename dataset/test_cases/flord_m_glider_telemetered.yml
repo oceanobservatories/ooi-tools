@@ -1,6 +1,0 @@
-instrument: flord_m_glider_telemetered
-resource: moas/gl/flord_m/resource
-endpoint: flord_m_glider_telemetered
-pairs:
-  - [single_flord_record.mrg, single_flord_record.mrg---result.yml]
-  - [multiple_flord_record.mrg,multiple_flord_record.mrg---result.yml]

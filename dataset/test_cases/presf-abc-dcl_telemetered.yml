@@ -1,0 +1,5 @@
+endpoint: presf-abc-dcl_telemetered
+instrument: presf-abc-dcl_telemetered
+pairs:
+- [20140105_trim.presf.log, 20140105_trim.presf_telem.yml]
+resource: presf_abc/dcl/resource

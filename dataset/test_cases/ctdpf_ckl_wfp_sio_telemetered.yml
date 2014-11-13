@@ -1,5 +1,0 @@
-instrument: ctdpf_ckl_wfp_sio_telemetered
-resource: ctdpf_ckl/wfp_sio/resource
-endpoint: ctdpf_ckl/wfp_sio/telemetered
-pairs:
-  - [node58p1_0.wc_wfp.dat, node58p1_0.wc_wfp_ALL.yml]

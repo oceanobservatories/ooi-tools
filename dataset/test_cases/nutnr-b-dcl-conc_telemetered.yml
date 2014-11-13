@@ -1,0 +1,5 @@
+endpoint: nutnr-b-dcl-conc_telemetered
+instrument: nutnr-b-dcl-conc_telemetered
+pairs:
+- [20020125.nutnr_b_dcl_conc.log, tel_20020125.nutnr_b_dcl_conc.yml]
+resource: nutnr_b/dcl_conc/resource
