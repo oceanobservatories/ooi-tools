@@ -131,6 +131,10 @@ def generate_test_cases(rows):
         test_case['instrument'] = name
         test_case['endpoint'] = name
         test_case['resource'] =  each['resourcedir']
+        if each['timeout'] is not None:
+            test_case['timeout'] = int(each['timeout'])
+        if each['rename'] is not None:
+            test_case['rename'] = bool(int(each['rename']))
         test_case['pairs'] = []
         if each['input1'] and each['output1']:
             test_case['pairs'].append([each['input1'], each['output1']])
