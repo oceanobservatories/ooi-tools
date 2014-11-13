@@ -1,0 +1,5 @@
+instrument: ctdpf_ckl_wfp_sio_recovered
+resource: ctdpf_ckl/wfp/resource
+endpoint: ctdpf_ckl/wfp_sio/recovered
+pairs:
+  - [first.DAT, rec_first.result.yml]
