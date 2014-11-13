@@ -188,7 +188,7 @@ def diff(stream, a, b, ignore=None, rename=None):
             continue
         if type(v) == dict:
             _round = v.get('round')
-            value = v.get('value')
+            value = massage_data(v.get('value'), _round)
             rvalue = massage_data(b[k], _round)
         else:
             value = massage_data(v)
