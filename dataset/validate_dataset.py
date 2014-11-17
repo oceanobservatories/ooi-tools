@@ -90,7 +90,8 @@ def get_expected(filename):
             if particle_type != 'MULTIPLE':
                 for record in data:
                     record['particle_type'] = particle_type
-    except:
+    except Exception as e:
+        log.error('Error loading results from %s - %s', filename, e)
         data = []
 
     for record in data:
@@ -183,7 +184,7 @@ def diff(stream, a, b, ignore=None, rename=None):
             if v is None:
                 log.info("%s - Soft failure, None value in expected data for: %s", stream, k)
             else:
-                failures.append((edex_tools.FAILURES.MISSING_FIELD, (stream,k)))
+                failures.append((edex_tools.FAILURES.MISSING_FIELD, (stream, k)))
                 log.error('%s - missing key: %s in retrieved record', stream, k)
             continue
         if type(v) == dict:
@@ -203,14 +204,16 @@ def diff(stream, a, b, ignore=None, rename=None):
                 except:
                     pass
                 try:
-                    rvalue = '%12.3f' % float(value)
+                    rvalue = '%12.3f' % float(rvalue)
                 except Exception as e:
-                   log.error('Exception massaging timestamp to string: %s', e)
-                if value != rvalue: failed = True
+                    log.error('Exception massaging timestamp to string: %s', e)
+                if value != rvalue:
+                    failed = True
             else:
                 failed = True
             if failed:
-                failures.append((edex_tools.FAILURES.BAD_VALUE, 'stream=%s key=%s expected=%s retrieved=%s' % (stream, k, v, b[k])))
+                failures.append((edex_tools.FAILURES.BAD_VALUE,
+                                 'stream=%s key=%s expected=%s retrieved=%s' % (stream, k, v, b[k])))
                 log.error('%s - non-matching value: key=%r expected=%r retrieved=%r', stream, k, value, rvalue)
 
     # verify no extra (unexpected) keys present in retrieved data
@@ -218,7 +221,7 @@ def diff(stream, a, b, ignore=None, rename=None):
         if k in ignore:
             continue
         if k not in a:
-            failures.append((edex_tools.FAILURES.UNEXPECTED_VALUE, (stream,k)))
+            failures.append((edex_tools.FAILURES.UNEXPECTED_VALUE, (stream, k)))
             log.error('%s - item in retrieved data not in expected data: %s', stream, k)
 
     return failures
@@ -234,7 +237,7 @@ def massage_data(value, _round=3):
     elif type(value) == list:
         return [massage_data(x, _round) for x in value]
     elif type(value) == dict:
-        return {massage_data(k, _round):massage_data(v, _round) for k,v in value.items()}
+        return {massage_data(k, _round):massage_data(v, _round) for k, v in value.items()}
     else:
         return value
 
@@ -254,6 +257,10 @@ def copy_file(resource, endpoint, test_file, rename=False):
 
 
 def find_latest_log():
+    """
+    Fetch the latest EDEX log file.  Will throw OSError if file not found.
+    :return:  file handle to the log file
+    """
     todayglob = time.strftime('edex-ooi-%Y%m%d.log*', time.localtime())
     files = glob.glob(os.path.join(log_dir, todayglob))
     files = [(os.stat(f).st_mtime, f) for f in files if not f.endswith('lck')]
@@ -264,26 +271,44 @@ def find_latest_log():
 
 
 def watch_log_for(expected_string, logfile=None, expected_count=1, timeout=DEFAULT_STANDARD_TIMEOUT):
+    """
+    Wait for expected string to appear in log file.
+    :param expected_string:   string to watch for in log file
+    :param logfile:   file to watch
+    :param expected_count:  number of occurrences expected
+    :param timeout:  maximum time to wait for expected string
+    :return:  True if expected string occurs before specified timeout, False otherwise.
+    """
     if logfile is None:
-        logfile = find_latest_log()
+        try:
+            logfile = find_latest_log()
+        except OSError as e:
+            log.error('Error fetching latest log file - %s', e)
+            return False
+
     log.info('waiting for %s in logfile: %s', expected_string, logfile.name)
 
-    endtime = time.time() + timeout
+    end_time = time.time() + timeout
     count = 0
-    while time.time() < endtime:
+    while time.time() < end_time:
         data = logfile.read()
         for line in data.split('\n'):
             if expected_string in line:
                 count += 1
                 log.info('Found expected string %d times of %d', count, expected_count)
                 if count == expected_count:
-                    return
+                    return True
         time.sleep(.1)
-    raise Exception('timeout waiting for log output')
+    return False
 
 
 def wait_for_ingest_complete():
-    watch_log_for('Ingest: EDEX: Ingest')
+    """
+    Wait for ingestion to complete.
+    :return:  True when the EDEX log file indicates completion, False if message does not appear within expected
+              timeout.
+    """
+    return watch_log_for('Ingest: EDEX: Ingest')
 
 
 def test_results(expected, stream_name):
@@ -296,9 +321,14 @@ def test_results(expected, stream_name):
     return len(retrieved), len(expected), failures
 
 
-def dump_csv(table_data):
+def dump_csv(data):
+    """
+    Save results in comma separated file and close log file.
+    :param data:   table data
+    :return:  none
+    """
     fh = open(os.path.join(output_dir, 'results.csv'), 'w')
-    for row in table_data:
+    for row in data:
         row = [str(x) for x in row]
         fh.write(','.join(row) + '\n')
     fh.close()
@@ -306,12 +336,16 @@ def dump_csv(table_data):
 
 def purge_edex(logfile=None):
     edex_tools.purge_edex()
-    watch_log_for('Purge Operation: PURGE_ALL_DATA completed', logfile=logfile)
+    return watch_log_for('Purge Operation: PURGE_ALL_DATA completed', logfile=logfile)
 
 
 def test(test_cases):
     scorecard = {}
-    logfile = find_latest_log()
+    try:
+        logfile = find_latest_log()
+    except OSError as e:
+        log.error('Error fetching latest log file - %s', e)
+        return scorecard
 
     last_instrument = None
     for test_case in test_cases:
@@ -325,12 +359,10 @@ def test(test_cases):
             expected = get_expected(os.path.join(drivers_dir, test_case.resource, yaml_file))
 
             if copy_file(test_case.resource, test_case.endpoint, test_file):
-                try:
-                    watch_log_for('Ingest: EDEX: Ingest', logfile=logfile, timeout=test_case.timeout)
-                    time.sleep(1)
-                except:
+                if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile, timeout=test_case.timeout):
                     # didn't see any ingest, proceed, results should be all failed
                     log.error('Timed out waiting for ingest complete message')
+                time.sleep(1)
 
             for stream in expected:
                 results = test_results(expected[stream], stream)
@@ -349,7 +381,11 @@ def test_bulk(test_cases):
     num_files = 0
 
     purge_edex()
-    logfile = find_latest_log()
+    try:
+        logfile = find_latest_log()
+    except OSError as e:
+        log.error('Error fetching latest log file - %s', e)
+        return scorecard
 
     for test_case in test_cases:
         num_files += 1
@@ -361,12 +397,10 @@ def test_bulk(test_cases):
             for stream in this_expected:
                 expected[(test_case.instrument, test_file, yaml_file, stream)] = this_expected[stream]
 
-    try:
-        watch_log_for('Ingest: EDEX: Ingest', logfile=logfile, expected_count=num_files, timeout=60)
-        # sometimes edex needs to catch its breath after so many files... sleep a bit
-        time.sleep(15)
-    except:
+    if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile, expected_count=num_files, timeout=60):
         log.error('Timed out waiting for ingest complete message')
+    # sometimes edex needs to catch its breath after so many files... sleep a bit
+    time.sleep(15)
 
     last_instrument = None
     for k,v in expected.iteritems():
