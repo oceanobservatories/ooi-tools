@@ -135,11 +135,13 @@ def generate_test_cases(rows):
             test_case['timeout'] = int(each['timeout'])
         if each['rename'] is not None:
             test_case['rename'] = bool(int(each['rename']))
+        
         test_case['pairs'] = []
-        if each['input1'] and each['output1']:
-            test_case['pairs'].append([each['input1'], each['output1']])
-        if each['input2'] and each['output2']:
-            test_case['pairs'].append([each['input2'], each['output2']])
+        pairs = zip(sorted([x for x in each if 'input' in x]),
+                    sorted([x for x in each if 'output' in x]))
+
+        for input, output in pairs:
+            test_case['pairs'].append((input,output))
 
         if test_case['pairs']:
             with open('%s/%s.yml' % (yml_dir, name), 'wb') as fh:
