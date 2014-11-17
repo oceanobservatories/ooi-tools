@@ -141,7 +141,10 @@ def generate_test_cases(rows):
                     sorted([x for x in each if 'output' in x]))
 
         for input, output in pairs:
-            test_case['pairs'].append((input,output))
+            input = each[input]
+            output = each[output]
+            if all([input, output]):
+                test_case['pairs'].append([input, output])
 
         if test_case['pairs']:
             with open('%s/%s.yml' % (yml_dir, name), 'wb') as fh:
