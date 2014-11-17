@@ -61,6 +61,9 @@ def get_csv(filename):
     for row in rows[1:]:
         d = {header[i]:row[i] for i in range(len(row))}
         d.update({header[i]:None for i in range(len(row), len(header))})
+        for key in d:
+            if d[key] == '':
+                d[key] = None
         return_list.append(d)
 
     return return_list
@@ -130,10 +133,10 @@ def generate_test_cases(rows):
 
         test_case['instrument'] = name
         test_case['endpoint'] = name
-        test_case['resource'] =  each['resourcedir']
-        if each['timeout'] is not None:
+        test_case['resource'] =  each['resource']
+        if each.get('timeout') is not None:
             test_case['timeout'] = int(each['timeout'])
-        if each['rename'] is not None:
+        if each.get('rename') is not None:
             test_case['rename'] = bool(int(each['rename']))
         
         test_case['pairs'] = []
