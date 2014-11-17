@@ -1,0 +1,5 @@
+endpoint: ctdmo-ghqr-imodem_recovered
+instrument: ctdmo-ghqr-imodem_recovered
+pairs:
+- [ctdmo01_20140712_120719.DAT, ctdmo01_20140712_120719_recov.yml]
+resource: ctdmo_ghqr/imodem/resource
