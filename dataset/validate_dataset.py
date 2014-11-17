@@ -352,11 +352,10 @@ def test_bulk(test_cases):
     logfile = find_latest_log()
 
     for test_case in test_cases:
-        num_files += 1
         log.debug('Processing test case: %s', test_case)
-
         for test_file, yaml_file in test_case.pairs:
-            copy_file(test_case.resource, test_case.endpoint, test_file, rename=True)
+            if copy_file(test_case.resource, test_case.endpoint, test_file, rename=True):
+                num_files += 1
             this_expected = get_expected(os.path.join(drivers_dir, test_case.resource, yaml_file))
             for stream in this_expected:
                 expected[(test_case.instrument, test_file, yaml_file, stream)] = this_expected[stream]
