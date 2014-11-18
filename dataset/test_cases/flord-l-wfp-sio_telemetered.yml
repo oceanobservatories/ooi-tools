@@ -1,0 +1,5 @@
+endpoint: flord-l-wfp-sio_telemetered
+instrument: flord-l-wfp-sio_telemetered
+pairs:
+- [node58p1_0.we_wfp.dat, node58p1_0.we_wfp.yml]
+resource: flord_l_wfp/sio/resource
