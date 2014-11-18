@@ -1,0 +1,5 @@
+endpoint: dosta-ln-wfp-sio-mule_telemetered
+instrument: dosta-ln-wfp-sio-mule_telemetered
+pairs:
+- [node58p1_0.we_wfp.dat, node58p1_0.we_wfp.yml]
+resource: dosta_ln/wfp_sio/resource
