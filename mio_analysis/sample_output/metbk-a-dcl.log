@@ -1,0 +1,10 @@
+2014-11-18 13:15:44,874 - DEBUG   Processing test case: {'endpoint': 'metbk-a-dcl_recovered',
+ 'instrument': 'metbk-a-dcl',
+ 'resource': 'metbk_a/dcl/resource',
+ 'source_data': ['20140805.metbk2.log']}
+2014-11-18 13:15:44,875 - INFO    Purging edex
+2014-11-18 13:15:44,934 - INFO    waiting for Purge Operation: PURGE_ALL_DATA completed in logfile: /home/race/uframes/ooi/uframe-1.0/edex/logs/edex-ooi-20141118.log
+2014-11-18 13:15:49,047 - INFO    Found expected string 1 times of 1
+2014-11-18 13:15:49,048 - INFO    copy test file 20140805.metbk2.log into endpoint /home/race/uframes/ooi/uframe-1.0/edex/data/ooi/metbk-a-dcl_recovered from /home/race/uframes/ooi/uframe-1.0/edex/data/utility/edex_static/base/ooi/parsers/mi-dataset/mi/dataset/driver/metbk_a/dcl/resource
+2014-11-18 13:15:49,048 - INFO    waiting for Ingest: EDEX: Ingest in logfile: /home/race/uframes/ooi/uframe-1.0/edex/logs/edex-ooi-20141118.log
+2014-11-18 13:16:11,860 - INFO    Found expected string 1 times of 1
