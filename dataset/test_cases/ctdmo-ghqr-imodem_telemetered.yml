@@ -1,0 +1,5 @@
+endpoint: ctdmo-ghqr-imodem_telemetered
+instrument: ctdmo-ghqr-imodem_telemetered
+pairs:
+- [ctdmo01_20140712_120719.DAT, ctdmo01_20140712_120719_telem.yml]
+resource: ctdmo_ghqr/imodem/resource
