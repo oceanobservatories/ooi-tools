@@ -1,0 +1,5 @@
+endpoint: flort-dj-sio_telemetered
+instrument: flort-dj-sio_telemetered
+pairs:
+- [node59p1_0.flort.dat, node59p1_0.flort.yml]
+resource: flort_dj/sio/resource

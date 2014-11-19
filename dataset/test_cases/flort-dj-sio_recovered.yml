@@ -1,0 +1,5 @@
+endpoint: flort-dj-sio_recovered
+instrument: flort-dj-sio_recovered
+pairs:
+- [FLO15908.DAT, FLO15908.yml]
+resource: flort_dj/sio/resource

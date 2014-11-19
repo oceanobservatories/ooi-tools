@@ -1,6 +1,0 @@
-instrument: flort_dj_sio
-resource: flort_dj/sio/resource
-endpoint: flort_dj_sio_telem
-pairs:
-  - [node59p1_0.flort.dat, node59p1_0.flort.yml]
-
