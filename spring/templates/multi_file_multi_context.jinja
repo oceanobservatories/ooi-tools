@@ -13,7 +13,7 @@
         xmlns="http://camel.apache.org/schema/spring" errorHandlerRef="errorHandler">
 {% for row in rows %}
         <endpoint id="{{row.name}}_{{row.suffix}}FileEndpoint"
-            uri="file:${edex.home}/data/ooi/{{row.name}}_{{row.suffix}}?delete=true&amp;delay=3000&amp;maxMessagesPerPoll=1&amp;exclusiveReadLockStrategy=#fileChangedStrategy" />
+            uri="file:${edex.home}/data/ooi/{{row.name}}_{{row.suffix}}?delete=true&amp;delay=3000&amp;maxMessagesPerPoll=30&amp;exclusiveReadLockStrategy=#fileChangedStrategy" />
 {% endfor %}{% for row in rows %}
         <route id="{{row.name}}_{{row.suffix}}FileConsumerRoute">
             <from ref="{{row.name}}_{{row.suffix}}FileEndpoint" />

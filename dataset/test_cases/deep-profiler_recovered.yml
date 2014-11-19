@@ -1,0 +1,11 @@
+endpoint: deep-profiler_recovered
+instrument: deep-profiler_recovered
+pairs:
+- [acm_1_20140105T015004_6400.mpk, acm_1_20140105T015004_6400.yml]
+- [ctd_1_20140105T015004_6400.mpk, ctd_1_20140105T015004_6400.yml]
+- [flcd_1_20140105T015004_6400.mpk, flcd_1_20140105T015004_6400.yml]
+- [mmp_1_20140105T015004_6400.mpk, mmp_1_20140105T015004_6400.yml]
+- [optode_1_20140105T015004_6400.mpk, optode_1_20140105T015004_6400.yml]
+- [flntu_1_20140105T015004_6400.mpk, flntu_1_20140105T015004_6400.yml]
+- [acs_archive.mpk, acs_archive.yml]
+resource: dpc/resource
