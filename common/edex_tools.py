@@ -4,9 +4,11 @@ import pprint
 import urllib2
 import json
 import ntplib
+import numpy
 
 import qpid.messaging as qm
 import time
+import requests
 from logger import get_logger
 
 
@@ -146,3 +148,100 @@ def parse_scorecard(scorecard):
     row = [total_instrument_count, '', '', '', total_yaml_count, total_edex_count, total_pass_count, total_fail_count]
     result.append(format_string.format(*row))
     return '\n'.join(result), table_data
+
+
+def isnumber(x):
+    """
+    :param x: number to be evaluated
+    :return: true if x has an __int__ method, false otherwise
+    """
+    return hasattr(x, '__int__')
+
+
+def edex_get_streams(host):
+    """
+    Get list of available streams
+    :param host:  EDEX hostname or qualified IP address
+    :return:  list of streams
+    """
+    url = 'http://%s:12570/sensor/m2m/inv' % host
+    return requests.get(url).json()
+
+
+def edex_get_instruments(host):
+    """
+    Get dictionary of available instruments
+    :param host:  EDEX hostname or qualified IP address
+    :return:  dictionary containing stream name with associated instruments
+    """
+    instruments = {}
+    for stream in edex_get_streams(host):
+        url = 'http://%s:12570/sensor/m2m/inv/%s' % (host, stream)
+        # print 'checking: %s' % url
+        instruments[stream] = requests.get(url).json()
+    return instruments
+
+
+def edex_get_json(host, stream, sensor, save_sample_data=False, sample_data_file='mda_sample.json'):
+    """
+    Fetch results from EDEX using URL lookup
+    :param host:  EDEX host
+    :param stream:  stream name
+    :param sensor:  sensor name
+    :return:  JSON formatted data
+    """
+    url = 'http://%s:12570/sensor/user/inv/%s/%s' % (host, stream, sensor)
+    r = requests.get(url)
+    if save_sample_data:
+        with open(sample_data_file, 'wb') as f:
+            f.write(r.content)
+    return r.json()
+
+
+def edex_mio_report(stream, instrument, data, output_dir='.'):
+    """
+    Calculate statistics for captured data stream and write to CSV file output_dir/<stream>-<instrument>.csv.
+    :param stream:      stream name
+    :param instrument:  instrument name
+    :param data:        JSON formatted stream data
+    :param output_dir:  location to write mio report
+    :return:            none
+    """
+    d = {}
+    # first pass to extract data values
+    for record in data:
+        for param in record:
+            d.setdefault(param, []).append(record[param])
+
+    # second pass to compute statistics
+    stat_file = output_dir + '/' + stream + '-' + instrument + '.csv'
+    print 'saving statistics to %s' % stat_file
+    with open(stat_file, 'wb') as f:
+        f.write("key, min, max, median, mean, sigma\n")
+        for param in sorted(d.keys()):
+            value = numpy.array(d[param])
+            dtype = value.dtype
+            if dtype.kind in 'iuf':
+                # expect 1 or 2-d arrays - other multi-dimensional arrays are not supported
+                if len(value.shape) > 1:
+                    value = numpy.transpose(value)
+                    for i, row in enumerate(value):
+                        v_min = numpy.min(row)
+                        v_max = numpy.max(row)
+                        median = numpy.median(row)
+                        mean = numpy.mean(row)
+                        sigma = numpy.std(row)
+                        f.write("%s(%d), %f, %f, %f, %f, %f\n" % (param, i, v_min, v_max, median, mean, sigma))
+
+                v_min = numpy.min(value)
+                v_max = numpy.max(value)
+                median = numpy.median(value)
+                mean = numpy.mean(value)
+                sigma = numpy.std(value)
+                f.write("%s, %f, %f, %f, %f, %f\n" % (param, v_min, v_max, median, mean, sigma))
+            else:
+                s = set()
+                s.update(value)
+                print " - skipping non-numeric data for %s" % param
+
+

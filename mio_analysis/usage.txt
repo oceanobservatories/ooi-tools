@@ -1,0 +1,8 @@
+Usage: mio.py <test_cases>
+	test_cases - one or more test case YAML files describing test event
+
+Example Usage:
+	./mio.py test_cases/test.yaml
+
+See Also
+	Check sample_output for expected output from running with test.yaml

@@ -1,0 +1,5 @@
+endpoint: metbk-a-dcl_recovered
+instrument: metbk-a-dcl
+source_data:
+- 20140805.metbk2.log
+resource: metbk_a/dcl/resource
