@@ -22,9 +22,11 @@ from common import logger
 edex_dir = os.getenv('EDEX_HOME')
 if edex_dir is None:
     edex_dir = os.path.join(os.getenv('HOME'), 'uframes', 'ooi', 'uframe-1.0', 'edex')
+omc_dir = os.getenv('OMC_HOME')
+if omc_dir is None:
+    omc_dir = os.path.join(os.getenv('HOME'), 'src', 'omc_data', 'omc_data')
 startdir = os.path.join(edex_dir, 'data/utility/edex_static/base/ooi/parsers/mi-dataset/mi')
 hdf5dir = os.path.join(edex_dir, 'data', 'hdf5', 'sensorreading')
-drivers_dir = os.path.join(startdir, 'dataset/driver')
 ingest_dir = os.path.join(edex_dir, 'data', 'ooi')
 output_dir = os.path.join(dataset_dir, 'output_%s' % time.strftime('%Y%m%d-%H%M%S'))
 log = logger.get_logger(file_output=os.path.join(output_dir, 'everything.log'))
@@ -36,7 +38,7 @@ DEFAULT_STANDARD_TIMEOUT = 60
 class TestCase(object):
     def __init__(self, config):
         self.config = config
-        self.resource = os.path.join(drivers_dir, config.get('resource'))
+        self.resource = os.path.join(omc_dir, config.get('resource'))
         self.endpoint = os.path.join(ingest_dir, config.get('endpoint'))
         self.instrument = config.get('instrument')
         self.source_data = config.get('source_data', [])
@@ -126,7 +128,7 @@ def wait_for_ingest_complete():
 
 def copy_file(resource, endpoint, test_file, rename=False):
     log.info('copy test file %s into endpoint %s from %s', test_file, endpoint, resource)
-    source_file = os.path.join(drivers_dir, resource, test_file)
+    source_file = os.path.join(omc_dir, resource, test_file)
     if rename:
         test_file = '%s.%.2f' % (test_file, time.time())
     destination_file = os.path.join(ingest_dir, endpoint, test_file)
@@ -159,11 +161,14 @@ def test(test_cases):
         log.debug('Processing test case: %s', test_case)
         purge_edex()
 
+        num_files = 0
         for source in test_case.source_data:
             if copy_file(test_case.resource, test_case.endpoint, source):
-                if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile, timeout=test_case.timeout):
-                    # didn't see any ingest, proceed, results should be all failed
-                    log.error('Timed out waiting for ingest complete message')
+                num_files +=1
+        if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile,
+                             timeout=test_case.timeout, expected_count=num_files):
+            # didn't see any ingest, proceed, results should be all failed
+            log.error('Timed out waiting for ingest complete message')
             time.sleep(1)
 
         mio_analysis(hostname='localhost', dir=output_dir)
