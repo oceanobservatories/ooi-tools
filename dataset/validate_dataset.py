@@ -59,7 +59,11 @@ class TestCase(object):
 
 def clear_hdf5():
     for fname in os.listdir(hdf5dir):
-        os.remove(os.path.join(hdf5dir, fname))
+        fname = os.path.join(hdf5dir, fname)
+        if os.path.isfile(fname):
+            os.remove(fname)
+        if os.path.isdir(fname):
+            shutil.rmtree(fname)
 
 
 def read_test_cases(f):
