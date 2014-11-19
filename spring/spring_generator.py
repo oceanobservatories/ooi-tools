@@ -59,6 +59,8 @@ def get_csv(filename):
     header = rows[0]
     return_list = []
     for row in rows[1:]:
+        if not row:
+            continue
         d = {header[i]:row[i] for i in range(len(row))}
         d.update({header[i]:None for i in range(len(row), len(header))})
         for key in d:
@@ -135,9 +137,15 @@ def generate_test_cases(rows):
         test_case['endpoint'] = name
         test_case['resource'] =  each['resource']
         if each.get('timeout') is not None:
-            test_case['timeout'] = int(each['timeout'])
+            try:
+                test_case['timeout'] = int(each['timeout'])
+            except:
+                pass
         if each.get('rename') is not None:
-            test_case['rename'] = bool(int(each['rename']))
+            try:
+                test_case['rename'] = bool(int(each['rename']))
+            except:
+                pass
         
         test_case['pairs'] = []
         pairs = zip(sorted([x for x in each if 'input' in x]),
@@ -169,7 +177,7 @@ def main():
 
     strip_rows(rows)
 
-    rows = [row for row in rows if not row['context'].startswith('#')]
+    rows = [row for row in rows if row is not None and not row['context'].startswith('#')]
     generate_spring(options, rows)
     generate_ingest_csv(rows)
     generate_test_cases(rows)
