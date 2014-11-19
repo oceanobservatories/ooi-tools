@@ -1,0 +1,3 @@
+context,name,suffix,driver,sensor,regex,resource,timeout,rename,input1,output1,input2,output2,input3,output3,input4,output4,input5,output5,input6,output6,input7,output7
+flort-dj-sio,flort-dj-sio,recovered,/flort_dj/sio/flort_dj_sio_recovered_driver.py,XX00XXXX-XX00X-00-FLTDJR000,,flort_dj/sio/resource,,,FLO15908.DAT,FLO15908.yml
+flort-dj-sio,flort-dj-sio,telemetered,/flort_dj/sio/flort_dj_sio_telemetered_driver.py,XX00XXXX-XX00X-00-FLTDJT000,,flort_dj/sio/resource,,,node59p1_0.flort.dat,node59p1_0.flort.yml
