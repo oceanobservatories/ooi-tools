@@ -189,6 +189,8 @@ def mio_analysis(hostname='localhost', dir='./'):
             print 'calculating results for %s:%s...' % (stream, instrument)
             edex_tools.edex_mio_report(stream, instrument, edex_tools.edex_get_json(hostname, stream, instrument),
                                        dir)
+            print 'fetching netcdf file for %s:%s...' % (stream, instrument)
+            edex_tools.get_netcdf(hostname, stream, instrument, dir)
     print 'done'
 
 

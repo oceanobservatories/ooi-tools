@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os
 
 import pprint
 import urllib2
@@ -16,15 +17,15 @@ log = get_logger()
 
 
 def purge_edex():
-    USER = 'guest'
-    HOST = 'localhost'
-    PORT = 5672
-    PURGE_MESSAGE = qm.Message(content='PURGE_ALL_DATA', content_type='text/plain', user_id=USER)
+    user = 'guest'
+    host = 'localhost'
+    port = 5672
+    purge_message = qm.Message(content='PURGE_ALL_DATA', content_type='text/plain', user_id=user)
 
     log.info('Purging edex')
-    conn = qm.Connection(host=HOST, port=PORT, username=USER, password=USER)
+    conn = qm.Connection(host=host, port=port, username=user, password=user)
     conn.open()
-    conn.session().sender('purgeRequest').send(PURGE_MESSAGE)
+    conn.session().sender('purgeRequest').send(purge_message)
     conn.close()
 
 
@@ -35,25 +36,23 @@ def ntptime_to_string(t):
     return time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime(t)) + millis + 'Z'
 
 
-def get_from_edex(host, stream_name, sensor=None, timestamp_as_string=False, start_time=None, stop_time=None):
+def get_netcdf(host, stream_name, sensor='null', start_time=None, stop_time=None, output_dir='.'):
+    url = 'http://%s:12570/sensor/m2m/inv/%s/%s' % (host, stream_name, sensor)
+    netcdf_file = os.path.join(output_dir, '%s-%s.ncdf' % (stream_name, sensor))
+    with open(netcdf_file, 'wb') as fh:
+        r = requests.get(url, params={'format': 'application/netcdf'})
+        fh.write(r)
+
+
+def get_from_edex(host, stream_name, sensor='null', timestamp_as_string=False, start_time=None, stop_time=None):
     """
     Retrieve all stored sensor data from edex
     :return: list of edex records
     """
-    if sensor is None:
-        sensor = 'null'
-    all_data_url = 'http://%s:12570/sensor/m2m/inv/%s/%s'
-    proxy_handler = urllib2.ProxyHandler({})
-    opener = urllib2.build_opener(proxy_handler)
-    url = all_data_url % (host, stream_name, sensor)
-    if start_time and stop_time:
-        start_time = ntptime_to_string(start_time)
-        stop_time = ntptime_to_string(stop_time)
-        url = url + '/%s/%s' % (start_time, stop_time)
-    log.debug('Request url: %s', url)
-    req = urllib2.Request(url)
-    r = opener.open(req)
-    records = json.loads(r.read())
+    url = 'http://%s:12570/sensor/m2m/inv/%s/%s' % (host, stream_name, sensor)
+    r = requests.get(url)
+    records = r.json()
+
     log.debug('RETRIEVED:')
     log.debug(pprint.pformat(records, depth=3))
     d = {}
@@ -90,7 +89,7 @@ def parse_scorecard(scorecard):
     total_edex_count = 0
     total_pass_count = 0
     total_fail_count = 0
-    table_data = [('Instrument', 'Input File', 'Output File', 'Stream', 'YAML_count', 'EDEX_count', 'Pass', 'Fail')]
+    table_data = [['Instrument', 'Input File', 'Output File', 'Stream', 'YAML_count', 'EDEX_count', 'Pass', 'Fail']]
 
     longest = {}
     last_label = {}
@@ -115,14 +114,14 @@ def parse_scorecard(scorecard):
                             last_label[name] = val
                         longest[name] = max((len(val), longest.get(name, 0)))
 
-                    table_data.append((instrument,
+                    table_data.append([instrument,
                                        test_file,
                                        yaml_file,
                                        stream,
                                        yaml_count,
                                        edex_count,
                                        pass_count,
-                                       len(fail_count)))
+                                       len(fail_count)])
 
                     total_yaml_count += yaml_count
                     total_edex_count += edex_count
@@ -130,7 +129,11 @@ def parse_scorecard(scorecard):
                     total_fail_count += len(fail_count)
                     total_instrument_count += 1
 
-    format_string = format_string % (longest['instrument'], longest['test_file'], longest['yaml_file'], longest['stream'])
+    format_string = format_string % (
+        longest.get('instrument', 10),
+        longest.get('test_file', 10),
+        longest.get('yaml_file', 10),
+        longest.get('stream', 10))
 
     banner = format_string.format(*table_data[0])
     half_banner = len(banner)/2
@@ -214,7 +217,7 @@ def edex_mio_report(stream, instrument, data, output_dir='.'):
             d.setdefault(param, []).append(record[param])
 
     # second pass to compute statistics
-    stat_file = output_dir + '/' + stream + '-' + instrument + '.csv'
+    stat_file = os.path.join(output_dir, '%s-%s.csv' % (stream, instrument))
     print 'saving statistics to %s' % stat_file
     with open(stat_file, 'wb') as f:
         f.write("key, min, max, median, mean, sigma\n")
@@ -243,5 +246,4 @@ def edex_mio_report(stream, instrument, data, output_dir='.'):
                 s = set()
                 s.update(value)
                 print " - skipping non-numeric data for %s" % param
-
 
