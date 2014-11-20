@@ -32,7 +32,6 @@ log_dir = os.path.join(edex_dir, 'logs')
 
 output_dir = os.path.join(dataset_dir, 'output_%s' % time.strftime('%Y%m%d-%H%M%S'))
 
-
 log = logger.get_logger(file_output=os.path.join(output_dir, 'everything.log'))
 
 DEFAULT_STANDARD_TIMEOUT = 60
@@ -94,8 +93,7 @@ def get_expected(filename):
             if particle_type != 'MULTIPLE':
                 for record in data:
                     record['particle_type'] = particle_type
-    except Exception as e:
-        log.error('Error loading results from %s - %s', filename, e)
+    except (IOError, KeyError):
         data = []
 
     for record in data:
@@ -205,12 +203,13 @@ def diff(stream, a, b, ignore=None, rename=None):
                 # try rounding...
                 try:
                     value = '%12.3f' % float(value)
-                except:
+                except ValueError:
                     pass
                 try:
-                    rvalue = '%12.3f' % float(rvalue)
-                except Exception as e:
-                    log.error('Exception massaging timestamp to string: %s', e)
+                    rvalue = '%12.3f' % float(value)
+                except ValueError:
+                    pass
+
                 if value != rvalue:
                     failed = True
             else:
@@ -241,7 +240,7 @@ def massage_data(value, _round=3):
     elif type(value) == list:
         return [massage_data(x, _round) for x in value]
     elif type(value) == dict:
-        return {massage_data(k, _round):massage_data(v, _round) for k, v in value.items()}
+        return {massage_data(k, _round): massage_data(v, _round) for k, v in value.items()}
     else:
         return value
 
@@ -343,16 +342,16 @@ def purge_edex(logfile=None):
     return watch_log_for('Purge Operation: PURGE_ALL_DATA completed', logfile=logfile)
 
 
-def test(test_cases):
-    scorecard = {}
+def test(my_test_cases):
+    sc = {}
     try:
         logfile = find_latest_log()
     except OSError as e:
         log.error('Error fetching latest log file - %s', e)
-        return scorecard
+        return sc
 
     last_instrument = None
-    for test_case in test_cases:
+    for test_case in my_test_cases:
         logger.remove_handler(last_instrument)
         logger.add_handler(test_case.instrument, dir=output_dir)
         last_instrument = test_case.instrument
@@ -373,15 +372,15 @@ def test(test_cases):
                 log.debug('Results for instrument: %s test_file: %s yaml_file: %s stream: %s',
                           test_case.instrument, test_file, yaml_file, stream)
                 log.debug(results)
-                scorecard.setdefault(test_case.instrument, {}) \
-                         .setdefault(test_file, {}) \
-                         .setdefault(yaml_file, {})[stream] = results
-    return scorecard
+                sc.setdefault(test_case.instrument, {}) \
+                    .setdefault(test_file, {}) \
+                    .setdefault(yaml_file, {})[stream] = results
+    return sc
 
 
-def test_bulk(test_cases):
+def test_bulk(my_test_cases):
     expected = {}
-    scorecard = {}
+    sc = {}
     num_files = 0
 
     purge_edex()
@@ -391,7 +390,7 @@ def test_bulk(test_cases):
         log.error('Error fetching latest log file - %s', e)
         return scorecard
 
-    for test_case in test_cases:
+    for test_case in my_test_cases:
         log.debug('Processing test case: %s', test_case)
         for test_file, yaml_file in test_case.pairs:
             if copy_file(test_case.resource, test_case.endpoint, test_file, rename=True):
@@ -406,22 +405,22 @@ def test_bulk(test_cases):
     time.sleep(15)
 
     last_instrument = None
-    for k,v in expected.iteritems():
+    for k, v in expected.iteritems():
         instrument, test_file, yaml_file, stream = k
         if instrument != last_instrument:
             logger.remove_handler(last_instrument)
             logger.add_handler(instrument, dir=output_dir)
             last_instrument = instrument
 
-        results = test_results(expected[(instrument,test_file,yaml_file,stream)], stream)
+        results = test_results(expected[(instrument, test_file, yaml_file, stream)], stream)
         log.debug('Results for instrument: %s test_file: %s yaml_file: %s stream: %s',
-                   instrument, test_file, yaml_file, stream)
+                  instrument, test_file, yaml_file, stream)
         log.debug(results)
-        scorecard.setdefault(instrument, {}) \
-                 .setdefault(test_file, {}) \
-                 .setdefault(yaml_file, {})[stream] = results
+        sc.setdefault(instrument, {}) \
+            .setdefault(test_file, {}) \
+            .setdefault(yaml_file, {})[stream] = results
 
-    return scorecard
+    return sc
 
 
 if __name__ == '__main__':
