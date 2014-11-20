@@ -129,15 +129,27 @@ def wait_for_ingest_complete():
 def copy_file(resource, endpoint, test_file, rename=False):
     log.info('copy test file %s into endpoint %s from %s', test_file, endpoint, resource)
     source_file = os.path.join(omc_dir, resource, test_file)
-    if rename:
-        test_file = '%s.%.2f' % (test_file, time.time())
-    destination_file = os.path.join(ingest_dir, endpoint, test_file)
-    try:
-        shutil.copy(source_file, destination_file)
-        return True
-    except IOError as e:
-        log.error('Exception copying input file to endpoint: %s', e)
-        return False
+    files = []
+    num_files = 0
+
+    if os.path.isdir(source_file):
+        files.extend(os.listdir(source_file))
+    else:
+        files.append(os.path.basename(source_file))
+        source_file = os.path.dirname(source_file)
+
+    for f in files:
+        try:
+            target_name = f
+            if rename:
+                target_name = '%s.%.2f' % (test_file, time.time())
+            destination_file = os.path.join(ingest_dir, endpoint, target_name)
+            shutil.copy(os.path.join(source_file, f), destination_file)
+            num_files += 1
+        except IOError as e:
+            log.error('Exception copying input file to endpoint: %s', e)
+
+    return num_files
 
 
 def purge_edex(logfile=None):
@@ -163,8 +175,7 @@ def test(test_cases):
 
         num_files = 0
         for source in test_case.source_data:
-            if copy_file(test_case.resource, test_case.endpoint, source):
-                num_files +=1
+            num_files += copy_file(test_case.resource, test_case.endpoint, source)
         if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile,
                              timeout=test_case.timeout, expected_count=num_files):
             # didn't see any ingest, proceed, results should be all failed

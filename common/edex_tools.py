@@ -41,7 +41,7 @@ def get_netcdf(host, stream_name, sensor='null', start_time=None, stop_time=None
     netcdf_file = os.path.join(output_dir, '%s-%s.ncdf' % (stream_name, sensor))
     with open(netcdf_file, 'wb') as fh:
         r = requests.get(url, params={'format': 'application/netcdf'})
-        fh.write(r)
+        fh.write(r.content)
 
 
 def get_from_edex(host, stream_name, sensor='null', timestamp_as_string=False, start_time=None, stop_time=None):
