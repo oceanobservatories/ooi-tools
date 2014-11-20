@@ -60,7 +60,7 @@ def get_from_edex(host, stream_name, sensor='null', timestamp_as_string=False, s
         timestamp = record.get('internal_timestamp')
         if timestamp is None:
             timestamp = record.get('port_timestamp')
-        if timestamp_as_string:
+        if timestamp is not None and timestamp_as_string:
             timestamp = '%12.3f' % timestamp
 
         stream_name = record.get('stream_name')
