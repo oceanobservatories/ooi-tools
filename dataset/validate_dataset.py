@@ -399,7 +399,8 @@ def test_bulk(my_test_cases):
             for stream in this_expected:
                 expected[(test_case.instrument, test_file, yaml_file, stream)] = this_expected[stream]
 
-    if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile, expected_count=num_files, timeout=60):
+    if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile, expected_count=num_files,
+                         timeout=(60 + 10 * num_files)):
         log.error('Timed out waiting for ingest complete message')
     # sometimes edex needs to catch its breath after so many files... sleep a bit
     time.sleep(15)
