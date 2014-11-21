@@ -291,6 +291,8 @@ def watch_log_for(expected_string, logfile=None, expected_count=1, timeout=DEFAU
 
     log.info('waiting for %s in logfile: %s', expected_string, logfile.name)
 
+    log.info('timeout value: %s', timeout)
+
     end_time = time.time() + timeout
     count = 0
     while time.time() < end_time:
@@ -390,7 +392,13 @@ def test_bulk(my_test_cases):
         log.error('Error fetching latest log file - %s', e)
         return scorecard
 
+    total_timeout = 0
+
     for test_case in my_test_cases:
+        if test_case.timeout:
+            total_timeout += test_case.timeout
+        else:
+            total_timeout += DEFAULT_STANDARD_TIMEOUT
         log.debug('Processing test case: %s', test_case)
         for test_file, yaml_file in test_case.pairs:
             if copy_file(test_case.resource, test_case.endpoint, test_file, rename=True):
@@ -400,7 +408,7 @@ def test_bulk(my_test_cases):
                 expected[(test_case.instrument, test_file, yaml_file, stream)] = this_expected[stream]
 
     if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile, expected_count=num_files,
-                         timeout=(60 + 10 * num_files)):
+                         timeout=total_timeout):
         log.error('Timed out waiting for ingest complete message')
     # sometimes edex needs to catch its breath after so many files... sleep a bit
     time.sleep(15)
