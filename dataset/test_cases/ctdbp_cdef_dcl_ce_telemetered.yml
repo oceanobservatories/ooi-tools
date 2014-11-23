@@ -1,6 +1,0 @@
-instrument: ctdbp_cdef_dcl_ce_telemetered
-resource: ctdbp_cdef/dcl_ce/resource
-endpoint: ctdbp_cdef_dcl_ce_telem
-pairs:
-  - [20140918.ctdbp_1rec_uncorr.log, 20140918.ctdbp_1rec_uncorr_t.yml] 
-  - [20140918.ctdbp_many.log, 20140918.ctdbp_many_uncorr_t.yml] 

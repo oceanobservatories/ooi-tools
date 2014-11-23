@@ -1,0 +1,5 @@
+endpoint: velpt-ab_recovered
+instrument: velpt-ab_recovered
+pairs:
+- [VELPT_SN_11402_2014-07-02.aqd, VELPT_SN_11402_2014-07-02.yml]
+resource: velpt_ab/resource

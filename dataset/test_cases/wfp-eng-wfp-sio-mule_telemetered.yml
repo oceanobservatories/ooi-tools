@@ -1,0 +1,6 @@
+endpoint: wfp-eng-wfp-sio-mule_telemetered
+instrument: wfp-eng-wfp-sio-mule_telemetered
+pairs:
+- [node58p1_0.we_wfp.dat, node58p1_0.we_wfp.yml]
+- [node58p1_3.we_wfp.dat, node58p1_3.we_wfp.yml]
+resource: WFP_ENG/wfp_sio/resource

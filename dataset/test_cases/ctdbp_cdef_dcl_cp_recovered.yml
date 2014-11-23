@@ -1,8 +1,0 @@
-instrument: ctdbp_cdef_dcl_cp_recovered
-resource: ctdbp_cdef/dcl_cp/resource
-endpoint: ctdbp_cdef_dcl_cp_recov
-pairs:
-  - [20131123.ctdbp1_1rec.log, 20131123.ctdbp1_1rec_r.yml] 
-  - [20131123.ctdbp1_1rec_c.log, 20131123.ctdbp1_1rec_r.yml] 
-  - [20131123.ctdbp1_many.log, 20131123.ctdbp1_many_recovered.yml] 
-  - [20131123.ctdbp1_many_corrected.log, 20131123.ctdbp1_many_recovered.yml] 

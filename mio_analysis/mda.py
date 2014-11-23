@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+
+
 __author__ = 'Pete Cable, Dan Mergens'
 
 import os
@@ -19,18 +21,15 @@ import pprint
 from common import edex_tools
 from common import logger
 
-edex_dir = os.getenv('EDEX_HOME')
-if edex_dir is None:
-    edex_dir = os.path.join(os.getenv('HOME'), 'uframes', 'ooi', 'uframe-1.0', 'edex')
 omc_dir = os.getenv('OMC_HOME')
 if omc_dir is None:
     omc_dir = os.path.join(os.getenv('HOME'), 'src', 'omc_data', 'omc_data')
-startdir = os.path.join(edex_dir, 'data/utility/edex_static/base/ooi/parsers/mi-dataset/mi')
-hdf5dir = os.path.join(edex_dir, 'data', 'hdf5', 'sensorreading')
-ingest_dir = os.path.join(edex_dir, 'data', 'ooi')
+startdir = os.path.join(edex_tools.edex_dir, 'data/utility/edex_static/base/ooi/parsers/mi-dataset/mi')
+hdf5dir = os.path.join(edex_tools.edex_dir, 'data', 'hdf5', 'sensorreading')
+ingest_dir = os.path.join(edex_tools.edex_dir, 'data', 'ooi')
 output_dir = os.path.join(dataset_dir, 'output_%s' % time.strftime('%Y%m%d-%H%M%S'))
 log = logger.get_logger(file_output=os.path.join(output_dir, 'everything.log'))
-log_dir = os.path.join(edex_dir, 'logs')
+log_dir = os.path.join(edex_tools.edex_dir, 'logs')
 
 DEFAULT_STANDARD_TIMEOUT = 60
 
@@ -64,11 +63,6 @@ def read_test_cases(f):
     elif os.path.isfile(f):
         config = yaml.load(open(f, 'r'))
         yield TestCase(config)
-
-
-def clear_hdf5():
-    for fname in os.listdir(hdf5dir):
-        os.remove(os.path.join(hdf5dir, fname))
 
 
 def find_latest_log():
@@ -213,6 +207,6 @@ if __name__ == '__main__':
         for each in sys.argv[1:]:
             test_cases.extend(list(read_test_cases(each)))
 
-    clear_hdf5()
+    edex_tools.clear_hdf5()
 
     test(test_cases)
