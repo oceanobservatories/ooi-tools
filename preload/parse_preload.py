@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
     Usage:
-        ./parse_preload.py [--rebuild]
+        ./parse_preload.py [--rebuild] [--key=key]
 """
 from collections import namedtuple, Counter
 import json
@@ -254,7 +254,11 @@ def check_for_dupes(data, field):
             log.warn('Duplicate record found [%s][%s] ID: %s COUNT: %d', name, field, k, v)
 
 def main():
+    global key
     options = docopt.docopt(__doc__)
+    print options
+    if '--key' in options:
+        key = options['--key']
     log.debug('Opening database...')
 
     if options['--rebuild'] or not os.path.exists(dbfile):
