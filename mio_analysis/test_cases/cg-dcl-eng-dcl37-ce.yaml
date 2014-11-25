@@ -1,0 +1,30 @@
+endpoint: cg-dcl-eng-dcl_telemetered
+instrument: cg-dcl-eng-dcl37-ce
+resource: CE06ISSM/D00001/dcl37/syslog
+timeout: 120
+source_data:
+- 20141007.syslog.log
+- 20141012.syslog.log
+- 20141017.syslog.log
+- 20141022.syslog.log
+- 20141027.syslog.log
+- 20141008.syslog.log
+- 20141013.syslog.log
+- 20141018.syslog.log
+- 20141023.syslog.log
+- 20141028.syslog.log
+- 20141009.syslog.log
+- 20141014.syslog.log
+- 20141019.syslog.log
+- 20141024.syslog.log
+- 20141029.syslog.log
+- 20141010.syslog.log
+- 20141015.syslog.log
+- 20141020.syslog.log
+- 20141025.syslog.log
+- 20141030.syslog.log
+- 20141011.syslog.log
+- 20141016.syslog.log
+- 20141021.syslog.log
+- 20141026.syslog.log
+

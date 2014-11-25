@@ -1,0 +1,6 @@
+endpoint: cg-dcl-eng-dcl_telemetered
+instrument: cg-dcl-eng-dcl16-gi
+resource: GI01SUMO/D00001/cg_data/dcl16
+timeout: 480
+source_data:
+- syslog

@@ -1,0 +1,10 @@
+endpoint: cg-dcl-eng-dcl_telemetered
+instrument: cg-dcl-eng-dcl35-cp
+resource: CP01CNSM/X00001/cg_data/dcl35/syslog
+timeout: 300
+source_data:
+- 19350322.syslog.log
+- 20131020.syslog.log
+- 20131125.syslog.log
+- 20131218.syslog.log
+- 20140110.syslog.log
