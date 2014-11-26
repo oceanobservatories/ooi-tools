@@ -1,0 +1,6 @@
+endpoint: cg-dcl-eng-dcl_telemetered
+instrument: cg-dcl-eng-dcl13-cp
+resource: CP01CNSM/X00001/cg_data/dcl13/syslog
+timeout: 120
+source_data:
+- 19340629.syslog.log

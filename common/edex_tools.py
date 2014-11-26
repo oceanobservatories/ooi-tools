@@ -2,8 +2,6 @@
 import os
 
 import pprint
-import urllib2
-import json
 import ntplib
 import numpy
 
@@ -11,6 +9,7 @@ import qpid.messaging as qm
 import time
 import requests
 from logger import get_logger
+import simplejson.scanner
 
 
 log = get_logger()
@@ -44,6 +43,17 @@ def get_netcdf(host, stream_name, sensor='null', start_time=None, stop_time=None
         fh.write(r.content)
 
 
+def get_record_json(record):
+    """
+    Perform a safe fetch of JSON data from the supplied data record.
+    @return  JSON record or empty list if not found or error.
+    """
+    try:
+        return record.json()
+    except simplejson.scanner.JSONDecodeError as e:
+        log.warn('unable to decode record as JSON - %s - skipping data: %r', e, record.content)
+        return []
+
 def get_from_edex(host, stream_name, sensor='null', timestamp_as_string=False, start_time=None, stop_time=None):
     """
     Retrieve all stored sensor data from edex
@@ -51,7 +61,7 @@ def get_from_edex(host, stream_name, sensor='null', timestamp_as_string=False, s
     """
     url = 'http://%s:12570/sensor/m2m/inv/%s/%s' % (host, stream_name, sensor)
     r = requests.get(url)
-    records = r.json()
+    records = get_record_json()
 
     log.debug('RETRIEVED:')
     log.debug(pprint.pformat(records, depth=3))
@@ -168,7 +178,8 @@ def edex_get_streams(host):
     :return:  list of streams
     """
     url = 'http://%s:12570/sensor/m2m/inv' % host
-    return requests.get(url).json()
+    record = requests.get(url)
+    return get_record_json(record)
 
 
 def edex_get_instruments(host):
@@ -181,7 +192,8 @@ def edex_get_instruments(host):
     for stream in edex_get_streams(host):
         url = 'http://%s:12570/sensor/m2m/inv/%s' % (host, stream)
         # print 'checking: %s' % url
-        instruments[stream] = requests.get(url).json()
+        record = requests.get(url)
+        instruments[stream] = get_record_json(record)
     return instruments
 
 
@@ -198,7 +210,7 @@ def edex_get_json(host, stream, sensor, save_sample_data=False, sample_data_file
     if save_sample_data:
         with open(sample_data_file, 'wb') as f:
             f.write(r.content)
-    return r.json()
+    return get_record_json(r)
 
 
 def edex_mio_report(stream, instrument, data, output_dir='.'):
