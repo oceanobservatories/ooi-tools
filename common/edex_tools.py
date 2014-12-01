@@ -61,7 +61,7 @@ def get_from_edex(host, stream_name, sensor='null', timestamp_as_string=False, s
     """
     url = 'http://%s:12570/sensor/m2m/inv/%s/%s' % (host, stream_name, sensor)
     r = requests.get(url)
-    records = get_record_json()
+    records = get_record_json(r)
 
     log.debug('RETRIEVED:')
     log.debug(pprint.pformat(records, depth=3))
