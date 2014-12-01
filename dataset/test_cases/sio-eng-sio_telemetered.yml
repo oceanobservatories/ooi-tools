@@ -1,0 +1,6 @@
+endpoint: sio-eng-sio_telemetered
+instrument: sio-eng-sio_telemetered
+pairs:
+- [node59p1_1.status.dat, node59p1_1.yml]
+- [node58p1_0.status.dat, node58p1_0.yml]
+resource: sio_eng/sio/resource

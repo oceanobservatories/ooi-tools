@@ -1,0 +1,5 @@
+endpoint: sio-eng-sio_recovered
+instrument: sio-eng-sio_recovered
+pairs:
+- [STA15908.DAT, STA15908.yml]
+resource: sio_eng/sio/resource
