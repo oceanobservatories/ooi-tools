@@ -1,0 +1,5 @@
+endpoint: pco2w-abc-imodem_recovered
+instrument: pco2w-abc-imodem_recovered
+pairs:
+- [pco2wXYZ_11212014_1624.DAT, pco2wXYZ_11212014_1624.recov.yml]
+resource: pco2w_abc/imodem/resource
