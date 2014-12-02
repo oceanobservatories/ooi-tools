@@ -1,0 +1,5 @@
+endpoint: adcpt-m-dspec_recovered
+instrument: adcpt-m-dspec_recovered
+pairs:
+- [DSpec1404180021.txt, DSpec1404180021.yml]
+resource: adcpt_m/resource

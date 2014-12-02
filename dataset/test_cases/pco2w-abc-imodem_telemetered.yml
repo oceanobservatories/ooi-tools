@@ -1,0 +1,5 @@
+endpoint: pco2w-abc-imodem_telemetered
+instrument: pco2w-abc-imodem_telemetered
+pairs:
+- [pco2wXYZ_11212014_1624.DAT, pco2wXYZ_11212014_1624.telem.yml]
+resource: pco2w_abc/imodem/resource

@@ -1,0 +1,5 @@
+endpoint: adcpt-m-log9_recovered
+instrument: adcpt-m-log9_recovered
+pairs:
+- [ADCPT_M_LOG9_large.txt, ADCPT_M_LOG9_large.yml]
+resource: adcpt_m/resource
