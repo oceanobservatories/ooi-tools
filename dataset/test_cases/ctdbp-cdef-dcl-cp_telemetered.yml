@@ -1,0 +1,6 @@
+endpoint: ctdbp-cdef-dcl-cp_telemetered
+instrument: ctdbp-cdef-dcl-cp_telemetered
+pairs:
+- [20131123.ctdbp1_1rec.log, 20131123.ctdbp1_1rec.yml]
+- [20131123.ctdbp1_many.log, 20131123.ctdbp1_many_telemetered.yml]
+resource: ctdbp_cdef/dcl_cp/resource
