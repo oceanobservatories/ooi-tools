@@ -1,0 +1,9 @@
+endpoint: ctdbp-cdef-dcl-ce_recovered
+instrument: ctdbp-cdef-dcl-ce_recovered
+pairs:
+- [20140918.ctdbp_1rec_uncorr.log, 20140918.ctdbp_1rec_uncorr_r.yml]
+- [20140930.ctdbp1_1rec_corr1st.log, 20140930.ctdbp1_1rec_corr.yml]
+- [20140930.ctdbp1_1rec_corr2nd.log, 20140930.ctdbp1_1rec_corr.yml]
+- [20140930.ctdbp1_corr1stVariant_many.log, 20140930.ctdbp1_many_corr.yml]
+- [20140930.ctdbp1_corr2ndVariant_many.log, 20140930.ctdbp1_many_corr.yml]
+resource: ctdbp_cdef/dcl_ce/resource

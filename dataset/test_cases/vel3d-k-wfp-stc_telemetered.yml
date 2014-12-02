@@ -2,4 +2,4 @@ endpoint: vel3d-k-wfp-stc_telemetered
 instrument: vel3d-k-wfp-stc_telemetered
 pairs:
 - [valid_A0000004.DEC, valid_A0000004.yml]
-resource: vel3d_k/wfp/resource
+resource: vel3d_k/wfp_stc/resource
