@@ -8,24 +8,47 @@ import numpy
 import qpid.messaging as qm
 import time
 import requests
+import shutil
 from logger import get_logger
 import simplejson.scanner
 
 
 log = get_logger()
 
+edex_dir = os.getenv('EDEX_HOME')
+if edex_dir is None:
+    edex_dir = os.path.join(os.getenv('HOME'), 'uframes', 'ooi', 'uframe-1.0', 'edex')
+hdf5dir = os.path.join(edex_dir, 'data', 'hdf5', 'sensorreading')
+
+qpid_session = None
+user = 'guest'
+host = 'localhost'
+port = 5672
+
+def get_qpid():
+    global qpid_session
+    if qpid_session is None:
+        conn = qm.Connection(host=host, port=port, username=user, password=user)
+        conn.open()
+        qpid_session = conn.session()
+    return qpid_session
+
 
 def purge_edex():
-    user = 'guest'
-    host = 'localhost'
-    port = 5672
     purge_message = qm.Message(content='PURGE_ALL_DATA', content_type='text/plain', user_id=user)
-
     log.info('Purging edex')
-    conn = qm.Connection(host=host, port=port, username=user, password=user)
-    conn.open()
-    conn.session().sender('purgeRequest').send(purge_message)
-    conn.close()
+    get_qpid().sender('purgeRequest').send(purge_message)
+
+
+def send_file_to_queue(filename, queue, delivery_type, sensor):
+    props = {'deliveryType': delivery_type, 'sensor': sensor}
+    ingest_message = qm.Message(content=filename, content_type='text/plain', user_id=user, properties=props)
+    get_qpid().sender(queue).send(ingest_message)
+
+
+def clear_hdf5():
+    if os.path.exists(hdf5dir):
+        shutil.rmtree(hdf5dir)
 
 
 def ntptime_to_string(t):
@@ -37,7 +60,7 @@ def ntptime_to_string(t):
 
 def get_netcdf(host, stream_name, sensor='null', start_time=None, stop_time=None, output_dir='.'):
     url = 'http://%s:12570/sensor/m2m/inv/%s/%s' % (host, stream_name, sensor)
-    netcdf_file = os.path.join(output_dir, '%s-%s.ncdf' % (stream_name, sensor))
+    netcdf_file = os.path.join(output_dir, '%s-%s.nc' % (stream_name, sensor))
     with open(netcdf_file, 'wb') as fh:
         r = requests.get(url, params={'format': 'application/netcdf'})
         fh.write(r.content)
@@ -232,7 +255,7 @@ def edex_mio_report(stream, instrument, data, output_dir='.'):
     stat_file = os.path.join(output_dir, '%s-%s.csv' % (stream, instrument))
     print 'saving statistics to %s' % stat_file
     with open(stat_file, 'wb') as f:
-        f.write("key, min, max, median, mean, sigma\n")
+        f.write("key,count,min,max,median,mean,sigma\n")
         for param in sorted(d.keys()):
             value = numpy.array(d[param])
             dtype = value.dtype
@@ -246,14 +269,14 @@ def edex_mio_report(stream, instrument, data, output_dir='.'):
                         median = numpy.median(row)
                         mean = numpy.mean(row)
                         sigma = numpy.std(row)
-                        f.write("%s(%d), %f, %f, %f, %f, %f\n" % (param, i, v_min, v_max, median, mean, sigma))
+                        f.write("%s(%d),%d,%f,%f,%f,%f,%f\n" % (param, i, len(row), v_min, v_max, median, mean, sigma))
 
                 v_min = numpy.min(value)
                 v_max = numpy.max(value)
                 median = numpy.median(value)
                 mean = numpy.mean(value)
                 sigma = numpy.std(value)
-                f.write("%s, %f, %f, %f, %f, %f\n" % (param, v_min, v_max, median, mean, sigma))
+                f.write("%s,%d,%f,%f,%f,%f,%f\n" % (param, len(value), v_min, v_max, median, mean, sigma))
             else:
                 s = set()
                 s.update(value)

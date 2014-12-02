@@ -1,38 +1,53 @@
 #!/usr/bin/env python
+"""Validate dataset
 
+Usage:
+  validate_dataset.py [--ignore_null]
+  validate_dataset.py [--ignore_null] <test_case>...
+
+Options:
+  --ignore_null  Don't fail on missing null values
+
+"""
 import os
 import sys
+
 
 dataset_dir = os.path.dirname(os.path.realpath('__file__'))
 tools_dir = os.path.dirname(dataset_dir)
 
 sys.path.append(tools_dir)
 
-import calendar
-from datetime import datetime
-import glob
-import yaml
-import shutil
 import time
-import pprint
 import math
+import glob
+import Queue
+import pprint
 import ntplib
+import docopt
+import calendar
 
+from threading import Thread
+from qpid.messaging.exceptions import NotFound
+from datetime import datetime
+from yaml import load
 from common import logger
 from common import edex_tools
 
-edex_dir = os.getenv('EDEX_HOME')
-if edex_dir is None:
-    edex_dir = os.path.join(os.getenv('HOME'), 'uframes', 'ooi', 'uframe-1.0', 'edex')
-hdf5dir = os.path.join(edex_dir, 'data', 'hdf5', 'sensorreading')
-startdir = os.path.join(edex_dir, 'data/utility/edex_static/base/ooi/parsers/mi-dataset/mi')
+
+FLOAT_TOLERANCE = 0.001
+IGNORE_NULLS = False
+
+
+startdir = os.path.join(edex_tools.edex_dir, 'data/utility/edex_static/base/ooi/parsers/mi-dataset/mi')
 drivers_dir = os.path.join(startdir, 'dataset/driver')
-ingest_dir = os.path.join(edex_dir, 'data', 'ooi')
-log_dir = os.path.join(edex_dir, 'logs')
+ingest_dir = os.path.join(edex_tools.edex_dir, 'data', 'ooi')
+log_dir = os.path.join(edex_tools.edex_dir, 'logs')
 
 output_dir = os.path.join(dataset_dir, 'output_%s' % time.strftime('%Y%m%d-%H%M%S'))
 
 log = logger.get_logger(file_output=os.path.join(output_dir, 'everything.log'))
+
 
 DEFAULT_STANDARD_TIMEOUT = 60
 
@@ -48,6 +63,7 @@ class TestCase(object):
         # Attempt to obtain a timeout value from the test_case yml.  Default it to
         # DEFAULT_STANDARD_TIMEOUT if no yml value was provided.
         self.timeout = config.get('timeout', DEFAULT_STANDARD_TIMEOUT)
+        self.sensors = []
 
     def __str__(self):
         return pprint.pformat(self.config)
@@ -56,23 +72,14 @@ class TestCase(object):
         return self.config.__repr__()
 
 
-def clear_hdf5():
-    for fname in os.listdir(hdf5dir):
-        fname = os.path.join(hdf5dir, fname)
-        if os.path.isfile(fname):
-            os.remove(fname)
-        if os.path.isdir(fname):
-            shutil.rmtree(fname)
-
-
 def read_test_cases(f):
     log.info('Finding test cases in: %s', f)
     if os.path.isdir(f):
         for filename in os.listdir(f):
-            config = yaml.load(open(os.path.join(f, filename), 'r'))
+            config = load(open(os.path.join(f, filename), 'r'))
             yield TestCase(config)
     elif os.path.isfile(f):
-        config = yaml.load(open(f, 'r'))
+        config = load(open(f, 'r'))
         yield TestCase(config)
 
 
@@ -84,7 +91,7 @@ def get_expected(filename):
     """
     try:
         fh = open(filename, 'r')
-        data = yaml.load(fh)
+        data = load(fh)
         log.debug('Raw data from YAML: %s', data)
         header = data.get('header')
         data = data.get('data')
@@ -121,6 +128,48 @@ def get_expected(filename):
         expected_dictionary.setdefault(record.get('particle_type'), []).append(record)
 
     return expected_dictionary
+
+
+def same(a, b):
+    string_types = [str, unicode]
+    # log.info('same(%r,%r) %s %s', a, b, type(a), type(b))
+    if a == b:
+        return True
+
+    if type(a) is not type(b):
+        if type(a) not in string_types and type(b) not in string_types:
+            return False
+
+    if type(a) is dict:
+        if a.keys() != b.keys():
+            return False
+        return all([same(a[k], b[k]) for k in a])
+
+    if type(a) is list:
+        if len(a) != len(b):
+            return False
+        return all([same(a[i], b[i]) for i in xrange(len(a))])
+
+    if type(a) is float or type(b) is float:
+        try:
+            if type(a) is unicode:
+                a = str(a)
+            if type(b) is unicode:
+                b = str(b)
+            a = float(a)
+            b = float(b)
+            if abs(a-b) < FLOAT_TOLERANCE:
+                return True
+            if math.isnan(a) and math.isnan(b):
+                return True
+        except:
+            pass
+        log.info('FAILED floats: %r %r', a, b)
+
+    if type(a) in string_types and type(b) in string_types:
+        return a.strip() == b.strip()
+
+    return False
 
 
 def compare(stored, expected):
@@ -183,80 +232,29 @@ def diff(stream, a, b, ignore=None, rename=None):
         if k in rename:
             k = rename[k]
         if k not in b:
-            if v is None:
-                log.info("%s - Soft failure, None value in expected data for: %s", stream, k)
+            message = '%s - missing key: %s in retrieved record' % (stream, k)
+            log.error(message)
+            if IGNORE_NULLS and v is None:
+                log.info('Ignoring NULL value from expected data')
             else:
-                failures.append((edex_tools.FAILURES.MISSING_FIELD, (stream, k)))
-                log.error('%s - missing key: %s in retrieved record', stream, k)
+                failures.append((edex_tools.FAILURES.MISSING_FIELD, message))
             continue
+
         if type(v) == dict:
-            _round = v.get('round')
-            value = massage_data(v.get('value'), _round)
-            rvalue = massage_data(b[k], _round)
-        else:
-            value = massage_data(v)
-            rvalue = massage_data(b[k])
+            v = v.get('value')
 
-        if value != rvalue:
-            failed = False
-            if 'timestamp' in k:
-                # try rounding...
-                try:
-                    value = '%12.3f' % float(value)
-                except ValueError:
-                    pass
-                try:
-                    rvalue = '%12.3f' % float(value)
-                except ValueError:
-                    pass
-
-                if value != rvalue:
-                    failed = True
-            else:
-                failed = True
-            if failed:
-                failures.append((edex_tools.FAILURES.BAD_VALUE,
-                                 'stream=%s key=%s expected=%s retrieved=%s' % (stream, k, v, b[k])))
-                log.error('%s - non-matching value: key=%r expected=%r retrieved=%r', stream, k, value, rvalue)
+        if not same(v, b[k]):
+            failures.append((edex_tools.FAILURES.BAD_VALUE,
+                             'stream=%s key=%s expected=%s retrieved=%s' % (stream, k, v, b[k])))
+            log.error('%s - non-matching value: key=%r expected=%r retrieved=%r', stream, k, v, b[k])
 
     # verify no extra (unexpected) keys present in retrieved data
     for k in b:
-        if k in ignore:
-            continue
-        if k not in a:
+        if k not in a and k not in ignore:
             failures.append((edex_tools.FAILURES.UNEXPECTED_VALUE, (stream, k)))
             log.error('%s - item in retrieved data not in expected data: %s', stream, k)
 
     return failures
-
-
-def massage_data(value, _round=3):
-    if type(value) == str:
-        return value.strip()
-    elif type(value) == float and math.isnan(value):
-        return 'NaN'
-    elif type(value) == float:
-        return round(value, _round)
-    elif type(value) == list:
-        return [massage_data(x, _round) for x in value]
-    elif type(value) == dict:
-        return {massage_data(k, _round): massage_data(v, _round) for k, v in value.items()}
-    else:
-        return value
-
-
-def copy_file(resource, endpoint, test_file, rename=False):
-    log.info('copy test file %s into endpoint %s from %s', test_file, endpoint, resource)
-    source_file = os.path.join(drivers_dir, resource, test_file)
-    if rename:
-        test_file = '%s.%.2f' % (test_file, time.time())
-    destination_file = os.path.join(ingest_dir, endpoint, test_file)
-    try:
-        shutil.copy(source_file, destination_file)
-        return True
-    except IOError as e:
-        log.error('Exception copying input file to endpoint: %s', e)
-        return False
 
 
 def find_latest_log():
@@ -295,15 +293,19 @@ def watch_log_for(expected_string, logfile=None, expected_count=1, timeout=DEFAU
 
     end_time = time.time() + timeout
     count = 0
-    while time.time() < end_time:
-        data = logfile.read()
-        for line in data.split('\n'):
-            if expected_string in line:
-                count += 1
-                log.info('Found expected string %d times of %d', count, expected_count)
-                if count == expected_count:
-                    return True
-        time.sleep(.1)
+
+    try:
+        while time.time() < end_time:
+            data = logfile.read()
+            for line in data.split('\n'):
+                if expected_string in line:
+                    count += 1
+                    log.info('Found expected string %d times of %d', count, expected_count)
+                    if count == expected_count:
+                        return True
+            time.sleep(.1)
+    except KeyboardInterrupt:
+        pass
     return False
 
 
@@ -316,8 +318,8 @@ def wait_for_ingest_complete():
     return watch_log_for('Ingest: EDEX: Ingest')
 
 
-def test_results(expected, stream_name):
-    retrieved = edex_tools.get_from_edex('localhost', stream_name, timestamp_as_string=True)
+def test_results(expected, stream_name, sensor='null'):
+    retrieved = edex_tools.get_from_edex('localhost', stream_name, timestamp_as_string=True, sensor=sensor)
     log.debug('Retrieved %d records from edex:', len(retrieved))
     log.debug(pprint.pformat(retrieved, depth=3))
     log.debug('Retrieved %d records from expected data file:', len(expected))
@@ -344,108 +346,101 @@ def purge_edex(logfile=None):
     return watch_log_for('Purge Operation: PURGE_ALL_DATA completed', logfile=logfile)
 
 
+def execute_test(test_case, index, count, expected_queue):
+    log.debug('Processing test case: %s index: %d', test_case, index)
+
+    test_file, yaml_file = test_case.pairs[index]
+    input_filepath = os.path.join(drivers_dir, test_case.resource, test_file)
+    output_filepath = os.path.join(drivers_dir, test_case.resource, yaml_file)
+
+    if os.path.exists(input_filepath) and os.path.exists(output_filepath):
+
+        delivery = test_case.instrument.split('_')[-1]
+        sensor = 'VALIDATE-%.1f-%08d' % (time.time(), count)
+        queue = 'Ingest.%s' % test_case.instrument
+
+        try:
+            log.info('Sending file (%s) to queue (%s)', test_file, queue)
+            edex_tools.send_file_to_queue(input_filepath, queue, delivery, sensor)
+        except NotFound:
+            log.warn('Queue not found: %s', queue)
+            return None
+
+        log.info('Fetching expected results from YML file: %s', yaml_file)
+        this_expected = get_expected(output_filepath)
+        expected_queue.put((test_case.instrument, sensor, test_file, yaml_file, this_expected))
+
 def test(my_test_cases):
-    sc = {}
     try:
         logfile = find_latest_log()
     except OSError as e:
         log.error('Error fetching latest log file - %s', e)
-        return sc
+        return {}
 
-    last_instrument = None
-    for test_case in my_test_cases:
-        logger.remove_handler(last_instrument)
-        logger.add_handler(test_case.instrument, dir=output_dir)
-        last_instrument = test_case.instrument
-
-        log.debug('Processing test case: %s', test_case)
-        for test_file, yaml_file in test_case.pairs:
-            purge_edex()
-            expected = get_expected(os.path.join(drivers_dir, test_case.resource, yaml_file))
-
-            if copy_file(test_case.resource, test_case.endpoint, test_file):
-                if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile, timeout=test_case.timeout):
-                    # didn't see any ingest, proceed, results should be all failed
-                    log.error('Timed out waiting for ingest complete message')
-                time.sleep(1)
-
-            for stream in expected:
-                results = test_results(expected[stream], stream)
-                log.debug('Results for instrument: %s test_file: %s yaml_file: %s stream: %s',
-                          test_case.instrument, test_file, yaml_file, stream)
-                log.debug(results)
-                sc.setdefault(test_case.instrument, {}) \
-                    .setdefault(test_file, {}) \
-                    .setdefault(yaml_file, {})[stream] = results
-    return sc
-
-
-def test_bulk(my_test_cases):
-    expected = {}
-    sc = {}
-    num_files = 0
-
-    purge_edex()
-    try:
-        logfile = find_latest_log()
-    except OSError as e:
-        log.error('Error fetching latest log file - %s', e)
-        return scorecard
+    purge_edex(logfile)
 
     total_timeout = 0
+    expected_queue = Queue.Queue()
+    threads = []
+    sc = {}
 
-    for test_case in my_test_cases:
-        if test_case.timeout:
-            total_timeout += test_case.timeout
-        else:
-            total_timeout += DEFAULT_STANDARD_TIMEOUT
-        log.debug('Processing test case: %s', test_case)
-        for test_file, yaml_file in test_case.pairs:
-            if copy_file(test_case.resource, test_case.endpoint, test_file, rename=True):
-                num_files += 1
-            this_expected = get_expected(os.path.join(drivers_dir, test_case.resource, yaml_file))
-            for stream in this_expected:
-                expected[(test_case.instrument, test_file, yaml_file, stream)] = this_expected[stream]
+    # execute all tests and load expected results
+    for count, case in enumerate(my_test_cases):
+        total_timeout += case.__dict__.get('timeout', DEFAULT_STANDARD_TIMEOUT)
+        for index, _ in enumerate(case.pairs):
+            t = Thread(target=execute_test, args=[case, index, count, expected_queue])
+            t.start()
+            threads.append(t)
 
-    if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile, expected_count=num_files,
+    for t in threads:
+        t.join()
+
+    # pull the data from the queue
+    expected_results = []
+    while True:
+        try:
+            expected_results.append(expected_queue.get_nowait())
+        except Queue.Empty:
+            break
+
+    # wait for all ingestion to complete
+    if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile, expected_count=len(expected_results),
                          timeout=total_timeout):
         log.error('Timed out waiting for ingest complete message')
-    # sometimes edex needs to catch its breath after so many files... sleep a bit
-    time.sleep(15)
 
+    # iterate through each sensor/stream combo and test the results
     last_instrument = None
-    for k, v in expected.iteritems():
-        instrument, test_file, yaml_file, stream = k
+    for instrument, sensor, test_file, yaml_file, expected in expected_results:
         if instrument != last_instrument:
             logger.remove_handler(last_instrument)
             logger.add_handler(instrument, dir=output_dir)
             last_instrument = instrument
-
-        results = test_results(expected[(instrument, test_file, yaml_file, stream)], stream)
-        log.debug('Results for instrument: %s test_file: %s yaml_file: %s stream: %s',
-                  instrument, test_file, yaml_file, stream)
-        log.debug(results)
-        sc.setdefault(instrument, {}) \
-            .setdefault(test_file, {}) \
-            .setdefault(yaml_file, {})[stream] = results
+        for stream in expected:
+            log.info('Testing instrument: %r, sensor: %r, stream: %r', instrument, sensor, stream)
+            results = test_results(expected[stream], stream, sensor=sensor)
+            log.debug('Results for instrument: %s test_file: %s yaml_file: %s stream: %s',
+              instrument, test_file, yaml_file, stream)
+            log.debug(results)
+            sc.setdefault(instrument, {}) \
+                    .setdefault(test_file, {}) \
+                    .setdefault(yaml_file, {})[stream] = results
 
     return sc
 
 
 if __name__ == '__main__':
+    options = docopt.docopt(__doc__)
+
+    IGNORE_NULLS = options['--ignore_null']
+
     test_cases = []
-    if len(sys.argv) <= 1:
-        test_cases = read_test_cases('test_cases')
+    if not options['<test_case>']:
+        test_cases = list(read_test_cases('test_cases'))
     else:
-        for each in sys.argv[1:]:
+        for each in options['<test_case>']:
             test_cases.extend(list(read_test_cases(each)))
-    bulk_test_cases = [tc for tc in test_cases if tc.rename]
-    single_test_cases = [tc for tc in test_cases if not tc.rename]
 
-    clear_hdf5()
-
-    scorecard = test_bulk(bulk_test_cases)
-    scorecard.update(test(single_test_cases))
+    scorecard = test(test_cases)
 
     result, table_data = edex_tools.parse_scorecard(scorecard)
     log.info(result)
