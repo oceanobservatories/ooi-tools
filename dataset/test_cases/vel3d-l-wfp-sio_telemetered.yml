@@ -1,7 +1,7 @@
-instrument: vel3d-l-wfp-sio_telemetered
-resource: vel3d_l/wfp/resource
 endpoint: vel3d-l-wfp-sio_telemetered
+instrument: vel3d-l-wfp-sio_telemetered
 pairs:
-  - [tel_vel3d_l_1.dat, tel_vel3d_l_1.yml]
-  - [tel_node15p1.dat, tel_node15p1.yml]
-  - [tel_node58p1_0_wa_wfp.dat, tel_node58p1_0_wa_wfp.yml]
+- [tel_vel3d_l_1.dat, tel_vel3d_l_1.yml]
+- [tel_node15p1.dat, tel_node15p1.yml]
+- [tel_node58p1_0_wa_wfp.dat, tel_node58p1_0_wa_wfp.yml]
+resource: vel3d_l/wfp/resource
