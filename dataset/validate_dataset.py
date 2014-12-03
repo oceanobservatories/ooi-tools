@@ -34,7 +34,13 @@ from yaml import load
 from common import logger
 from common import edex_tools
 
+try:
+    from yaml import CLoader as Loader
+except ImportError:
+    from yaml import Loader, Dumper
 
+
+NUM_THREADS = 30
 FLOAT_TOLERANCE = 0.001
 IGNORE_NULLS = False
 
@@ -45,6 +51,9 @@ ingest_dir = os.path.join(edex_tools.edex_dir, 'data', 'ooi')
 log_dir = os.path.join(edex_tools.edex_dir, 'logs')
 
 output_dir = os.path.join(dataset_dir, 'output_%s' % time.strftime('%Y%m%d-%H%M%S'))
+
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
 
 log = logger.get_logger(file_output=os.path.join(output_dir, 'everything.log'))
 
@@ -76,10 +85,10 @@ def read_test_cases(f):
     log.info('Finding test cases in: %s', f)
     if os.path.isdir(f):
         for filename in os.listdir(f):
-            config = load(open(os.path.join(f, filename), 'r'))
+            config = load(open(os.path.join(f, filename), 'r'), Loader=Loader)
             yield TestCase(config)
     elif os.path.isfile(f):
-        config = load(open(f, 'r'))
+        config = load(open(f, 'r'), Loader=Loader)
         yield TestCase(config)
 
 
@@ -91,7 +100,7 @@ def get_expected(filename):
     """
     try:
         fh = open(filename, 'r')
-        data = load(fh)
+        data = load(fh, Loader=Loader)
         log.debug('Raw data from YAML: %s', data)
         header = data.get('header')
         data = data.get('data')
@@ -346,29 +355,52 @@ def purge_edex(logfile=None):
     return watch_log_for('Purge Operation: PURGE_ALL_DATA completed', logfile=logfile)
 
 
-def execute_test(test_case, index, count, expected_queue):
-    log.debug('Processing test case: %s index: %d', test_case, index)
-
-    test_file, yaml_file = test_case.pairs[index]
-    input_filepath = os.path.join(drivers_dir, test_case.resource, test_file)
-    output_filepath = os.path.join(drivers_dir, test_case.resource, yaml_file)
-
-    if os.path.exists(input_filepath) and os.path.exists(output_filepath):
-
-        delivery = test_case.instrument.split('_')[-1]
-        sensor = 'VALIDATE-%.1f-%08d' % (time.time(), count)
-        queue = 'Ingest.%s' % test_case.instrument
-
+def execute_test(test_queue, expected_queue):
+    while True:
         try:
-            log.info('Sending file (%s) to queue (%s)', test_file, queue)
-            edex_tools.send_file_to_queue(input_filepath, queue, delivery, sensor)
-        except NotFound:
-            log.warn('Queue not found: %s', queue)
-            return None
+            test_case, index, count = test_queue.get_nowait()
+            log.debug('Processing test case: %s index: %d', test_case, index)
 
-        log.info('Fetching expected results from YML file: %s', yaml_file)
-        this_expected = get_expected(output_filepath)
-        expected_queue.put((test_case.instrument, sensor, test_file, yaml_file, this_expected))
+            test_file, yaml_file = test_case.pairs[index]
+            input_filepath = os.path.join(drivers_dir, test_case.resource, test_file)
+            output_filepath = os.path.join(drivers_dir, test_case.resource, yaml_file)
+
+            if os.path.exists(input_filepath) and os.path.exists(output_filepath):
+
+                delivery = test_case.instrument.split('_')[-1]
+                sensor = 'VALIDATE-%.1f-%08d' % (time.time(), count)
+                queue = 'Ingest.%s' % test_case.instrument
+
+                try:
+                    log.info('Sending file (%s) to queue (%s)', test_file, queue)
+                    edex_tools.send_file_to_queue(input_filepath, queue, delivery, sensor)
+                except NotFound:
+                    log.warn('Queue not found: %s', queue)
+                    return None
+
+                log.info('Fetching expected results from YML file: %s', yaml_file)
+                this_expected = get_expected(output_filepath)
+                expected_queue.put((test_case.instrument, sensor, test_file, yaml_file, this_expected))
+
+        except Queue.Empty:
+            break
+
+
+def execute_validate(expected_queue, results_queue):
+    while True:
+        try:
+            instrument, sensor, test_file, yaml_file, stream, expected = expected_queue.get_nowait()
+
+            log.info('Testing instrument: %r, sensor: %r, stream: %r', instrument, sensor, stream)
+            results = test_results(expected, stream, sensor=sensor)
+            log.debug('Results for instrument: %s test_file: %s yaml_file: %s stream: %s',
+                      instrument, test_file, yaml_file, stream)
+            log.debug(results)
+            results_queue.put_nowait((instrument, test_file, yaml_file, stream, results))
+
+        except Queue.Empty:
+            break
+
 
 def test(my_test_cases):
     try:
@@ -380,7 +412,9 @@ def test(my_test_cases):
     purge_edex(logfile)
 
     total_timeout = 0
+    test_queue = Queue.Queue()
     expected_queue = Queue.Queue()
+    results_queue = Queue.Queue()
     threads = []
     sc = {}
 
@@ -388,42 +422,49 @@ def test(my_test_cases):
     for count, case in enumerate(my_test_cases):
         total_timeout += case.__dict__.get('timeout', DEFAULT_STANDARD_TIMEOUT)
         for index, _ in enumerate(case.pairs):
-            t = Thread(target=execute_test, args=[case, index, count, expected_queue])
-            t.start()
-            threads.append(t)
+            test_queue.put((case, index, count))
+
+    for _ in xrange(NUM_THREADS):
+        t = Thread(target=execute_test, args=[test_queue, expected_queue])
+        t.start()
+        threads.append(t)
 
     for t in threads:
         t.join()
 
-    # pull the data from the queue
-    expected_results = []
-    while True:
-        try:
-            expected_results.append(expected_queue.get_nowait())
-        except Queue.Empty:
-            break
-
     # wait for all ingestion to complete
-    if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile, expected_count=len(expected_results),
+    if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile, expected_count=expected_queue.qsize(),
                          timeout=total_timeout):
         log.error('Timed out waiting for ingest complete message')
 
-    # iterate through each sensor/stream combo and test the results
-    last_instrument = None
-    for instrument, sensor, test_file, yaml_file, expected in expected_results:
-        if instrument != last_instrument:
-            logger.remove_handler(last_instrument)
-            logger.add_handler(instrument, dir=output_dir)
-            last_instrument = instrument
-        for stream in expected:
-            log.info('Testing instrument: %r, sensor: %r, stream: %r', instrument, sensor, stream)
-            results = test_results(expected[stream], stream, sensor=sensor)
-            log.debug('Results for instrument: %s test_file: %s yaml_file: %s stream: %s',
-              instrument, test_file, yaml_file, stream)
-            log.debug(results)
-            sc.setdefault(instrument, {}) \
-                    .setdefault(test_file, {}) \
-                    .setdefault(yaml_file, {})[stream] = results
+    # pull expected results from the queue, break them down into individual streams then put them back in
+    temp_list = []
+    while True:
+        try:
+            instrument, sensor, test_file, yaml_file, expected = expected_queue.get_nowait()
+            for stream in expected:
+                temp_list.append((instrument, sensor, test_file, yaml_file, stream, expected[stream]))
+        except Queue.Empty:
+            break
+
+    for each in temp_list:
+        expected_queue.put_nowait(each)
+
+    # retrieve results and compare with expected
+    for _ in xrange(NUM_THREADS):
+        t = Thread(target=execute_validate, args=[expected_queue, results_queue])
+        t.start()
+        threads.append(t)
+
+    for t in threads:
+        t.join()
+
+    while True:
+        try:
+            instrument, test_file, yaml_file, stream, results = results_queue.get_nowait()
+            sc.setdefault(instrument, {}).setdefault(test_file, {}).setdefault(yaml_file, {})[stream] = results
+        except Queue.Empty:
+            break
 
     return sc
 
