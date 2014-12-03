@@ -1,0 +1,5 @@
+instrument: vel3d-l-wfp_recovered
+resource: vel3d_l/wfp/resource
+endpoint: vel3d-l-wfp_recovered
+pairs:
+  - [rec_vel3d_l_2.dat, rec_vel3d_l_2.yml]
