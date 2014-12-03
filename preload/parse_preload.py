@@ -256,8 +256,7 @@ def check_for_dupes(data, field):
 def main():
     global key
     options = docopt.docopt(__doc__)
-    print options
-    if '--key' in options:
+    if options['--key'] is not None:
         key = options['--key']
     log.debug('Opening database...')
 
