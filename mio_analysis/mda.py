@@ -125,6 +125,7 @@ def load_files(resource, instrument, test_file, count=0):
     log.info('send test file %s into ingest queue %s from %s', test_file, queue, resource)
     source_file = os.path.join(omc_dir, resource, test_file)
     files = []
+    num_files = 0
 
     if os.path.isdir(source_file):
         files.extend(os.listdir(source_file))
@@ -137,11 +138,11 @@ def load_files(resource, instrument, test_file, count=0):
             delivery = instrument.split('_')[-1]
             sensor = 'MDA-%.1f-%08d' % (time.time(), count)
             edex_tools.send_file_to_queue(os.path.join(source_file, f), queue, delivery, sensor)
-            count += 1
+            num_files += 1
         except IOError as e:
             log.error('Exception copying input file to endpoint: %s', e)
 
-    return count
+    return num_files
 
 
 def purge_edex(logfile=None):
@@ -157,7 +158,7 @@ def test(test_cases):
         return
 
     last_instrument = None
-    for test_case in test_cases:
+    for i, test_case in enumerate(test_cases):
         logger.remove_handler(last_instrument)
         logger.add_handler(test_case.instrument, dir=output_dir)
         last_instrument = test_case.instrument
@@ -167,7 +168,7 @@ def test(test_cases):
 
         num_files = 0
         for source in test_case.source_data:
-            num_files += load_files(test_case.resource, test_case.endpoint, source)
+            num_files += load_files(test_case.resource, test_case.endpoint, source, count=i)
         if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile,
                              timeout=test_case.timeout, expected_count=num_files):
             # didn't see any ingest, proceed, results should be all failed
