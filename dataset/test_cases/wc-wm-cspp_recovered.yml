@@ -1,0 +1,5 @@
+endpoint: wc-wm-cspp_recovered
+instrument: wc-wm-cspp_recovered
+pairs:
+- [11079364_WC_WM_20.txt, 11079364_WC_WM_recov.yml]
+resource: wc_wm/cspp/resource

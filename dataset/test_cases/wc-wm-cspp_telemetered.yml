@@ -1,0 +1,5 @@
+endpoint: wc-wm-cspp_telemetered
+instrument: wc-wm-cspp_telemetered
+pairs:
+- [11079364_WC_WM_20.txt, 11079364_WC_WM_telem.yml]
+resource: wc_wm/cspp/resource
