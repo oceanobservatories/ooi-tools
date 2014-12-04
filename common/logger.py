@@ -4,6 +4,7 @@ import os
 import logging
 
 _logs = {}
+_files = {}
 
 
 def get_formatter():
@@ -11,7 +12,7 @@ def get_formatter():
 
 
 def get_logger(name='logger', level=logging.INFO, file_output=None, file_level=logging.DEBUG):
-    if not name in _logs:
+    if name not in _logs:
         logger = logging.getLogger(name)
         logger.setLevel(logging.DEBUG)
 
@@ -20,26 +21,27 @@ def get_logger(name='logger', level=logging.INFO, file_output=None, file_level=l
         ch.name = 'console'
         ch.setLevel(level)
 
-        # create formatter
-        formatter = get_formatter()
-
         # add formatter to ch
-        ch.setFormatter(formatter)
+        ch.setFormatter(get_formatter())
 
         # add ch to logger
         logger.addHandler(ch)
+        _logs[name] = logger
 
+    if name not in _files:
+        logger = logging.getLogger(name)
         if file_output:
             parent_dir = os.path.dirname(file_output)
             if not os.path.exists(parent_dir):
                 os.makedirs(parent_dir)
 
             fh = logging.FileHandler(file_output)
-            fh.setFormatter(formatter)
+            fh.name = 'file'
+            fh.setFormatter(get_formatter())
             fh.setLevel(file_level)
             logger.addHandler(fh)
+            _files[name] = logger
 
-        _logs[name] = logger
     return _logs[name]
 
 
