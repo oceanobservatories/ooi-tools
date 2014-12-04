@@ -20,7 +20,6 @@ sys.path.append(tools_dir)
 
 import time
 import math
-import glob
 import Queue
 import pprint
 import ntplib
@@ -48,7 +47,6 @@ IGNORE_NULLS = False
 startdir = os.path.join(edex_tools.edex_dir, 'data/utility/edex_static/base/ooi/parsers/mi-dataset/mi')
 drivers_dir = os.path.join(startdir, 'dataset/driver')
 ingest_dir = os.path.join(edex_tools.edex_dir, 'data', 'ooi')
-log_dir = os.path.join(edex_tools.edex_dir, 'logs')
 
 output_dir = os.path.join(dataset_dir, 'output_%s' % time.strftime('%Y%m%d-%H%M%S'))
 
@@ -56,9 +54,6 @@ if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
 log = logger.get_logger(file_output=os.path.join(output_dir, 'everything.log'))
-
-
-DEFAULT_STANDARD_TIMEOUT = 60
 
 
 class TestCase(object):
@@ -71,7 +66,7 @@ class TestCase(object):
         self.rename = config.get('rename', True)
         # Attempt to obtain a timeout value from the test_case yml.  Default it to
         # DEFAULT_STANDARD_TIMEOUT if no yml value was provided.
-        self.timeout = config.get('timeout', DEFAULT_STANDARD_TIMEOUT)
+        self.timeout = config.get('timeout', edex_tools.DEFAULT_STANDARD_TIMEOUT)
         self.sensors = []
 
     def __str__(self):
@@ -266,65 +261,13 @@ def diff(stream, a, b, ignore=None, rename=None):
     return failures
 
 
-def find_latest_log():
-    """
-    Fetch the latest EDEX log file.  Will throw OSError if file not found.
-    :return:  file handle to the log file
-    """
-    todayglob = time.strftime('edex-ooi-%Y%m%d.log*', time.localtime())
-    files = glob.glob(os.path.join(log_dir, todayglob))
-    files = [(os.stat(f).st_mtime, f) for f in files if not f.endswith('lck')]
-    files.sort()
-    fh = open(files[-1][1], 'r')
-    fh.seek(0, 2)
-    return fh
-
-
-def watch_log_for(expected_string, logfile=None, expected_count=1, timeout=DEFAULT_STANDARD_TIMEOUT):
-    """
-    Wait for expected string to appear in log file.
-    :param expected_string:   string to watch for in log file
-    :param logfile:   file to watch
-    :param expected_count:  number of occurrences expected
-    :param timeout:  maximum time to wait for expected string
-    :return:  True if expected string occurs before specified timeout, False otherwise.
-    """
-    if logfile is None:
-        try:
-            logfile = find_latest_log()
-        except OSError as e:
-            log.error('Error fetching latest log file - %s', e)
-            return False
-
-    log.info('waiting for %s in logfile: %s', expected_string, logfile.name)
-
-    log.info('timeout value: %s', timeout)
-
-    end_time = time.time() + timeout
-    count = 0
-
-    try:
-        while time.time() < end_time:
-            data = logfile.read()
-            for line in data.split('\n'):
-                if expected_string in line:
-                    count += 1
-                    log.info('Found expected string %d times of %d', count, expected_count)
-                    if count == expected_count:
-                        return True
-            time.sleep(.1)
-    except KeyboardInterrupt:
-        pass
-    return False
-
-
 def wait_for_ingest_complete():
     """
     Wait for ingestion to complete.
     :return:  True when the EDEX log file indicates completion, False if message does not appear within expected
               timeout.
     """
-    return watch_log_for('Ingest: EDEX: Ingest')
+    return edex_tools.watch_log_for('Ingest: EDEX: Ingest')
 
 
 def test_results(expected, stream_name, sensor='null'):
@@ -352,7 +295,7 @@ def dump_csv(data):
 
 def purge_edex(logfile=None):
     edex_tools.purge_edex()
-    return watch_log_for('Purge Operation: PURGE_ALL_DATA completed', logfile=logfile)
+    return edex_tools.watch_log_for('Purge Operation: PURGE_ALL_DATA completed', logfile=logfile)
 
 
 def execute_test(test_queue, expected_queue):
@@ -404,7 +347,7 @@ def execute_validate(expected_queue, results_queue):
 
 def test(my_test_cases):
     try:
-        logfile = find_latest_log()
+        logfile = edex_tools.find_latest_log()
     except OSError as e:
         log.error('Error fetching latest log file - %s', e)
         return {}
@@ -420,7 +363,7 @@ def test(my_test_cases):
 
     # execute all tests and load expected results
     for count, case in enumerate(my_test_cases):
-        total_timeout += case.__dict__.get('timeout', DEFAULT_STANDARD_TIMEOUT)
+        total_timeout += case.timeout
         for index, _ in enumerate(case.pairs):
             test_queue.put((case, index, count))
 
@@ -433,8 +376,8 @@ def test(my_test_cases):
         t.join()
 
     # wait for all ingestion to complete
-    if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile, expected_count=expected_queue.qsize(),
-                         timeout=total_timeout):
+    if not edex_tools.watch_log_for('Ingest: EDEX: Ingest', logfile=logfile,
+                                    expected_count=expected_queue.qsize(), timeout=total_timeout):
         log.error('Timed out waiting for ingest complete message')
 
     # pull expected results from the queue, break them down into individual streams then put them back in

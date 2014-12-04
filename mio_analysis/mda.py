@@ -11,13 +11,9 @@ tools_dir = os.path.dirname(dataset_dir)
 
 sys.path.append(tools_dir)
 
-import glob
 import yaml
-import shutil
 import time
 import pprint
-
-# from common import logger
 from common import edex_tools
 from common import logger
 
@@ -65,59 +61,13 @@ def read_test_cases(f):
         yield TestCase(config)
 
 
-def find_latest_log():
-    """
-    Fetch the latest EDEX log file.  Will throw OSError if file not found.
-    :return:  file handle to the log file
-    """
-    todayglob = time.strftime('edex-ooi-%Y%m%d.log*', time.localtime())
-    files = glob.glob(os.path.join(log_dir, todayglob))
-    files = [(os.stat(f).st_mtime, f) for f in files if not f.endswith('lck')]
-    files.sort()
-    fh = open(files[-1][1], 'r')
-    fh.seek(0, 2)
-    return fh
-
-
-def watch_log_for(expected_string, logfile=None, expected_count=1, timeout=DEFAULT_STANDARD_TIMEOUT):
-    """
-    Wait for expected string to appear in log file.
-    :param expected_string:   string to watch for in log file
-    :param logfile:   file to watch
-    :param expected_count:  number of occurrences expected
-    :param timeout:  maximum time to wait for expected string
-    :return:  True if expected string occurs before specified timeout, False otherwise.
-    """
-    if logfile is None:
-        try:
-            logfile = find_latest_log()
-        except OSError as e:
-            log.error('Error fetching latest log file - %s', e)
-            return False
-
-    log.info('waiting for %s in logfile: %s', expected_string, logfile.name)
-
-    end_time = time.time() + timeout
-    count = 0
-    while time.time() < end_time:
-        data = logfile.read()
-        for line in data.split('\n'):
-            if expected_string in line:
-                count += 1
-                log.info('Found expected string %d times of %d', count, expected_count)
-                if count == expected_count:
-                    return True
-        time.sleep(.1)
-    return False
-
-
 def wait_for_ingest_complete():
     """
     Wait for ingestion to complete.
     :return:  True when the EDEX log file indicates completion, False if message does not appear within expected
               timeout.
     """
-    return watch_log_for('Ingest: EDEX: Ingest')
+    return edex_tools.watch_log_for('Ingest: EDEX: Ingest')
 
 
 def load_files(resource, instrument, test_file, sensor):
@@ -151,12 +101,12 @@ def load_files(resource, instrument, test_file, sensor):
 
 def purge_edex(logfile=None):
     edex_tools.purge_edex()
-    return watch_log_for('Purge Operation: PURGE_ALL_DATA completed', logfile=logfile)
+    return edex_tools.watch_log_for('Purge Operation: PURGE_ALL_DATA completed', logfile=logfile)
 
 
 def test(test_cases):
     try:
-        logfile = find_latest_log()
+        logfile = edex_tools.find_latest_log()
     except OSError as e:
         log.error('Error fetching latest log file - %s', e)
         return
@@ -179,8 +129,8 @@ def test(test_cases):
         for source in test_case.source_data:
             num_files += load_files(test_case.resource, test_case.endpoint, source, sensor)
 
-    if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile,
-                         timeout=total_timeout, expected_count=num_files):
+    if not edex_tools.watch_log_for('Ingest: EDEX: Ingest', logfile=logfile,
+                                    timeout=total_timeout, expected_count=num_files):
         log.error('Timed out waiting for ingest complete message')
         time.sleep(1)
 
