@@ -236,7 +236,7 @@ def edex_get_json(host, stream, sensor, save_sample_data=False, sample_data_file
     return get_record_json(r)
 
 
-def edex_mio_report(stream, instrument, data, output_dir='.'):
+def edex_mio_report(hostname, stream, instrument, output_dir='.'):
     """
     Calculate statistics for captured data stream and write to CSV file output_dir/<stream>-<instrument>.csv.
     :param stream:      stream name
@@ -245,15 +245,20 @@ def edex_mio_report(stream, instrument, data, output_dir='.'):
     :param output_dir:  location to write mio report
     :return:            none
     """
+
+    stat_file = os.path.join(output_dir, '%s-%s.csv' % (stream, instrument))
+    json_file = os.path.join(output_dir, '%s-%s.json' % (stream, instrument))
+
+    data = edex_get_json(hostname, stream, instrument, sample_data_file=json_file, save_sample_data=True)
     d = {}
+
     # first pass to extract data values
     for record in data:
         for param in record:
             d.setdefault(param, []).append(record[param])
 
     # second pass to compute statistics
-    stat_file = os.path.join(output_dir, '%s-%s.csv' % (stream, instrument))
-    print 'saving statistics to %s' % stat_file
+    log.info('saving statistics to %s', stat_file)
     with open(stat_file, 'wb') as f:
         f.write("key,count,min,max,median,mean,sigma\n")
         for param in sorted(d.keys()):
@@ -279,6 +284,6 @@ def edex_mio_report(stream, instrument, data, output_dir='.'):
                 f.write("%s,%d,%f,%f,%f,%f,%f\n" % (param, len(value), v_min, v_max, median, mean, sigma))
             else:
                 s = set()
-                s.update(value)
-                print " - skipping non-numeric data for %s" % param
+                s.update(list(value.flatten()))
+                log.info(" - skipping non-numeric data for %s", param)
 

@@ -38,7 +38,7 @@ class TestCase(object):
     def __init__(self, config):
         self.config = config
         self.resource = os.path.join(omc_dir, config.get('resource'))
-        self.endpoint = os.path.join(ingest_dir, config.get('endpoint'))
+        self.endpoint = config.get('endpoint')
         self.instrument = config.get('instrument')
         self.source_data = config.get('source_data', [])
         self.rename = config.get('rename', True)
@@ -120,11 +120,11 @@ def wait_for_ingest_complete():
     return watch_log_for('Ingest: EDEX: Ingest')
 
 
-def copy_file(resource, endpoint, test_file, rename=False):
-    log.info('copy test file %s into endpoint %s from %s', test_file, endpoint, resource)
+def load_files(resource, instrument, test_file, count=0):
+    queue = 'Ingest.%s' % instrument
+    log.info('send test file %s into ingest queue %s from %s', test_file, queue, resource)
     source_file = os.path.join(omc_dir, resource, test_file)
     files = []
-    num_files = 0
 
     if os.path.isdir(source_file):
         files.extend(os.listdir(source_file))
@@ -134,16 +134,14 @@ def copy_file(resource, endpoint, test_file, rename=False):
 
     for f in files:
         try:
-            target_name = f
-            if rename:
-                target_name = '%s.%.2f' % (test_file, time.time())
-            destination_file = os.path.join(ingest_dir, endpoint, target_name)
-            shutil.copy(os.path.join(source_file, f), destination_file)
-            num_files += 1
+            delivery = instrument.split('_')[-1]
+            sensor = 'MDA-%.1f-%08d' % (time.time(), count)
+            edex_tools.send_file_to_queue(os.path.join(source_file, f), queue, delivery, sensor)
+            count += 1
         except IOError as e:
             log.error('Exception copying input file to endpoint: %s', e)
 
-    return num_files
+    return count
 
 
 def purge_edex(logfile=None):
@@ -169,34 +167,33 @@ def test(test_cases):
 
         num_files = 0
         for source in test_case.source_data:
-            num_files += copy_file(test_case.resource, test_case.endpoint, source)
+            num_files += load_files(test_case.resource, test_case.endpoint, source)
         if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile,
                              timeout=test_case.timeout, expected_count=num_files):
             # didn't see any ingest, proceed, results should be all failed
             log.error('Timed out waiting for ingest complete message')
             time.sleep(1)
 
-        mio_analysis(hostname='localhost', dir=output_dir)
+        mio_analysis(hostname='localhost', output_dir=output_dir)
 
 
-def mio_analysis(hostname='localhost', dir='./'):
+def mio_analysis(hostname='localhost', output_dir='./'):
     """
     Fetch current data from EDEX and perform MIO data analysis.
     :param hostname:  EDEX server hostname (default: localhost)
-    :param dir:   Output directory to archive MIO data analysis files.
+    :param output_dir:   Output directory to archive MIO data analysis files.
     :return:          none
     """
-    print 'collecting available instruments from %s...' % hostname
+    log.info('collecting available instruments from %s...', hostname)
     instruments = edex_tools.edex_get_instruments(hostname)
 
     for stream in instruments:
         for instrument in instruments[stream]:
-            print 'calculating results for %s:%s...' % (stream, instrument)
-            edex_tools.edex_mio_report(stream, instrument, edex_tools.edex_get_json(hostname, stream, instrument),
-                                       dir)
-            print 'fetching netcdf file for %s:%s...' % (stream, instrument)
-            edex_tools.get_netcdf(hostname, stream, instrument, dir)
-    print 'done'
+            log.info('calculating results for %s:%s...' % (stream, instrument))
+            edex_tools.edex_mio_report(hostname, stream, instrument, output_dir)
+            log.info('fetching netcdf file for %s:%s...' % (stream, instrument))
+            edex_tools.get_netcdf(hostname, stream, instrument, output_dir=output_dir)
+    log.info('done')
 
 
 if __name__ == '__main__':
