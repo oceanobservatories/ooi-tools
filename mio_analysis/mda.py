@@ -123,7 +123,11 @@ def wait_for_ingest_complete():
 def load_files(resource, instrument, test_file, sensor):
     queue = 'Ingest.%s' % instrument
     log.info('send test file %s into ingest queue %s from %s', test_file, queue, resource)
-    source_file = os.path.join(omc_dir, resource, test_file)
+    source_file = os.path.join(resource, test_file)
+
+    log.info('source_file: %s', source_file)
+    if not os.path.exists(source_file):
+        source_file = os.path.join(omc_dir, source_file)
     files = []
     num_files = 0
 
@@ -136,6 +140,7 @@ def load_files(resource, instrument, test_file, sensor):
     for f in files:
         try:
             delivery = instrument.split('_')[-1]
+            log.debug('sending file to queue: %s', f)
             edex_tools.send_file_to_queue(os.path.join(source_file, f), queue, delivery, sensor)
             num_files += 1
         except IOError as e:
@@ -156,26 +161,30 @@ def test(test_cases):
         log.error('Error fetching latest log file - %s', e)
         return
 
+    purge_edex(logfile)
+
     last_instrument = None
+    num_files = 0
+    total_timeout = 0
+
     for i, test_case in enumerate(test_cases):
         logger.remove_handler(last_instrument)
         logger.add_handler(test_case.instrument, dir=output_dir)
         last_instrument = test_case.instrument
+        total_timeout += test_case.timeout
 
         log.debug('Processing test case: %s', test_case)
-        purge_edex()
         sensor = 'MDA-%.1f-%08d' % (time.time(), i)
 
-        num_files = 0
         for source in test_case.source_data:
             num_files += load_files(test_case.resource, test_case.endpoint, source, sensor)
-        if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile,
-                             timeout=test_case.timeout, expected_count=num_files):
-            # didn't see any ingest, proceed, results should be all failed
-            log.error('Timed out waiting for ingest complete message')
-            time.sleep(1)
 
-        mio_analysis(hostname='localhost', output_dir=output_dir)
+    if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile,
+                         timeout=total_timeout, expected_count=num_files):
+        log.error('Timed out waiting for ingest complete message')
+        time.sleep(1)
+
+    mio_analysis(hostname='localhost', output_dir=output_dir)
 
 
 def mio_analysis(hostname='localhost', output_dir='./'):
