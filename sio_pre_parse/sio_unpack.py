@@ -1,3 +1,8 @@
+"""
+This file is used to parse and capture the state of sio nodeXXp1.dat files, generating output files for each instrument 
+group from any new data within nodeXXp1.dat 
+"""
+
 __author__ = 'Emily Hahn'
 __license__ = 'Apache 2.0'
 
@@ -26,6 +31,7 @@ SIO_HEADER_REGEX += b'([0-9a-fA-F]{4})'     # CRC Checksum (hex)
 SIO_HEADER_REGEX += b'\x02'                 # End of SIO Header (binary data follows)
 SIO_HEADER_MATCHER = re.compile(SIO_HEADER_REGEX)
 
+# includes start and end header markers \x01 and \x02
 SIO_HEADER_LENGTH = 34
 
 # sio header group match index
@@ -52,11 +58,11 @@ ID_MAP = {
     'WC': 'wc_wfp',
     'WE': 'we_wfp'}  # dosta_ln_wfp, flord_l_wfp, wfp_eng
 
-
+# keep track of the state of the nodexxp1.dat file being processed
 class StateKey(object):
-    UNPROCESSED_DATA = 'unprocessed_data'
-    FILE_SIZE = 'file_size'
-    OUTPUT_INDEX = 'output_index'
+    UNPROCESSED_DATA = 'unprocessed_data'  # holds an array of unprocessed data start and end indices
+    FILE_SIZE = 'file_size'                # size of the file (this will change)
+    OUTPUT_INDEX = 'output_index'          # index of the output file (increase once each time node file is read)
 
 
 class SioFileStateInit(object):
@@ -65,6 +71,9 @@ class SioFileStateInit(object):
 
 
 class SioState(object):
+    """
+    Class to handle storing sio state and retrieving it from the sio pickle file
+    """
 
     def __init__(self):
         """
@@ -74,6 +83,7 @@ class SioState(object):
             self.sio_db = pickle.load(open(sio_db_file))
             print "Starting state from file: %s" % self.sio_db.file_state
         except IOError:
+            # no sio pickle file found, initialze the state
             self.sio_db = SioFileStateInit()
 
     def save(self):
@@ -110,6 +120,10 @@ class SioState(object):
 
 
 class SioParse(object):
+    """
+    Class to parse sio nodeXXp1.dat files, generate output files, and update the state
+    """
+
     def __init__(self):
         # initialize the object used to store the sio parser state
         self.sio_db = SioState()

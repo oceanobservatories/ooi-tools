@@ -239,7 +239,7 @@ class TestSioUnpack(unittest.TestCase):
 
     def test_duplicate(self):
         """
-        Test to fix duplicates in output
+        Test to confirm duplicates are not in output
         """
         test_file = os.path.join(INPUT_HYPM_PATH, 'unit_364-2013-225-1-0.mdd')
 
@@ -310,7 +310,7 @@ class TestSioUnpack(unittest.TestCase):
     def get_file_state(self, filename):
         """
         Get the file state for this filename from the stored sio pickle file
-        :param filename:
+        :param filename: name of the file to get the state of
         :return: file state dictionary
         """
         # load the pickle file

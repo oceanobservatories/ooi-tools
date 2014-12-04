@@ -4,6 +4,7 @@
 # 2aug2013	dpingal@teledyne.com	Fix segment lengths, zero fills in wrong place
 # 8aug2013	dpingal@teledyne.com	Fix bug parsing fileopen_time with single digit day
 # 5jun2014	dpingal@teledyne.com	Fix compatability with 7.14 glider firmware
+# oct2014       ehahn@bbn.com	        Add parsing node files into individual instrument group fixed files
 
 import calendar
 import mdd_config
