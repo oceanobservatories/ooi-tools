@@ -1,5 +1,5 @@
 endpoint: adcps-jln-stc_recovered
 instrument: adcps-jln-stc_recovered
 pairs:
-- [ADCP_CCE1T_20.000, ADCP_CCE1T_20.yml]
+- [adcpt_20140504_015742.DAT, adcpt_20140504_015742.recov.yml]
 resource: adcps_jln/stc/resource

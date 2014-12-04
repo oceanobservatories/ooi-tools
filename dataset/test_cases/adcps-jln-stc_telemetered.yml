@@ -1,5 +1,5 @@
 endpoint: adcps-jln-stc_telemetered
 instrument: adcps-jln-stc_telemetered
 pairs:
-- [adcpt_20140504_015742.DAT, adcpt_20140504_015742.yml]
+- [adcpt_20140504_015742.DAT, adcpt_20140504_015742.telem.yml]
 resource: adcps_jln/stc/resource
