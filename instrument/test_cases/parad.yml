@@ -1,10 +1,10 @@
-instrument: parad
+instrument: parad-rsn-driver
 module: mi.instrument.satlantic.par_ser_600m.ooicore.driver
 klass: InstrumentDriver
 command_port: 10023
 event_port: 10024
 port_agent_config:
-  addr: 69.196.58.141
+  addr: 10.0.1.51
   port: 13009
   cmd_port: 12009
 startup_config:

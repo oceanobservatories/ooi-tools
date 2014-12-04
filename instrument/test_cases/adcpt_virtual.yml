@@ -1,4 +1,4 @@
-instrument: adcpt_virtual
+instrument: adcpt_virtual-rsn-driver
 module: mi.instrument.virtual.driver
 klass: InstrumentDriver
 command_port: 10002

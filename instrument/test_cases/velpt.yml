@@ -1,10 +1,10 @@
-instrument: velpt 
+instrument: velpt-rsn-driver
 module: mi.instrument.nortek.aquadopp.ooicore.driver 
 klass: InstrumentDriver
 command_port: 10051
 event_port: 10052
 port_agent_config:
-  addr: 69.196.58.141
+  addr: 10.0.1.51
   port: 13010
   cmd_port: 12010
 startup_config:

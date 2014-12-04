@@ -1,4 +1,4 @@
-instrument: ctdbp 
+instrument: ctdbp-no-rsn
 module: mi.instrument.seabird.sbe16plus_v2.ctdbp_no.driver
 klass: InstrumentDriver
 command_port: 10008
