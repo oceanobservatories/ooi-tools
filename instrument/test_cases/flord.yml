@@ -1,10 +1,10 @@
-instrument: flord 
+instrument: flord-rsn-driver
 module: mi.instrument.wetlabs.fluorometer.flort_d.driver
 klass: InstrumentDriver
 command_port: 13019
 event_port: 12019
 port_agent_config:
-  addr: 69.196.58.141
+  addr: 10.0.1.51
   port: 13019
   cmd_port: 12019
 startup_config:
@@ -17,3 +17,4 @@ script:
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
 - [sleep, 5]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+- [sleep, 5]

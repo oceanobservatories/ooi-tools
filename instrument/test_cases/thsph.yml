@@ -1,10 +1,10 @@
-instrument: thsph 
+instrument: thsph-rsn-driver 
 module: mi.instrument.um.thsph.ooicore.driver 
 klass: InstrumentDriver
 command_port: 10039
 event_port: 10040
 port_agent_config:
-  addr: 69.196.58.141
+  addr: 10.0.1.51
   port: 13022
   cmd_port: 12022
 expected_particles:

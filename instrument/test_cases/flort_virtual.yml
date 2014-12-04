@@ -1,0 +1,18 @@
+instrument: flort_virtual-whoi-driver
+module: mi.instrument.virtual.driver
+klass: InstrumentDriver
+command_port: 10014
+event_port: 10015
+port_agent_config: {}
+startup_config:
+  parameters:
+   flort_d_status: 1
+   flort_d_data_record: 1
+expected_particles:
+- flort_d_status
+- flort_d_data_record
+starting_state: DRIVER_STATE_COMMAND
+script:
+- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+- [sleep, 5]
+- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

@@ -1,0 +1,20 @@
+instrument: ctdbp_cdef_virtual-whoi-driver
+module: mi.instrument.virtual.driver
+klass: InstrumentDriver
+command_port: 10002
+event_port: 10003
+port_agent_config: {}
+startup_config:
+  parameters:
+    ctdbp_cdef_sample: 1
+    ctdbp_cdef_status: 1
+    ctdbp_cdef_calibration_coefficients: 1
+expected_particles:
+- ctdbp_cdef_sample
+- ctdbp_cdef_status
+- ctdbp_cdef_calibration_coefficients
+starting_state: DRIVER_STATE_AUTOSAMPLE
+script:
+- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+- [sleep, 10]
+- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
