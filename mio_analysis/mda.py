@@ -120,7 +120,7 @@ def wait_for_ingest_complete():
     return watch_log_for('Ingest: EDEX: Ingest')
 
 
-def load_files(resource, instrument, test_file, count=0):
+def load_files(resource, instrument, test_file, sensor):
     queue = 'Ingest.%s' % instrument
     log.info('send test file %s into ingest queue %s from %s', test_file, queue, resource)
     source_file = os.path.join(omc_dir, resource, test_file)
@@ -136,7 +136,6 @@ def load_files(resource, instrument, test_file, count=0):
     for f in files:
         try:
             delivery = instrument.split('_')[-1]
-            sensor = 'MDA-%.1f-%08d' % (time.time(), count)
             edex_tools.send_file_to_queue(os.path.join(source_file, f), queue, delivery, sensor)
             num_files += 1
         except IOError as e:
@@ -165,10 +164,11 @@ def test(test_cases):
 
         log.debug('Processing test case: %s', test_case)
         purge_edex()
+        sensor = 'MDA-%.1f-%08d' % (time.time(), i)
 
         num_files = 0
         for source in test_case.source_data:
-            num_files += load_files(test_case.resource, test_case.endpoint, source, count=i)
+            num_files += load_files(test_case.resource, test_case.endpoint, source, sensor)
         if not watch_log_for('Ingest: EDEX: Ingest', logfile=logfile,
                              timeout=test_case.timeout, expected_count=num_files):
             # didn't see any ingest, proceed, results should be all failed
