@@ -1,0 +1,7 @@
+endpoint: phsen-abcdef-imodem_recovered
+instrument: phsen-abcdef-imodem_recovered
+pairs:
+- [phsen1_20140730_190554.DAT, phsen1_20140730_190554_rec.yml]
+- [phsen1_20140725_192532.DAT, phsen1_20140725_192532_rec.yml]
+- [example1.DAT, example1_rec.yml]
+resource: phsen_abcdef/imodem/resource
