@@ -1,0 +1,7 @@
+endpoint: phsen-abcdef-imodem_telemetered
+instrument: phsen-abcdef-imodem_telemetered
+pairs:
+- [phsen1_20140730_190554.DAT, phsen1_20140730_190554_tel.yml]
+- [phsen1_20140725_192532.DAT, phsen1_20140725_192532_tel.yml]
+- [example1.DAT, example1_tel.yml]
+resource: phsen_abcdef/imodem/resource
