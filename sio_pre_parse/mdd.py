@@ -4,11 +4,11 @@
 # 2aug2013	dpingal@teledyne.com	Fix segment lengths, zero fills in wrong place
 # 8aug2013	dpingal@teledyne.com	Fix bug parsing fileopen_time with single digit day
 # 5jun2014	dpingal@teledyne.com	Fix compatability with 7.14 glider firmware
+# 9dec2014  ehahn@bbn.com           Add sio parsing into individual instrument group files
 
 import calendar
 import mdd_config
 import mdd_data
-import os
 import re
 import time
 
@@ -16,11 +16,7 @@ from sio_unpack import SioParse
 
 subunder = re.compile('_+')
 
-mddtags = ['NODE', 'PORT', 'STARTOFFSET', 'ENDOFFSET']
-
-
-def age(t):
-    return round((time.time() - t) / 86400.0, 2)
+MDD_TAGS = ['NODE:', 'PORT:', 'STARTOFFSET:', 'ENDOFFSET:']
 
 
 class mdd(object):
@@ -42,35 +38,46 @@ class mdd(object):
             if not tag:
                 break
             self.__setattr__(tag, value)
+            # once all tags have been set, this header has been read and section is complete
             if self.port is not None and self.node is not None and \
                     self.endoffset is not None and self.startoffset is not None:
                 dlen = 1 + self.endoffset - self.startoffset
-                sdata = self.data[offset: offset + dlen]
+                sdata = self.data[offset:offset + dlen]
                 s = mdd_data.data_section(self.node, self.port, self.startoffset, self.endoffset, sdata)
                 self.sections.append(s)
-                # clear start and end offset for next increment
-                self.startoffset = None
+                # clear tags for next increment, node and port might not be present
                 self.endoffset = None
+                self.startoffset = None
 
     def gettag(self, tag):
+        # find first occurence of this tag
         found = self.data.find(tag + ':') + len(tag) + 1
-        end = found + self.data[found:].find('\n')
+        # find next new line after tag
+        end = self.data.find('\n', found)
         return self.data[found:end].strip()
-        
+
     def nextag(self, offset=0):
-        off = len(self.data)
-        got = None
+        # search the data and find the next tag starting at offset
+        tag = None
         value = None
         end = 0
-        for seek in mddtags:
-            found = self.data.find(seek, offset)
-            if found >= 0 and found < off:
-                off = found
-                got = seek.lower()
-                end = off + self.data[off:].find('\n')
-                vline = self.data[off:end]
-                value = int(vline.split(':')[1].strip())
-        return got, value, end + 1
+        min_found = len(self.data)
+        # loop over MDD tags, updating with min tag index
+        for seek in MDD_TAGS:
+            found_idx = self.data.find(seek, offset)
+            if 0 <= found_idx < min_found:
+                min_found = found_idx
+
+        if min_found != len(self.data):
+            # get the index of the end of the tag line
+            end = self.data.find('\n', min_found)
+            # pull out value from tag and value line
+            (tag, value) = self.data[min_found:end].split(':')
+            # format tag and value
+            tag = tag.lower()
+            value = int(value.strip())
+
+        return tag, value, end + 1
 
 
 def procall(fns):
@@ -92,7 +99,7 @@ def procall(fns):
         for sect in d.sections:
             sect.glider = d.glider
             sect.time = d.time
-            #print os.path.basename(fn), sect.node, sect.start, sect.end
+            #print fn, sect.node, sect.start, sect.end
             # Basic validation: we know gliders make these...
             if sect.end <= sect.start:
                 #print 'start > end?? node %d port %d start %d end %d' % (sect.node, sect.port, sect.start, sect.end)

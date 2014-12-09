@@ -108,4 +108,3 @@ class mdd_data(object):
             mdd_data.db.offsets = {}
             return mdd_data.db.offsets
  
-

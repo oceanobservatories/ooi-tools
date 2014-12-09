@@ -193,10 +193,10 @@ class SioParse(object):
 
                 fid_out.close()
 
-	# pre combine blocks so there aren't so many to loop over
+        # pre combine blocks so there aren't so many to loop over
         newly_processed_blocks = SioParse._combine_adjacent_packets(newly_processed_blocks)
 
-	# remove the processed blocks from the unprocessed file state
+        # remove the processed blocks from the unprocessed file state
         for new_block in newly_processed_blocks:
             self.update_processed_file_state(file_state, new_block[START_IDX], new_block[END_IDX])
 

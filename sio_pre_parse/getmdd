@@ -1,0 +1,72 @@
+#!/usr/bin/python
+# getmdd.py:
+# intended to be run as a cron job, grabs and processes all the .mdd
+# files in glider directories
+
+import glob
+import os
+import time
+
+import mdd
+import mdd_config
+import mdp_config
+import mkmdr
+
+# flag to turn on print statements
+trace = False
+# seconds per day
+SEC_PER_DAY = 86400.0
+
+
+def age(t):
+    # return the age in days from the current time
+    return round((time.time() - t) / SEC_PER_DAY, 2)
+
+
+def latest(sects, cfgnodes):
+    nodes = {}
+    # Get the most recent, highest known offset for each node, port 1
+    for sect in sects:
+        if sect.port != 1:
+            continue
+        snode = sect.node
+        if snode not in nodes:
+            nodes[snode] = [sect.end, sect.time]
+        else:
+            if sect.end > nodes[snode][0]:
+                nodes[snode][0] = sect.end
+            if sect.time > nodes[snode][1]:
+                nodes[snode][1] = sect.end
+                nodes[snode][1] = sect.time
+    if trace:
+        print nodes
+            
+    # Calculate days ago and expected production for the recent high offset
+    now = time.time()
+    pull_nodes = {}
+    for cnode in cfgnodes:
+        if cnode.id in nodes:
+            dnode = nodes[cnode.id]
+            daysago = (now - dnode[1]) / SEC_PER_DAY
+            nbytes = int(daysago * cnode.rate)
+            pull_nodes[cnode.id] = nbytes + dnode[0]
+            if trace:
+                print 'node', cnode.id, 'age', daysago, 'bytes', nbytes, 'start', dnode[0]
+    return pull_nodes
+
+
+def getmdd():
+    # Scan all glider directories for mdd files
+    deployments = mdp_config.getSysConfig()
+    for (gliders, nodes) in deployments: 
+        files = []
+        for glider in gliders:
+            files.extend(glob.glob(os.path.join(mdd_config.from_glider(glider), '*.mdd')))
+        sects = mdd.procall(files)
+        limits = latest(sects, nodes)
+        for glider in gliders:
+            opath = mdd_config.to_glider(glider)
+            mkmdr.genmdrs(opath, limits)
+
+if __name__ == '__main__':
+    getmdd()
