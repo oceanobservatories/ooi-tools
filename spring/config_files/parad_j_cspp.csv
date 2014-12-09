@@ -1,0 +1,3 @@
+context,name,suffix,driver,sensor,regex,resource,timeout,rename,input1,output1,input2,output2,input3,output3,input4,output4,input5,output5,input6,output6,input7,output7
+parad-j-cspp,parad-j-cspp,recovered,/parad_j/cspp/parad_j_cspp_recovered_driver.py,XX00XXXX-XX00X-00-PARAJR000,,parad_j/cspp/resource,,,11079364_PPB_PARS.txt,11079364_PPB_PARS_recov.yml
+parad-j-cspp,parad-j-cspp,telemetered,/parad_j/cspp/parad_j_cspp_telemetered_driver.py,XX00XXXX-XX00X-00-PARAJT000,,parad_j/cspp/resource,,,11079364_PPD_PARS.txt,11079364_PPD_PARS_telem.yml

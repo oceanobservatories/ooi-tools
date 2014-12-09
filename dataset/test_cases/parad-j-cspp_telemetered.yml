@@ -1,0 +1,5 @@
+endpoint: parad-j-cspp_telemetered
+instrument: parad-j-cspp_telemetered
+pairs:
+- [11079364_PPD_PARS.txt, 11079364_PPD_PARS_telem.yml]
+resource: parad_j/cspp/resource
