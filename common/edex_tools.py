@@ -84,12 +84,17 @@ def get_record_json(record):
         return []
 
 
-def get_from_edex(hostname, stream_name, sensor='null', timestamp_as_string=False):
+def get_from_edex(hostname, stream_name, sensor='null', start_time=None, stop_time=None, timestamp_as_string=False):
     """
     Retrieve all stored sensor data from edex
     :return: list of edex records
     """
     url = 'http://%s:12570/sensor/m2m/inv/%s/%s' % (hostname, stream_name, sensor)
+    if start_time and stop_time:
+        start_time = ntptime_to_string(start_time-.1)
+        stop_time = ntptime_to_string(stop_time+.1)
+        url += '/%s/%s' % (start_time, stop_time)
+
     r = requests.get(url)
     records = get_record_json(r)
 
