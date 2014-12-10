@@ -1,0 +1,6 @@
+endpoint: pco2w-abc-dcl_telemetered
+instrument: pco2w-abc-dcl
+resource:  GI01SUMO/D00001/cg_data/dcl16/
+timeout: 600
+source_data:
+- pco2w

@@ -1,0 +1,6 @@
+endpoint: ctdbp-cdef-cp_recovered 
+instrument: ctdbp-cdef-cp
+resource:  ctdbp-cdef-cp_recov
+timeout: 600
+source_data:
+- 20131126.ctdbp1.log

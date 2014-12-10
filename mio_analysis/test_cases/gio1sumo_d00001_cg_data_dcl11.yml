@@ -1,0 +1,6 @@
+endpoint: dosta-abcdjm-dcl_telemetered
+instrument: dosta-abcdjm-dcl
+resource: GI01SUMO/D00001/cg_data/dcl11/ 
+timeout: 2400
+source_data:
+- dosta

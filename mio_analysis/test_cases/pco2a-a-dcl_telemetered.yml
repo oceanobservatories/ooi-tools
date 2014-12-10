@@ -1,0 +1,6 @@
+endpoint: pco2a-a-dcl_telemetered
+instrument: pco2a-a-dcl
+resource: GI01SUMO/D00001/cg_data/dcl12/
+timeout: 600
+source_data:
+- pco2a

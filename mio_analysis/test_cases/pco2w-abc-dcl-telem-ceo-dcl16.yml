@@ -1,0 +1,6 @@
+endpoint: pco2w-abc-dcl_telemetered
+instrument: pco2w-abc-dcl
+resource:  CE06ISSM/D00001/dcl16/
+timeout: 600
+source_data:
+- pco2w1

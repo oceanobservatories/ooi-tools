@@ -1,0 +1,6 @@
+endpoint: velpt-ab-dcl_telemetered
+instrument: velpt-ab-dcl
+resource: CE06ISSM/D00001/dcl17/
+timeout: 400
+source_data:
+- velpt1

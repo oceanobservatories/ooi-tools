@@ -1,0 +1,6 @@
+endpoint: flort-dj-dcl_telemetered
+instrument: flort-dj-dcl
+resource: CE06ISSM/D00001/dcl16/
+timeout: 400
+source_data:
+- flort 

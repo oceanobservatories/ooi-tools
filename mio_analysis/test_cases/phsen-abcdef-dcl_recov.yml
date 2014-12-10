@@ -1,0 +1,7 @@
+endpoint: phsen-abcdef-dcl_recovered
+instrument: phsen-abcdef-dcl
+resource: phsen
+timeout: 600
+source_data:
+- SAMI_P0095_300614.txt
+- SAMI_P0096_020714.txt

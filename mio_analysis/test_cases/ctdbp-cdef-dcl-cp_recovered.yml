@@ -1,0 +1,7 @@
+endpoint: ctdbp_cdef_dcl_cp_recov 
+instrument: ctdbp-cdef-dcl-cp
+resource: ctdbp-cdef-cp_recov
+timeout: 600
+source_data:
+- 20131124.ctdbp2.log
+- 20131126.ctdbp1.log

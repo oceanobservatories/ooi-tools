@@ -1,0 +1,6 @@
+endpoint: dosta-abcdjm-dcl_recovered
+instrument: dosta-abcdjm-dcl
+resource: CP01CNSM/R00001/dcl27/
+timeout: 400
+source_data:
+- DOSTA_sn131

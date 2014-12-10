@@ -1,0 +1,6 @@
+endpoint: nutnr-b-dcl-full_telemetered
+instrument: nutnr-b-dcl-full
+resource: CP01CNSM/X00001/cg_data/dcl26/
+timeout: 400
+source_data:
+- nutnr

@@ -1,0 +1,7 @@
+endpoint: ctdbp_cdef_dcl_cp_telem 
+instrument: ctdbp-cdef-cp
+resource:  CP01CNSM/X00001/cg_data/dcl37/ctdbp2
+timeout: 800
+source_data:
+- 20131117.ctdbp2.log
+- 20131203.ctdbp2.log

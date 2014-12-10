@@ -1,0 +1,7 @@
+endpoint: optaa-dj-dcl_telemetered 
+instrument: optaa-dj-dcl
+resource: GI01SUMO/D00001/cg_data/dcl12/optaa1 
+timeout: 800
+source_data:
+- 20140802_070018.optaa1.log
+- 20140804_020018.optaa1.log 

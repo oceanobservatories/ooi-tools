@@ -1,0 +1,6 @@
+endpoint: flort-dj-dcl_telemetered
+instrument: flort-dj-dcl
+resource: GI01SUMO/D00001/cg_data/dcl12/flort1
+timeout: 400
+source_data:
+- 20140725.flort1.log

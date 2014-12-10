@@ -1,0 +1,6 @@
+endpoint: presf-abc-dcl_telemetered
+instrument: presf-abc-dcl
+resource:  CP01CNSM/X00001/cg_data/dcl35/ 
+timeout: 600
+source_data:
+- presf

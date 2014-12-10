@@ -1,0 +1,8 @@
+endpoint: optaa-dj-dcl_recovered 
+instrument: optaa-dj-dcl
+resource: optaa-dj-dcl-recov
+timeout: 800
+source_data:
+- 20131117_060018.optaa1.log 
+- 20131117_160016.optaa1.log
+- 20131118_100017.optaa1.log

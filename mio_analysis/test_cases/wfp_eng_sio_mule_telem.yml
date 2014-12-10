@@ -1,0 +1,6 @@
+endpoint: wfp-eng-wfp-sio-mule_telemetered
+instrument: wfp-eng-wfp-sio-mule
+resource:  GP02HYPM/D00002
+timeout: 600
+source_data:
+- node15p1.dat

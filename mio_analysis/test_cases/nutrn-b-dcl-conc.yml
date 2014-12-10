@@ -1,0 +1,8 @@
+endpoint: nutnr-b_recovered
+instrument: nutnr-b
+resource: nutnr/ 
+timeout: 600
+source_data:
+- SCH13326.DAT
+- SCH13336.DAT
+- SCH13347.DAT 

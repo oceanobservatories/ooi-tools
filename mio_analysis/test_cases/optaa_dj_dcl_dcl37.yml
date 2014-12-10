@@ -1,0 +1,7 @@
+endpoint: optaa-dj-dcl_telemetered 
+instrument: optaa-dj-dcl
+resource:  CE06ISSM/D00001/dcl37/optaa2
+timeout: 800
+source_data:
+- 20141009_172808.optaa2.log
+- 20141016_192806.optaa2.log 

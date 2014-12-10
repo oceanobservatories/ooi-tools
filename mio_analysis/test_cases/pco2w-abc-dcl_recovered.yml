@@ -1,0 +1,6 @@
+endpoint: pco2w-abc-dcl_recovered
+instrument: pco2w-abc-dcl
+resource: pco2w-abc
+timeout: 600
+source_data:
+- SAMI_C0069_300614.txt 

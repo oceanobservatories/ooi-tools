@@ -1,0 +1,6 @@
+endpoint: wavss-a-dcl-full_telemetered
+instrument: wavss-a-dcl-full_telemetered
+resource: GI01SUMO/D00001/cg_data/dcl12/wavss
+timeout: 600
+source_data:
+- 20140716.wavss.log

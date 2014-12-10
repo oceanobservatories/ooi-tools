@@ -1,0 +1,6 @@
+endpoint: velpt-ab-dcl_telemetered
+instrument: velpt-ab-dcl
+resource: GI01SUMO/D00001/cg_data/dcl16/ 
+timeout: 400
+source_data:
+- velpt

@@ -1,0 +1,7 @@
+endpoint: flort-dj-dcl_recovered
+instrument: flort-dj-dcl
+resource:  flort-dj-dcl-recovered
+timeout: 600
+source_data:
+- 20131114.flort.log
+- 20131120.flort.log  
