@@ -7,6 +7,7 @@ Usage:
   instrument_control.py <host> <name> stop
   instrument_control.py <host> <name> connect
   instrument_control.py <host> <name> discover
+  instrument_control.py <host> <name> state
   instrument_control.py <host> <name> configure <config_file>
   instrument_control.py <host> <name> execute <capability>
 
@@ -18,6 +19,7 @@ Options:
 
 """
 import os
+import pprint
 import sys
 
 instrument_dir = os.path.dirname(os.path.realpath('__file__'))
@@ -142,7 +144,7 @@ class Controller(object):
         r = requests.get(self.base_url, params={'blocking': blocking})
         reply = r.json()
         self.state = reply['value']
-        return r
+        return reply
 
     def execute(self, command):
         return requests.post(self.base_url + '/execute', data={'command': json.dumps(command)})
@@ -230,6 +232,8 @@ def main():
         c.discover()
     elif options['execute']:
         c.execute(options['<capability>'])
+    elif options['state']:
+        pprint.pprint(c.get_state())
 
 if __name__ == '__main__':
     c = main()

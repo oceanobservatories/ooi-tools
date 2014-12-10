@@ -1,4 +1,4 @@
-instrument: virtual_botpt
+instrument: virtual-botpt-0001
 module: mi.instrument.virtual.driver
 klass: InstrumentDriver
 command_port: 10004
@@ -15,4 +15,4 @@ script:
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
 - [sleep, 5]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
-- [sleep, 5]
+- [sleep, 500]
