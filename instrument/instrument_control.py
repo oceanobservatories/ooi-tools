@@ -112,7 +112,7 @@ class Controller(object):
             while self.keeprunning:
                 try:
                     r = self.get_state(True)
-                    log.info('State updated: %s', r.json()['value']['state'])
+                    log.info('State updated: %s', r['value']['state'])
                 except Exception as e:
                     log.info('Exception: %s', e)
                     time.sleep(.1)
