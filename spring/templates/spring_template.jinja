@@ -2,20 +2,34 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
   http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd">
-{% for row in rows %}
-    <bean id="{{row.name}}_{{row.suffix}}Processor" class="com.raytheon.uf.edex.ooi.decoder.dataset.FileDecoder">
+
+{% for context in contexts %}{% for row in context.rows %}
+    <bean id="{{row.name}}_{{row.suffix}}Processor" class="{{row.klass}}">
         <constructor-arg name="name" value="{{row.name}}_{{row.suffix}}" />
         <constructor-arg name="basePythonCodePath" value="#{basePythonCodeLocalizationPath}" />
         <constructor-arg name="scriptPath" value="#{basePythonCodeLocalizationPath}/mi/dataset/driver{{row.driver}}" />
         <constructor-arg name="properties" ref="oneHourBin" />
+        {% if row.hashkeys %}
+        <constructor-arg name="hashKeys">
+            <list>
+                {% for hashkey in row.hashkeys %}
+                <value>{{hashkey}}</value>
+                {% endfor %}
+            </list>
+        </constructor-arg>
+        {% endif %}
     </bean>
-{% endfor %}
-    <camelContext id="{{camel_context}}-decode-camel"
+
+{% endfor %}{% endfor %}
+{% for context in contexts %}
+    <camelContext id="{{context.name}}-decode-camel"
         xmlns="http://camel.apache.org/schema/spring" errorHandlerRef="errorHandler">
-{% for row in rows %}
+
+{% for row in context.rows %}
         <endpoint id="{{row.name}}_{{row.suffix}}FileEndpoint"
             uri="file:${edex.home}/data/ooi/{{row.name}}_{{row.suffix}}?delete=true&amp;delay=3000&amp;maxMessagesPerPoll=30&amp;exclusiveReadLockStrategy=#fileChangedStrategy" />
-{% endfor %}{% for row in rows %}
+
+{% endfor %}{% for row in context.rows %}
         <route id="{{row.name}}_{{row.suffix}}FileConsumerRoute">
             <from ref="{{row.name}}_{{row.suffix}}FileEndpoint" />
             <setHeader headerName="deliveryType">
@@ -41,6 +55,7 @@
                 </doCatch>
             </doTry>
         </route>
-{% endfor %}
+
+{% endfor %}{% endfor %}
     </camelContext>
 </beans>

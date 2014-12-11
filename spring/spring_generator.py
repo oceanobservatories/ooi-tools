@@ -11,6 +11,7 @@ Options:
 
 """
 from collections import namedtuple
+from StringIO import StringIO
 import docopt
 import jinja2
 import csv
@@ -25,10 +26,6 @@ key = '1PvbltMYMzkOsXQ45V2PHvvbAc1UN5u_DIXMjT9eegrA'
 
 CamelContext = namedtuple('CamelContext', 'context, name, suffix, driver, sensor')
 
-MULTI_FILE_MULTI_CONTEXT = "multi_file_multi_context.jinja"
-SINGLE_FILE_MULTI_CONTEXT = "single_file_multi_context.jinja"
-SINGLE_FILE_SINGLE_CONTEXT = "single_file_single_context.jinja"
-
 yml_dir = 'yml_files'
 xml_dir = 'xml_files'
 csv_dir = 'csv_files'
@@ -42,6 +39,149 @@ uri_options = {
 }
 uri_options = ampersand.join(['%s=%s' % (k, v) for k, v in uri_options.items()])
 
+
+class Spring(object):
+    def __init__(self, contexts, name):
+        self.name = name
+        self.contexts = contexts
+
+    def to_spring(self, template):
+        return template.render(contexts=self.contexts)
+
+    def write_file(self, template):
+        filename = '%s/ooi-%s-decode.xml' % (xml_dir, self.name)
+        with open(filename, 'wb') as fh:
+            fh.write(self.to_spring(template))
+
+    @staticmethod
+    def create_springs(rows, style=None):
+        # Single file, single context, no need to sort
+        if style == 'single':
+            return [Spring([Context('OOI-DECODE', rows)], 'all')]
+
+        # multiple contexts, group them
+        contexts = Spring.group_by_context(rows)
+
+        if style == 'multi':
+            # multiple camel contexts, single file
+            return [Spring([Context(c, contexts[c]) for c in contexts], 'all')]
+
+        return [Spring([Context(c, contexts[c])], c) for c in contexts]
+
+    @staticmethod
+    def group_by_context(rows):
+        d = {}
+        for row in rows:
+            d.setdefault(row.name, []).append(row)
+        return d
+
+
+class Context(object):
+    def __init__(self, name, rows):
+        self.name = name
+        self.rows = rows
+
+    def __str__(self):
+        return '%s: %s' % (self.name, self.rows)
+
+    def __repr__(self):
+        return '%s: %s' % (self.name, self.rows)
+
+
+class Row(object):
+    def __init__(self, row_dict):
+        self._strip(row_dict)
+        self.context = row_dict.get('context')
+        self.name = row_dict.get('name')
+        self.suffix = row_dict.get('suffix')
+        self.driver = row_dict.get('driver')
+        self.sensor = row_dict.get('sensor')
+        self.regex = row_dict.get('regex')
+        self.resource = row_dict.get('resource')
+        self.timeout = row_dict.get('timeout')
+        self.rename = row_dict.get('rename')
+
+        self.bin = row_dict.get('bin')
+        if self.bin is None:
+            self.bin = 'oneHourBin'
+
+        self.klass = row_dict.get('class')
+        if self.klass is None:
+            self.klass = 'com.raytheon.uf.edex.ooi.decoder.dataset.FileDecoder'
+        self.pairs = self._generate_pairs(row_dict)
+
+        self.hashkeys = row_dict.get('hashkeys')
+        if self.hashkeys is not None:
+            self.hashkeys = [x.strip() for x in self.hashkeys.split(',')]
+
+    def _strip(self, d):
+        for k in d:
+            if d[k] is not None:
+                d[k] = d[k].strip()
+
+    def _generate_pairs(self, row_dict):
+        pairs = []
+        keys = zip(sorted([x for x in row_dict if 'input' in x]),
+                    sorted([x for x in row_dict if 'output' in x]))
+
+        for input, output in keys:
+            input = row_dict[input]
+            output = row_dict[output]
+            if all([input, output]):
+                pairs.append([input, output])
+        return pairs
+
+    def is_valid(self):
+        if self.context.startswith('#'):
+            return False
+        if not all([self.driver, self.name, self.suffix]):
+            return False
+        return True
+
+    def to_csv(self):
+        io = StringIO()
+        writer = csv.writer(io)
+        dropbox = '${edex.home}/data/ooi/%s_%s' % (self.name, self.suffix)
+        ingest = 'jms-durable:queue:Ingest.%s_%s' % (self.name, self.suffix)
+        if self.regex is None:
+            self.regex = '.*'
+        writer.writerow((dropbox, self.regex, self.sensor, self.suffix, ingest, 'true'))
+        return io.getvalue()
+
+    def to_yml(self):
+        test_case = {}
+        name = '%s_%s' % (self.name, self.suffix)
+
+        test_case['instrument'] = name
+        test_case['endpoint'] = name
+        test_case['resource'] =  self.resource
+        if self.timeout is not None:
+            try:
+                test_case['timeout'] = int(self.timeout)
+            except:
+                pass
+        if self.rename is not None:
+            try:
+                test_case['rename'] = bool(self.rename)
+            except:
+                pass
+
+        test_case['pairs'] = self.pairs
+        return yaml.dump(test_case)
+
+    def write_csv(self):
+        with open(os.path.join(csv_dir, '%s-%s-ingest.conf' % (self.name, self.suffix)), 'wb') as csvfile:
+            csvfile.write(self.to_csv())
+
+    def write_yml(self):
+        with open('%s/%s_%s.yml' % (yml_dir, self.name, self.suffix), 'wb') as fh:
+            fh.write(self.to_yml())
+
+    def __str__(self):
+        return 'ROW: %s' % self.name
+
+    def __repr__(self):
+        return 'ROW: %s' % self.name
 
 def sheet_generator():
     client = gdata.spreadsheet.service.SpreadsheetsService()
@@ -70,117 +210,69 @@ def get_csv(filename):
 
     return return_list
 
-def validate_rows(rows):
-    for row in rows:
-        for key in ['driver', 'name', 'suffix']:
-            if row[key] is None:
-                return False
-    return True
 
-def generate_spring(options, rows):
-    parsers = {}
-
-    for row in rows:
-        parsers.setdefault(row['context'], []).append(row)
-    templateLoader = jinja2.FileSystemLoader(searchpath="templates")
-    templateEnv = jinja2.Environment(loader=templateLoader)
-
-    filename = None
-    if options['--single']:
-        filename = 'ooi-datasets.xml'
-        template = templateEnv.get_template(SINGLE_FILE_SINGLE_CONTEXT)
-    elif options['--multi']:
-        filename = 'ooi-datasets.xml'
-        template = templateEnv.get_template(SINGLE_FILE_MULTI_CONTEXT)
-    else:
-        template = templateEnv.get_template(MULTI_FILE_MULTI_CONTEXT)
-
-    if filename is None:
-        for context in parsers:
-            if validate_rows(parsers[context]):
-                output_text = template.render(rows=parsers[context], camel_context=context, uri_options=uri_options)
-                file = open('%s/ooi-%s-decode.xml' % (xml_dir, context) , 'w')
-                file.write(output_text)
-                file.close()
-
-    else:
-        context = 'ooi-datasets'
-        output_text = template.render(dictionary=parsers, camel_context=context, uri_options=uri_options)
-        file = open('%s/%s.xml' % (xml_dir, context), 'w')
-        file.write(output_text)
-        file.close()
-
-def generate_ingest_csv(rows):
-    """
-    file dropbox, file_regex, serial_number, delivery_type, ingest_route, rename?
-    """
-    for each in rows:
-        if each['sensor'] and each['name'] and each['suffix']:
-            with open(os.path.join(csv_dir, '%(name)s-%(suffix)s-ingest.conf' % each), 'wb') as csvfile:
-                writer = csv.writer(csvfile)
-                dropbox = '${edex.home}/data/ooi/%s_%s' % (each['name'], each['suffix'])
-                regex = each['regex']
-                if regex is None:
-                    regex = '.*'
-                serial = each['sensor']
-                delivery = each['suffix']
-                ingest = 'jms-durable:queue:Ingest.%s_%s' % (each['name'], each['suffix'])
-                # shove this in a dictionary to eliminate dupes
-                writer.writerow((dropbox, regex, serial, delivery, ingest, 'true'))
-
-def generate_test_cases(rows):
-    for each in rows:
-        test_case = {}
-        name = '%s_%s' % (each['name'], each['suffix'])
-
-        test_case['instrument'] = name
-        test_case['endpoint'] = name
-        test_case['resource'] =  each['resource']
-        if each.get('timeout') is not None:
-            try:
-                test_case['timeout'] = int(each['timeout'])
-            except:
-                pass
-        if each.get('rename') is not None:
-            try:
-                test_case['rename'] = bool(int(each['rename']))
-            except:
-                pass
-        
-        test_case['pairs'] = []
-        pairs = zip(sorted([x for x in each if 'input' in x]),
-                    sorted([x for x in each if 'output' in x]))
-
-        for input, output in pairs:
-            input = each[input]
-            output = each[output]
-            if all([input, output]):
-                test_case['pairs'].append([input, output])
-
-        if test_case['pairs']:
-            with open('%s/%s.yml' % (yml_dir, name), 'wb') as fh:
-                yaml.dump(test_case, fh)
-
-def strip_rows(rows):
-    for row in rows:
-        for k, v in row.items():
-            if v is not None:
-                row[k] = v.strip()
+# def generate_spring(options, rows):
+#     parsers = {}
+#
+#     for row in rows:
+#         parsers.setdefault(row['context'], []).append(row)
+#     templateLoader = jinja2.FileSystemLoader(searchpath="templates")
+#     templateEnv = jinja2.Environment(loader=templateLoader)
+#
+#     filename = None
+#     if options['--single']:
+#         filename = 'ooi-datasets.xml'
+#         template = templateEnv.get_template(SINGLE_FILE_SINGLE_CONTEXT)
+#     elif options['--multi']:
+#         filename = 'ooi-datasets.xml'
+#         template = templateEnv.get_template(SINGLE_FILE_MULTI_CONTEXT)
+#     else:
+#         template = templateEnv.get_template(MULTI_FILE_MULTI_CONTEXT)
+#
+#     if filename is None:
+#         for context in parsers:
+#             if validate_rows(parsers[context]):
+#                 output_text = template.render(rows=parsers[context], camel_context=context, uri_options=uri_options)
+#                 file = open('%s/ooi-%s-decode.xml' % (xml_dir, context) , 'w')
+#                 file.write(output_text)
+#                 file.close()
+#
+#     else:
+#         context = 'ooi-datasets'
+#         output_text = template.render(dictionary=parsers, camel_context=context, uri_options=uri_options)
+#         file = open('%s/%s.xml' % (xml_dir, context), 'w')
+#         file.write(output_text)
+#         file.close()
 
 def main():
     options = docopt.docopt(__doc__)
+
+    templateLoader = jinja2.FileSystemLoader(searchpath="templates")
+    templateEnv = jinja2.Environment(loader=templateLoader, trim_blocks=True, lstrip_blocks=True)
+    template = templateEnv.get_template('spring_template.jinja')
+
     if options['<csv_file>'] is not None:
         rows = get_csv(options['<csv_file>'])
     else:
         sheets = list(sheet_generator())
         title, rows = sheets[0]
 
-    strip_rows(rows)
+    rows = [Row(x) for x in rows]
 
-    rows = [row for row in rows if row is not None and not row['context'].startswith('#')]
-    generate_spring(options, rows)
-    generate_ingest_csv(rows)
-    generate_test_cases(rows)
+
+    if options['--single']:
+        springs = Spring.create_springs(rows, 'single')
+    elif options['--multi']:
+        springs = Spring.create_springs(rows, 'multi')
+    else:
+        springs = Spring.create_springs(rows)
+
+    for spring in springs:
+        spring.write_file(template)
+
+    for row in rows:
+        row.write_csv()
+        row.write_yml()
 
 
 if __name__ == '__main__':
