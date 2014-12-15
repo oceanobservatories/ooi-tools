@@ -83,8 +83,7 @@ def get_record_json(record):
         log.warn('unable to decode record as JSON - %s - skipping data: %r', e, record.content)
         return []
 
-
-def get_from_edex(hostname, stream_name, sensor='null', start_time=None, stop_time=None, timestamp_as_string=False):
+def get_sensor_records_from_edex(hostname, stream_name, sensor, start_time, stop_time, timestamp_as_string):
     """
     Retrieve all stored sensor data from edex
     :return: list of edex records
@@ -98,10 +97,33 @@ def get_from_edex(hostname, stream_name, sensor='null', start_time=None, stop_ti
     r = requests.get(url)
     records = get_record_json(r)
 
+    return records
+
+
+def get_from_edex(hostname, stream_name, sensor='null', start_time=None, stop_time=None, timestamp_as_string=False):
+    """
+    Retrieve all stored sensor data from edex
+    :return: list of edex records
+    """
+    sensor_data_records = list()
+
+    if sensor == 'null':
+        url = 'http://%s:12570/sensor/m2m/inv/%s/' % (hostname, stream_name)
+
+        r = requests.get(url)
+        sensors = get_record_json(r)
+
+        for sensor in sensors:
+            d = get_sensor_records_from_edex(hostname, stream_name, sensor, start_time, stop_time, timestamp_as_string)
+            sensor_data_records += d
+    else:
+        d = get_sensor_records_from_edex(hostname, stream_name, sensor, start_time, stop_time, timestamp_as_string)
+        sensor_data_records = d
+
     log.debug('RETRIEVED:')
-    log.debug(pprint.pformat(records, depth=3))
+    log.debug(pprint.pformat(sensor_data_records, depth=3))
     d = {}
-    for record in records:
+    for record in sensor_data_records:
         preferred = record.get('preferred_timestamp')
         timestamp = record.get(preferred)
         if timestamp is not None and timestamp_as_string:
@@ -111,11 +133,11 @@ def get_from_edex(hostname, stream_name, sensor='null', start_time=None, stop_ti
         key = (timestamp, stream_name)
         if key in d:
             log.debug('Duplicate record found in retrieved values %s', key)
-            d[key] = [d[key], record]
+            if type(d[key]) is list:
+                d[key].append(record)
         else:
-            d[key] = record
+            d[key] = [record]
     return d
-
 
 # noinspection PyClassHasNoInit
 class FAILURES:
@@ -279,7 +301,6 @@ def edex_get_instruments(hostname):
     instruments = {}
     for stream in edex_get_streams(hostname):
         url = 'http://%s:12570/sensor/m2m/inv/%s' % (hostname, stream)
-        # print 'checking: %s' % url
         record = requests.get(url)
         instruments[stream] = get_record_json(record)
     return instruments
