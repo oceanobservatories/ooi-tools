@@ -1,0 +1,5 @@
+endpoint: optaa-dj-cspp_recovered
+instrument: optaa-dj-cspp_recovered
+pairs:
+- [11079364_ACS_ACS.txt, 11079364_ACS_ACS_recov.yml]
+resource: optaa_dj/cspp/resource

@@ -1,0 +1,5 @@
+endpoint: optaa-dj-cspp_telemetered
+instrument: optaa-dj-cspp_telemetered
+pairs:
+- [11079364_ACD_ACS.txt, 11079364_ACD_ACS_telem.yml]
+resource: optaa_dj/cspp/resource
