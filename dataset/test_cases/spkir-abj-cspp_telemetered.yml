@@ -1,0 +1,6 @@
+endpoint: spkir-abj-cspp_telemetered
+instrument: spkir-abj-cspp_telemetered
+pairs:
+- [11079419_PPB_OCR_shortened.txt, 11079419_PPB_OCR_shortened_telem.yml]
+resource: spkir_abj/cspp/resource
+timeout: 500
