@@ -67,7 +67,7 @@ class TestCase(object):
         # Attempt to obtain a timeout value from the test_case yml.  Default it to
         # DEFAULT_STANDARD_TIMEOUT if no yml value was provided.
         self.timeout = config.get('timeout', edex_tools.DEFAULT_STANDARD_TIMEOUT)
-        self.sensors = []
+        self.sensor = config.get('sensor')
 
     def __str__(self):
         return pprint.pformat(self.config)
@@ -311,7 +311,12 @@ def execute_test(test_queue, expected_queue):
             if os.path.exists(input_filepath) and os.path.exists(output_filepath):
 
                 delivery = test_case.instrument.split('_')[-1]
-                sensor = 'VALIDATE-%.1f-%08d' % (time.time(), count)
+
+                if test_case.sensor is None:
+                    sensor = 'VALIDATE-%.1f-%08d' % (time.time(), count)
+                else:
+                    sensor = test_case.sensor
+
                 queue = 'Ingest.%s' % test_case.instrument
 
                 try:
@@ -324,6 +329,9 @@ def execute_test(test_queue, expected_queue):
                 log.info('Fetching expected results from YML file: %s', yaml_file)
                 this_expected = get_expected(output_filepath)
                 expected_queue.put((test_case.instrument, sensor, test_file, yaml_file, this_expected))
+
+            else:
+                log.error('Missing test data or results: %s %s', input_filepath, output_filepath)
 
         except Queue.Empty:
             break
