@@ -8,7 +8,9 @@
         <constructor-arg name="name" value="{{row.name}}_{{row.suffix}}" />
         <constructor-arg name="basePythonCodePath" value="#{basePythonCodeLocalizationPath}" />
         <constructor-arg name="scriptPath" value="#{basePythonCodeLocalizationPath}/mi/dataset/driver{{row.driver}}" />
+        {% if row.bin %}
         <constructor-arg name="properties" ref="oneHourBin" />
+        {% endif %}
         {% if row.hashkeys %}
         <constructor-arg name="hashKeys">
             <list>

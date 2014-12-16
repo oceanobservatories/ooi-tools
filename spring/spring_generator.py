@@ -104,10 +104,15 @@ class Row(object):
         self.bin = row_dict.get('bin')
         if self.bin is None:
             self.bin = 'oneHourBin'
+        elif self.bin == 'disabled':
+            self.bin = None
 
         self.klass = row_dict.get('class')
         if self.klass is None:
-            self.klass = 'com.raytheon.uf.edex.ooi.decoder.dataset.FileDecoder'
+            if self.hashkeys is None:
+                self.klass = 'com.raytheon.uf.edex.ooi.decoder.dataset.FileDecoder'
+            else:
+                self.klass = 'com.raytheon.uf.edex.ooi.decoder.dataset.ExtraHashFileDecoder'
         self.pairs = self._generate_pairs(row_dict)
 
         self.hashkeys = row_dict.get('hashkeys')
