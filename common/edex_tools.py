@@ -102,16 +102,16 @@ def get_from_edex(hostname, stream_name, sensor='null', start_time=None, stop_ti
     log.debug(pprint.pformat(records, depth=3))
     d = {}
     for record in records:
-        timestamp = record.get('internal_timestamp')
-        if timestamp is None:
-            timestamp = record.get('port_timestamp')
+        preferred = record.get('preferred_timestamp')
+        timestamp = record.get(preferred)
         if timestamp is not None and timestamp_as_string:
             timestamp = '%12.3f' % timestamp
 
         stream_name = record.get('stream_name')
         key = (timestamp, stream_name)
         if key in d:
-            log.error('Duplicate record found in retrieved values %s', key)
+            log.debug('Duplicate record found in retrieved values %s', key)
+            d[key] = [d[key], record]
         else:
             d[key] = record
     return d

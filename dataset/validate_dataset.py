@@ -233,7 +233,16 @@ def compare(stored, expected):
             failures.append((edex_tools.FAILURES.MISSING_SAMPLE, key))
             log.error('No matching record found in retrieved data for key %s', key)
         else:
-            f = diff(stream_name, record, stored.get(key))
+            edex_records = stored.get(key)
+            f = []
+            if type(edex_records) is list:
+                for each in edex_records:
+                    f = diff(stream_name, record, each)
+                    if f == []:
+                        # no differences, this is a pass
+                        break
+            else:
+                f = diff(stream_name, record, edex_records)
             if f:
                 failures.append(f)
     return failures
