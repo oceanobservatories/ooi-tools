@@ -11,6 +11,7 @@ Options:
 """
 import os
 import sys
+import struct
 
 
 dataset_dir = os.path.dirname(os.path.realpath('__file__'))
@@ -134,6 +135,27 @@ def get_expected(filename):
     return expected_dictionary
 
 
+def check_for_sign_error(a, b):
+    values = []
+
+    for each in [a, b]:
+        if each < 0:
+            if each >= -2**7:
+                dtype = 'b'
+            elif each >= -2**15:
+                dtype = 'h'
+            elif each >= -2**32:
+                dtype = 'i'
+            else:
+                dtype = 'l'
+            values.append(struct.unpack('<%s' % dtype.upper(), struct.pack('<%s' % dtype, each))[0])
+        else:
+            values.append(each)
+
+    if len(values) == 2 and values[0] == values[1]:
+        return True
+
+
 def same(a, b):
     string_types = [str, unicode]
     # log.info('same(%r,%r) %s %s', a, b, type(a), type(b))
@@ -172,6 +194,10 @@ def same(a, b):
 
     if type(a) in string_types and type(b) in string_types:
         return a.strip() == b.strip()
+
+    if type(a) is int and type(b) is int:
+        if check_for_sign_error(a, b):
+            log.error('Detected unsigned/signed issue: %r, %r', a, b)
 
     return False
 
