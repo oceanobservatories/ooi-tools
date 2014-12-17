@@ -1,0 +1,5 @@
+endpoint: nutnr-j-cspp_recovered
+instrument: nutnr-j-cspp_recovered
+pairs:
+- [11079364_SNA_SNA.txt, 11079364_SNA_SNA_recov.yml]
+resource: nutnr_j/cspp/resource
