@@ -1,0 +1,5 @@
+endpoint: phsen-abcdef-sio_telemetered
+instrument: phsen-abcdef-sio_telemetered
+pairs:
+- [node59p1_2.phsen.dat, node59p1_2.yml]
+resource: phsen_abcdef/sio/resource
