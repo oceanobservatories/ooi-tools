@@ -1,0 +1,5 @@
+endpoint: dbg-pdbg-cspp_telemetered
+instrument: dbg-pdbg-cspp_telemetered
+pairs:
+- [01554008_DBG_PDBG.txt, 01554008_DBG_PDBG_telem.yml]
+resource: dbg_pdbg/cspp/resource

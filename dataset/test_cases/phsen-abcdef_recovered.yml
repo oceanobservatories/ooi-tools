@@ -2,4 +2,4 @@ endpoint: phsen-abcdef_recovered
 instrument: phsen-abcdef_recovered
 pairs:
 - [SAMI_P0080_180713_integration_control_ph.txt, SAMI_P0080_180713_control_ph.yml]
-resource: mflm/phsen/resource
+resource: phsen_abcdef/resource

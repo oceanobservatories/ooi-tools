@@ -2,7 +2,7 @@
 """Instrument Control
 
 Usage:
-  instrument_control.py <host> <name> [options]
+  instrument_control.py <host>
   instrument_control.py <host> <name> start [options]
   instrument_control.py <host> <name> stop
   instrument_control.py <host> <name> connect
@@ -54,6 +54,11 @@ def flatten(particle):
     except:
         log.error('Exception flattening particle: %s', particle)
     return particle
+
+
+def get_running(host):
+    r = requests.get('http://%s:%d/%s' % (host, instrument_agent_port, base_api_url))
+    return r.json()
 
 
 class Controller(object):
@@ -212,12 +217,19 @@ class Controller(object):
 
 def main():
     options = docopt.docopt(__doc__)
+
+    if options['<name>'] is None:
+        # return a list of running agents
+        print get_running(options['<host>'])
+        sys.exit()
+
     c = Controller(options['<host>'],
                    options['<name>'],
                    options['--module'],
                    options['--klass'],
                    options['--command_port'],
                    options['--event_port'])
+
     if options['start']:
         c.start_driver()
     elif options['stop']:

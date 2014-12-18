@@ -11,6 +11,7 @@ Options:
 """
 import os
 import sys
+import struct
 
 
 dataset_dir = os.path.dirname(os.path.realpath('__file__'))
@@ -67,7 +68,7 @@ class TestCase(object):
         # Attempt to obtain a timeout value from the test_case yml.  Default it to
         # DEFAULT_STANDARD_TIMEOUT if no yml value was provided.
         self.timeout = config.get('timeout', edex_tools.DEFAULT_STANDARD_TIMEOUT)
-        self.sensors = []
+        self.sensor = config.get('sensor')
 
     def __str__(self):
         return pprint.pformat(self.config)
@@ -134,6 +135,27 @@ def get_expected(filename):
     return expected_dictionary
 
 
+def check_for_sign_error(a, b):
+    values = []
+
+    for each in [a, b]:
+        if each < 0:
+            if each >= -2**7:
+                dtype = 'b'
+            elif each >= -2**15:
+                dtype = 'h'
+            elif each >= -2**32:
+                dtype = 'i'
+            else:
+                dtype = 'l'
+            values.append(struct.unpack('<%s' % dtype.upper(), struct.pack('<%s' % dtype, each))[0])
+        else:
+            values.append(each)
+
+    if len(values) == 2 and values[0] == values[1]:
+        return True
+
+
 def same(a, b):
     string_types = [str, unicode]
     # log.info('same(%r,%r) %s %s', a, b, type(a), type(b))
@@ -173,6 +195,10 @@ def same(a, b):
     if type(a) in string_types and type(b) in string_types:
         return a.strip() == b.strip()
 
+    if type(a) is int and type(b) is int:
+        if check_for_sign_error(a, b):
+            log.error('Detected unsigned/signed issue: %r, %r', a, b)
+
     return False
 
 
@@ -207,7 +233,16 @@ def compare(stored, expected):
             failures.append((edex_tools.FAILURES.MISSING_SAMPLE, key))
             log.error('No matching record found in retrieved data for key %s', key)
         else:
-            f = diff(stream_name, record, stored.get(key))
+            edex_records = stored.get(key)
+            f = []
+            if type(edex_records) is list:
+                for each in edex_records:
+                    f = diff(stream_name, record, each)
+                    if f == []:
+                        # no differences, this is a pass
+                        break
+            else:
+                f = diff(stream_name, record, edex_records)
             if f:
                 failures.append(f)
     return failures
@@ -311,7 +346,12 @@ def execute_test(test_queue, expected_queue):
             if os.path.exists(input_filepath) and os.path.exists(output_filepath):
 
                 delivery = test_case.instrument.split('_')[-1]
-                sensor = 'VALIDATE-%.1f-%08d' % (time.time(), count)
+
+                if test_case.sensor is None:
+                    sensor = 'VALIDATE-%.1f-%08d' % (time.time(), count)
+                else:
+                    sensor = test_case.sensor
+
                 queue = 'Ingest.%s' % test_case.instrument
 
                 try:
@@ -324,6 +364,9 @@ def execute_test(test_queue, expected_queue):
                 log.info('Fetching expected results from YML file: %s', yaml_file)
                 this_expected = get_expected(output_filepath)
                 expected_queue.put((test_case.instrument, sensor, test_file, yaml_file, this_expected))
+
+            else:
+                log.error('Missing test data or results: %s %s', input_filepath, output_filepath)
 
         except Queue.Empty:
             break
