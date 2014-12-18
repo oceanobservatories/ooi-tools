@@ -1,0 +1,5 @@
+endpoint: nutnr-j-cspp_telemetered
+instrument: nutnr-j-cspp_telemetered
+pairs:
+- [11079419_SNA_SNA.txt, 11079419_SNA_SNA_telem.yml]
+resource: nutnr_j/cspp/resource
