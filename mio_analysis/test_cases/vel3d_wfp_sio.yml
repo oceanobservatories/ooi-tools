@@ -1,0 +1,6 @@
+endpoint: vel3d-l-wfp-sio_telemetered 
+instrument: vel3d-wfp-sio
+resource:  vel3d_wfp_sio
+timeout: 600
+source_data:
+- node15p1.dat 

@@ -1,0 +1,6 @@
+endpoint: flort-dj-sio_telemetered
+instrument: flort-dj-sio
+resource: sio_mule 
+timeout: 600
+source_data:
+- node17p1.dat 

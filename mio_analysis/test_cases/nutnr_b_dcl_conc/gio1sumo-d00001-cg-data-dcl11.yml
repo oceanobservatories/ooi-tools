@@ -1,0 +1,6 @@
+endpoint: nutnr-b-dcl-conc_telemetered 
+instrument: nutnr-b-dcl-conc
+resource: GI01SUMO/D00001/cg_data/dcl11/
+timeout: 400
+source_data:
+- nutnr1

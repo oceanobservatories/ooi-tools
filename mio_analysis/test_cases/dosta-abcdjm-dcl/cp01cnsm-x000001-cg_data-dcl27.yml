@@ -1,0 +1,6 @@
+endpoint: dosta-abcdjm-dcl_telemetered
+instrument: dosta-abcdjm-dcl
+resource: CP01CNSM/X00001/cg_data/dcl27/ 
+timeout: 400
+source_data:
+- dosta1

@@ -1,0 +1,6 @@
+endpoint: flord-l-wfp_recovered
+instrument: flord-l-wfp
+resource:  wfp_eng_stc_imodem
+timeout: 600
+source_data:
+- CP02PMCO

@@ -1,0 +1,6 @@
+endpoint: phsen-abcdef-imodem_telemetered
+instrument: phsen-abcdef-imodem_telemetered
+resource: GI01SUMO/D00001/cg_data/dcl11/imm/
+timeout: 600
+source_data:
+- phsen2 
