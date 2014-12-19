@@ -247,6 +247,18 @@ class TestSioUnpack(unittest.TestCase):
      
         self.compare_node58()
 
+    def test_sects(self):
+        """
+        Test that a processing done in the getmdd script succeeds, since we don't have enough config to run the script
+        """
+
+        test_files = glob.glob(INPUT_HYPM_PATH + '/*.mdd')
+        test_files.extend(glob.glob(INPUT_FLMB_PATH + '/*.mdd'))
+
+        sects = mdd.procall(test_files)
+
+        TestSioUnpack.latest(sects)
+
     def compare_node58(self, index=0, data_in=None):
         """
         Compare node58 port 1 output and generated instrument files (hypm)
@@ -373,3 +385,23 @@ class TestSioUnpack(unittest.TestCase):
             if match.group(SIO_HEADER_GROUP_ID) not in ids:
                 return False
         return True
+
+    @staticmethod
+    def latest(sects):
+        # this method is similar to latest in getmdd, but since we don't have all the config needed to run that
+        # make a function that processes the output of mdd in the same way to make sure this passes
+        nodes = {}
+        # Get the most recent, highest known offset for each node, port 1
+        for sect in sects:
+            if sect.port != 1:
+                continue
+            snode = sect.node
+            if snode not in nodes:
+                nodes[snode] = [sect.end, sect.time]
+            else:
+                if sect.end > nodes[snode][0]:
+                    nodes[snode][0] = sect.end
+                if sect.time > nodes[snode][1]:
+                    nodes[snode][1] = sect.end
+                    nodes[snode][1] = sect.time
+        print nodes
