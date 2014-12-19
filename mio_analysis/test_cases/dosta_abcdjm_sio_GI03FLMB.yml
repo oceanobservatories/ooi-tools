@@ -1,0 +1,6 @@
+endpoint: dosta-abcdjm-sio_telemetered
+instrument: dosta-abcdjm-sio
+resource: sio_mule 
+timeout: 600
+source_data:
+- node17p1.dat 

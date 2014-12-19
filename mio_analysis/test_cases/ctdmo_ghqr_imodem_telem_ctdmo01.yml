@@ -1,0 +1,6 @@
+endpoint: ctdmo-ghqr-imodem_telemetered
+instrument: ctdmo-ghqr-imodem_telemetered
+resource:  GI01SUMO/D00001/cg_data/dcl11/imm/
+timeout: 600
+source_data:
+- ctdmo01 

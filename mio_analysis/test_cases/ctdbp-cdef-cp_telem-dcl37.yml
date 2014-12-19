@@ -1,4 +1,4 @@
-endpoint: ctdbp_cdef_dcl_cp_telem 
+endpoint: ctdbp-cdef-dcl-cp_telemetered 
 instrument: ctdbp-cdef-cp
 resource:  CP01CNSM/X00001/cg_data/dcl37/ctdbp2
 timeout: 800

@@ -1,0 +1,6 @@
+endpoint: wfp-eng-stc-imodem_recovered
+instrument: wfp-eng-stc-imodem
+resource:  wfp_eng_stc_imodem
+timeout: 600
+source_data:
+- CP02PMUO

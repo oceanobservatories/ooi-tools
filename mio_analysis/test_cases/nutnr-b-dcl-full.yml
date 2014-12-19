@@ -1,0 +1,6 @@
+endpoint: nutnr-b-dcl-full_telemetered
+instrument: nutnr-b-dcl-full
+resource: nutnr_b_dcl_full
+timeout: 600
+source_data:
+- 20141128.nutnr.log

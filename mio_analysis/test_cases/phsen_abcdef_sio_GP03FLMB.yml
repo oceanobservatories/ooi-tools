@@ -1,0 +1,6 @@
+endpoint: phsen-abcdef-sio_telemetered
+instrument: phsen-abcdef-sio
+resource: sio_mule
+timeout: 600
+source_data:
+- node10p1.dat 

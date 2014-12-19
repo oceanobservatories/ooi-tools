@@ -1,0 +1,6 @@
+endpoint: adcps-jln_recovered
+instrument: adcps-jln-recov
+resource:  adcps_jln
+timeout: 600
+source_data:
+- CP02PMCO

@@ -1,0 +1,6 @@
+endpoint: metbk-a-dcl_telemetered 
+instrument: metbk-ab-dcl
+resource: GI01SUMO/D00001/cg_data/dcl12/
+timeout: 400
+source_data:
+- metbk2 

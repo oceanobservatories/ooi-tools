@@ -1,0 +1,6 @@
+endpoint: adcps-jln-sio_telemetered
+instrument: adcps-jln-sio
+resource: sio_mule
+timeout: 600
+source_data:
+- node10p1.dat 
