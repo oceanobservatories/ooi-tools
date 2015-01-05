@@ -6,3 +6,5 @@ preload.db
 xml_files
 yml_files
 csv_files
+.api_key
+issues.csv
