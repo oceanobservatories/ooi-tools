@@ -5,14 +5,18 @@
 
 {% for context in contexts %}{% for row in context.rows %}
     <bean id="{{row.name}}_{{row.suffix}}Processor" class="{{row.klass}}">
-        <constructor-arg name="name" value="{{row.name}}_{{row.suffix}}" />
-        <constructor-arg name="basePythonCodePath" value="#{basePythonCodeLocalizationPath}" />
-        <constructor-arg name="scriptPath" value="#{basePythonCodeLocalizationPath}/mi/dataset/driver{{row.driver}}" />
+        <constructor-arg index="0" value="{{row.name}}_{{row.suffix}}" />
+        <constructor-arg index="1" value="#{basePythonCodeLocalizationPath}" />
+        <constructor-arg index="2" value="#{basePythonCodeLocalizationPath}/mi/dataset/driver{{row.driver}}" />
         {% if row.bin %}
-        <constructor-arg name="properties" ref="oneHourBin" />
+        <constructor-arg index="3" ref="oneHourBin" />
         {% endif %}
         {% if row.hashkeys %}
-        <constructor-arg name="hashKeys">
+        {% if row.bin %}
+        <constructor-arg index="4">
+        {% else %}
+        <constructor-arg index="3">
+        {% endif %}
             <list>
                 {% for hashkey in row.hashkeys %}
                 <value>{{hashkey}}</value>
