@@ -41,7 +41,9 @@ def main():
         for issue in sys.argv[1:]:
             try:
                 i = get_issue(issue, api_key)
-                writer.writerow([i.id, i.status, i.priority, i.subject, i.tracker, i.assignee, i.category, i.status])
+                row = [i.id, i.status, i.priority, i.subject, i.tracker, i.assignee, i.category, i.status]
+                print 'writing row:', row
+                writer.writerow(row)
             except Exception as e:
                 traceback.print_exc()
 
