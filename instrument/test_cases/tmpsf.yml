@@ -1,12 +1,12 @@
-instrument: tmpsf 
+instrument: tmpsf-rsn-driver 
 module: mi.instrument.rbr.xr_420_thermistor_24.ooicore.driver
 klass: InstrumentDriver
 command_port: 10001
 event_port: 10002
 port_agent_config:
-  addr: 69.196.58.141
-  port: 13014
-  cmd_port: 12014
+  addr: 10.0.1.61
+  port: 13121
+  cmd_port: 12121
 startup_config:
   parameters:
 expected_particles:
@@ -14,7 +14,10 @@ expected_particles:
 - tmpsf_engineering
 starting_state: DRIVER_STATE_COMMAND
 script:
+- [sleep, 60]
 - [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+- [sleep, 60]
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
-- [sleep, 5]
+- [sleep, 60]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+- [sleep, 400]

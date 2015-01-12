@@ -1,12 +1,12 @@
-instrument: spkir 
+instrument: spkir-rsn-driver 
 module: mi.instrument.satlantic.ocr_507_icsw.ooicore.driver
 klass: SatlanticOCR507InstrumentDriver
 command_port: 10037
 event_port: 10038
 port_agent_config:
-  addr: 69.196.58.141
-  port: 13031
-  cmd_port: 12031
+  addr: 10.0.1.61
+  port: 13110
+  cmd_port: 12110
 startup_config:
   parameters:
 expected_particles:

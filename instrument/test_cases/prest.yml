@@ -1,12 +1,12 @@
-instrument: prest
+instrument: prest-rsn-driver
 module: mi.instrument.seabird.sbe54tps.ooicore.driver 
 klass: InstrumentDriver
 command_port: 10033
 event_port: 10034
 port_agent_config:
-  addr: 69.196.58.141
-  port: 13012
-  cmd_port: 12012
+  addr: 10.0.1.61
+  port: 13109
+  cmd_port: 12109
 startup_config:
   parameters:
 expected_particles:
