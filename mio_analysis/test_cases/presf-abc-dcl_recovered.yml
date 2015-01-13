@@ -1,0 +1,6 @@
+endpoint: presf-abc-dcl_recovered
+instrument: presf-abc-dcl
+resource:  CE06ISSM/D00001/dcl35/ 
+timeout: 600
+source_data:
+- presf

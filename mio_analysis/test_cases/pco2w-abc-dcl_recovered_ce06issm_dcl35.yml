@@ -1,6 +1,6 @@
 endpoint: pco2w-abc-dcl_recovered
 instrument: pco2w-abc-dcl
-resource: pco2w-abc
+resource:  CE06ISSM/D00001/dcl35/
 timeout: 600
 source_data:
-- SAMI_C0069_300614.txt 
+- pco2w2

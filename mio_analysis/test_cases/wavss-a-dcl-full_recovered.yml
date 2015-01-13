@@ -1,0 +1,8 @@
+endpoint: wavss-a-dcl-full_recovered
+instrument: wavss-a-dcl-full
+resource: CP01CNSM/D00002/cg_data/dcl12/wavss/
+timeout: 600
+source_data:
+- 20141117.wavss.log
+- 20141124.wavss.log
+- 20141206.wavss.log

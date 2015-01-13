@@ -1,7 +1,6 @@
 endpoint: ctdbp-cdef-cp_recovered 
 instrument: ctdbp-cdef-cp
-resource:  ctdbp-cdef-cp_recov
-timeout: 600
+resource: CP01CNSM/R00001/dcl27/CTDBP_sn16P-71174-7208/
+timeout: 800
 source_data:
-- 20131126.ctdbp1.log
-- 20131124.ctdbp2.log
+- SBE16plus_01607208_2014_07_01.hex

@@ -1,4 +1,4 @@
-endpoint: velpt-ab-dcl_telemetered
+endpoint: velpt-ab-dcl_recovered
 instrument: velpt-ab-dcl
 resource: GI01SUMO/D00001/cg_data/dcl16/ 
 timeout: 400
