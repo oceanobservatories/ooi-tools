@@ -1,0 +1,75 @@
+package com.raytheon.uf.edex.ooi.cassandra.tables;
+
+import com.raytheon.uf.edex.ooi.cassandra.CassandraParticle;
+import com.raytheon.uf.edex.ooi.cassandra.DataParticleJson;
+
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.cassandra.mapping.Column;
+import org.springframework.data.cassandra.mapping.Table;
+import java.util.List;
+import java.math.BigInteger;
+
+@Table(value = "{{table.name}}")
+public class {{table.classname}} extends CassandraParticle {
+    // Cassandra columns
+{% for column in table.columns %}
+
+    @Column(value = "{{column.name}}")
+    private {{column.javatype}} {{column.javaname}};
+{% endfor %}
+
+    @Transient
+    private String stream_name = "{{table.name}}";
+
+    // Fill values
+{% for column in table.columns %}
+{% if column.numeric or column.islist %}
+    @Transient
+{% if column.java_object == 'BigInteger' %}
+    private {{column.filltype}} {{column.fillvar}} = new BigInteger("{{column.fillvalue}}");
+{% elif column.java_object == 'String' %}
+    private {{column.filltype}} {{column.fillvar}} = "";
+{% else %}
+    private {{column.filltype}} {{column.fillvar}} = {{column.fillvalue}};
+{% endif %}
+
+{% endif %}
+{% endfor %}
+
+    public void fill(DataParticleJson particle) {
+        super.fill(particle);
+{% for column in table.columns %}
+{% if column.fillable %}
+    {% if column.islist %}
+        this.{{column.javaname}}_shape = getShape((List) particle.get("{{column.name}}"));
+        this.{{column.javaname}} = flatten((List) particle.get("{{column.name}}"), {{column.java_object}}.class, this.{{column.fillvar}}, "{{column.name}}");
+    {% elif column.numeric %}
+    {% if column.javatype == 'BigInteger' %}
+        this.{{column.javaname}} = ({{column.java_object}}) fitOrFill(particle.get("{{column.name}}"), {{column.java_object}}.class, this.{{column.fillvar}}, "{{column.name}}");
+    {% else %}
+        this.{{column.javaname}} = ({{column.java_object}}) fitOrFill(particle.get("{{column.name}}"), {{column.java_object}}.class, this.{{column.fillvar}}, "{{column.name}}");
+    {% endif %}
+    {% else %}
+        this.{{column.javaname}} = (particle.get("{{column.name}}") == null) ? null: particle.get("{{column.name}}").toString();
+    {% endif %}
+{% endif %}
+{% endfor %}
+    }
+
+    // Getters and Setters
+    public String getStream_name() {
+        return stream_name;
+    }
+
+{% for column in table.columns %}
+    public {{column.javatype}} {{column.getter}}() {
+        return {{column.javaname}};
+    }
+
+    public void {{column.setter}}({{column.javatype}} {{column.javaname}}) {
+        this.{{column.javaname}} = {{column.javaname}};
+    }
+
+{% endfor %}
+
+}

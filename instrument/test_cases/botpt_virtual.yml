@@ -6,7 +6,7 @@ event_port: 10005
 port_agent_config: {}
 startup_config:
   parameters:
-    botpt_nano_sample: 1
+    botpt_nano_sample: 40
     botpt_lily_sample: 1
     botpt_iris_sample: 1
     botpt_heat_sample: 1
@@ -15,4 +15,4 @@ script:
 - [execute, DRIVER_EVENT_START_AUTOSAMPLE]
 - [sleep, 5]
 - [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
-- [sleep, 500]
+- [sleep, 1]

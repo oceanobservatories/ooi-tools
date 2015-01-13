@@ -110,10 +110,7 @@ class Row(object):
 
         self.klass = row_dict.get('class')
         if self.klass is None:
-            if self.hashkeys is None:
-                self.klass = 'com.raytheon.uf.edex.ooi.decoder.dataset.FileDecoder'
-            else:
-                self.klass = 'com.raytheon.uf.edex.ooi.decoder.dataset.ExtraHashFileDecoder'
+            self.klass = 'com.raytheon.uf.edex.ooi.decoder.dataset.FileDecoder'
         self.pairs = self._generate_pairs(row_dict)
 
 

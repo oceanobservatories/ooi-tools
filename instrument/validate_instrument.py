@@ -75,17 +75,15 @@ class Scorecard(object):
                 'failures': []
             }
 
-    def record(self, stream, failures):
+    def record(self, stream, expected_count, retrieved_count, failures):
         failure_types = [x[0] for x in failures]
         self.init_stream(stream)
         if failures:
-            self.results[stream]['fail'] += 1
-            self.results[stream]['failures'].extend(failures)
-        else:
-            self.results[stream]['pass'] += 1
-        self.results[stream]['expected'] += 1
-        if not edex_tools.FAILURES.MISSING_SAMPLE in failure_types:
-            self.results[stream]['retrieved'] += 1
+            self.results[stream]['fail'] = len(failures)
+            self.results[stream]['failures'] = failures
+        self.results[stream]['pass'] = expected_count - len(failures)
+        self.results[stream]['expected'] = expected_count
+        self.results[stream]['retrieved'] = retrieved_count
 
     def __repr__(self):
         return repr(self.results)
@@ -110,87 +108,23 @@ class Scorecard(object):
         return '\n'.join(result)
 
 
-def diff(a, b, ignore=None, rename=None):
-    """
-    Compare two data records
-    :param a:
-    :param b:
-    :param ignore: fields to ignore
-    :param rename: fields to rename before comparison
-    :return: list of failures
-    """
-    if ignore is None:
-        ignore = ['particle_object', 'quality_flag', 'driver_timestamp', 'stream_name', 'preferred_timestamp',
-                  'pkt_format_id', 'pkt_version', 'time', 'internal_timestamp']
-    if rename is None:
-        rename = {'particle_type': 'stream_name'}
-
-    failures = []
-
-    # verify from expected to retrieved
-    for k, v in a.iteritems():
-        if k in ignore or k.startswith('_'):
-            continue
-        if k in rename:
-            k = rename[k]
-        if k not in b:
-            failures.append((edex_tools.FAILURES.MISSING_FIELD, k))
-            log.error('missing key: %r in retrieved record', k)
-            continue
-        if type(v) == dict:
-            _round = v.get('round')
-            value = v.get('value')
-            rvalue = round(b[k], _round)
-        else:
-            value = v
-            if type(value) in [str, unicode]:
-                value = value.strip()
-            rvalue = b[k]
-            if type(rvalue) in [str, unicode]:
-                rvalue = rvalue.strip()
-        if value != rvalue:
-            failures.append((edex_tools.FAILURES.BAD_VALUE, 'expected=%r retrieved=%r' % (v, b[k])))
-            log.error('non-matching value: expected=%r retrieved=%r', v, b[k])
-
-    # verify no extra (unexpected) keys present in retrieved data
-    for k in b:
-        if k in ignore:
-            continue
-        if k not in a:
-            failures.append((edex_tools.FAILURES.UNEXPECTED_VALUE, k))
-            log.error('item in retrieved data not in expected data: %r', k)
-
-    return failures
-
-
-def test_results(hostname, instrument, expected_results, scorecard=None, attempts=0):
+def test_results(hostname, instrument, expected_results, scorecard=None):
     num_items = sum([len(x) for x in expected_results.values()])
-    log.info('testing %d results (%s), attempt # %d', num_items, type(expected_results), attempts)
+    log.info('testing %d results (%s)', num_items, type(expected_results))
     if scorecard is None:
         scorecard = Scorecard()
-    not_found = {}
-    count = 0
+
     for stream in expected_results:
-        times = sorted(expected_results[stream].keys())[:RECORDS_PER_REQUEST]
+        times = [x.get(x.get('preferred_timestamp'), 0.0) for x in expected_results[stream]]
         retrieved = edex_tools.get_from_edex(hostname,
+                                             timestamp_as_string=True,
                                              stream_name=stream,
                                              sensor=instrument,
                                              start_time=times[0],
                                              stop_time=times[-1])
 
-        for ts, particle in expected_results[stream].iteritems():
-            if (ts, stream) not in retrieved:
-                if attempts > MAX_ATTEMPTS:
-                    scorecard.record(stream, [(edex_tools.FAILURES.MISSING_SAMPLE, (ts, stream))])
-                else:
-                    not_found.setdefault(stream, {})[ts] = particle
-            else:
-                scorecard.record(stream, diff(particle, retrieved[(ts,stream)]))
-
-    attempts += 1
-    if not_found:
-        time.sleep(1)
-        test_results(hostname, instrument, not_found, scorecard=scorecard, attempts=attempts)
+        failures = edex_tools.compare(retrieved, expected_results[stream], lookup_preferred_timestamp=True)
+        scorecard.record(stream, len(expected_results[stream]), len(retrieved), failures)
 
     return scorecard
 

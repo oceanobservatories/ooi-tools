@@ -74,7 +74,13 @@ def sheet_generator():
         log.debug('Fetching sheet %s from googles', title)
         rows = []
         for x in client.GetListFeed(key, id, visibility='public', projection='values').entry:
-           rows.append({k:v.text for k,v in x.custom.items()})
+            d = {}
+            for k, v in x.custom.items():
+                if v.text is not None:
+                    d[k] = v.text.strip()
+                else:
+                    d[k] = None
+            rows.append(d)
         yield title, rows
 
 def get_parameters(param_list, param_dict):
