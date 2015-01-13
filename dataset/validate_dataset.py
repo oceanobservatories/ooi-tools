@@ -9,6 +9,7 @@ Options:
   --ignore_null  Don't fail on missing null values
 
 """
+import json
 import os
 import sys
 import struct
@@ -40,7 +41,6 @@ except ImportError:
     from yaml import Loader, Dumper
 
 NUM_THREADS = 30
-FLOAT_TOLERANCE = 0.001
 IGNORE_NULLS = False
 
 
@@ -87,220 +87,63 @@ def read_test_cases(f):
         yield TestCase(config)
 
 
-def get_expected(filename):
+def get_expected(filename, cache_dir='.cache'):
     """
     Loads expected results from the supplied YAML file
     :param filename:
     :return: list of records containing the expected results
     """
-    try:
-        fh = open(filename, 'r')
-        data = load(fh, Loader=Loader)
-        log.debug('Raw data from YAML: %s', data)
-        header = data.get('header')
-        data = data.get('data')
-        particle_type = header.get('particle_type')
-        if particle_type is not None:
-            if particle_type != 'MULTIPLE':
-                for record in data:
-                    record['particle_type'] = particle_type
-    except (IOError, KeyError):
-        data = []
-
-    for record in data:
-        timestamp = record.get('internal_timestamp')
-        if type(timestamp) == str:
-            if not timestamp.endswith('Z'):
-                timestamp += 'Z'
-            # Check to see if we have a timestamp with a decimal point which
-            # means we have the millis included
-            if '.' in timestamp:
-                timestamp_to_use = timestamp
-            else:
-                # So now we will add the millis, eliminating the Z (i.e. [:-1])
-                # and reappend the Z
-                timestamp_to_use = timestamp[:-1] + '.0Z'
-            dt = datetime.strptime(timestamp_to_use, '%Y-%m-%dT%H:%M:%S.%fZ')
-            timestamp = ntplib.system_to_ntp_time(
-                calendar.timegm(dt.timetuple()) + (dt.microsecond / 1000000.0))
-
-            record['internal_timestamp'] = timestamp
-
-    expected_dictionary = {}
-
-    for record in data:
-        expected_dictionary.setdefault(record.get('particle_type'), []).append(record)
-
-    return expected_dictionary
-
-
-def check_for_sign_error(a, b):
-    values = []
-
-    for each in [a, b]:
-        if each < 0:
-            if each >= -2**7:
-                dtype = 'b'
-            elif each >= -2**15:
-                dtype = 'h'
-            elif each >= -2**32:
-                dtype = 'i'
-            else:
-                dtype = 'l'
-            values.append(struct.unpack('<%s' % dtype.upper(), struct.pack('<%s' % dtype, each))[0])
-        else:
-            values.append(each)
-
-    if len(values) == 2 and values[0] == values[1]:
-        return True
-
-
-def same(a, b, errors):
-    string_types = [str, unicode]
-    # log.info('same(%r,%r) %s %s', a, b, type(a), type(b))
-    if a == b:
-        return True
-
-    if type(a) is not type(b):
-        if type(a) not in string_types and type(b) not in string_types:
-            return False
-
-    if type(a) is dict:
-        if a.keys() != b.keys():
-            return False
-        return all([same(a[k], b[k], errors) for k in a])
-
-    if type(a) is list:
-        if len(a) != len(b):
-            return False
-        return all([same(a[i], b[i], errors) for i in xrange(len(a))])
-
-    if type(a) is float or type(b) is float:
+    cached_path = os.path.join(cache_dir, filename.split('mi-dataset/')[1])
+    if os.path.exists(cached_path):
+        log.info('found cached results file...')
+        return json.load(open(cached_path))
+    else:
         try:
-            if type(a) is unicode:
-                a = str(a)
-            if type(b) is unicode:
-                b = str(b)
-            a = float(a)
-            b = float(b)
-            if abs(a-b) < FLOAT_TOLERANCE:
-                return True
-            if math.isnan(a) and math.isnan(b):
-                return True
-        except:
-            pass
-        message = 'FAILED floats: %r %r' % (a, b)
-        errors.append(message)
+            fh = open(filename, 'r')
+            data = load(fh, Loader=Loader)
+            log.debug('Raw data from YAML: %s', data)
+            header = data.get('header')
+            data = data.get('data')
+            particle_type = header.get('particle_type')
+            if particle_type is not None:
+                if particle_type != 'MULTIPLE':
+                    for record in data:
+                        record['particle_type'] = particle_type
+        except (IOError, KeyError):
+            data = []
 
-    if type(a) in string_types and type(b) in string_types:
-        return a.strip() == b.strip()
+        for record in data:
+            timestamp = record.get('internal_timestamp')
+            if type(timestamp) == str:
+                if not timestamp.endswith('Z'):
+                    timestamp += 'Z'
+                # Check to see if we have a timestamp with a decimal point which
+                # means we have the millis included
+                if '.' in timestamp:
+                    timestamp_to_use = timestamp
+                else:
+                    # So now we will add the millis, eliminating the Z (i.e. [:-1])
+                    # and reappend the Z
+                    timestamp_to_use = timestamp[:-1] + '.0Z'
+                dt = datetime.strptime(timestamp_to_use, '%Y-%m-%dT%H:%M:%S.%fZ')
+                timestamp = ntplib.system_to_ntp_time(
+                    calendar.timegm(dt.timetuple()) + (dt.microsecond / 1000000.0))
 
-    if type(a) is int and type(b) is int:
-        if check_for_sign_error(a, b):
-            errors.append('Detected unsigned/signed issue: %r, %r' % (a, b))
+                record['internal_timestamp'] = timestamp
 
-    return False
+        expected_dictionary = {}
 
+        for record in data:
+            expected_dictionary.setdefault(record.get('particle_type'), []).append(record)
 
-def compare(stored, expected):
-    """
-    Compares a set of expected results against the retrieved values
-    :param stored:
-    :param expected:
-    :return: list of failures
-    """
-    failures = []
-    for record in expected:
-        timestamp = '%12.3f' % record.get('internal_timestamp')
-        stream_name = record.get('particle_type')
-        # Not all YAML files contain the particle type
-        # if we don't find it, let's check the stored data
-        # if all particles are the same type, then we'll proceed
-        if stream_name is None:
-            log.warn('Missing stream name from YML file, attempting to infer')
-            keys = stored.keys()
-            keys = [x[1] for x in keys]
-            keys = set(keys)
-            if len(keys) == 1:
-                key = (timestamp, keys.pop())
-            else:
-                failures.append((edex_tools.FAILURES.AMBIGUOUS, 'Multiple streams in output, no stream in YML'))
-                log.error('Ambiguous stream information in YML file and unable to infer')
-                continue
-        else:
-            key = (timestamp, stream_name)
-        if key not in stored:
-            failures.append((edex_tools.FAILURES.MISSING_SAMPLE, key))
-            log.error('No matching record found in retrieved data for key %s', key)
-        else:
-            edex_records = stored.get(key)
-            f = []
-            errors = []
-            if type(edex_records) is list:
-                for each in edex_records:
-                    f, errors = diff(stream_name, record, each)
-                    if f == []:
-                        # no differences, this is a pass
-                        break
-            else:
-                f = diff(stream_name, record, edex_records)
+        dirname = os.path.dirname(cached_path)
+        log.info('caching yml results for faster testing next run...')
+        if not os.path.exists(dirname):
+            log.info('creating dir: %s', dirname)
+            os.makedirs(dirname)
+        json.dump(expected_dictionary, open(cached_path, 'wb'))
 
-            if f:
-                failures.append(f)
-                for error in errors:
-                    log.error(error)
-    return failures
-
-
-def diff(stream, a, b, ignore=None, rename=None):
-    """
-    Compare two data records
-    :param a:
-    :param b:
-    :param ignore: fields to ignore
-    :param rename: fields to rename before comparison
-    :return: list of failures
-    """
-    if ignore is None:
-        ignore = ['particle_object', 'quality_flag', 'driver_timestamp', 'stream_name', 'preferred_timestamp']
-    if rename is None:
-        rename = {'particle_type': 'stream_name'}
-
-    failures = []
-    errors = []
-
-    # verify from expected to retrieved
-    for k, v in a.iteritems():
-        if k in ignore or k.startswith('_'):
-            continue
-        if k in rename:
-            k = rename[k]
-        if k not in b:
-            message = '%s - missing key: %s in retrieved record' % (stream, k)
-            errors.append(message)
-            if IGNORE_NULLS and v is None:
-                log.info('Ignoring NULL value from expected data')
-            else:
-                failures.append((edex_tools.FAILURES.MISSING_FIELD, message))
-            continue
-
-        if type(v) == dict:
-            v = v.get('value')
-
-        if not same(v, b[k], errors):
-            message = '%s - non-matching value: key=%r expected=%r retrieved=%r' % (stream, k, v, b[k])
-            failures.append((edex_tools.FAILURES.BAD_VALUE,
-                             message))
-            errors.append(message)
-
-    # verify no extra (unexpected) keys present in retrieved data
-    for k in b:
-        if k not in a and k not in ignore:
-            failures.append((edex_tools.FAILURES.UNEXPECTED_VALUE, (stream, k)))
-            message = '%s - item in retrieved data not in expected data: %s' % (stream, k)
-            errors.append(message)
-
-    return failures, errors
+        return expected_dictionary
 
 
 def wait_for_ingest_complete():
@@ -309,17 +152,20 @@ def wait_for_ingest_complete():
     :return:  True when the EDEX log file indicates completion, False if message does not appear within expected
               timeout.
     """
-    return edex_tools.watch_log_for('Ingest: EDEX: Ingest')
+    return edex_tools.watch_log_for('EDEX - Ingest complete for file')
 
 
 def test_results(expected, stream_name, sensor='null'):
     retrieved = edex_tools.get_from_edex('localhost', stream_name, timestamp_as_string=True, sensor=sensor)
-    log.debug('Retrieved %d records from edex:', len(retrieved))
+    retrieved_count = 0
+    for each in retrieved.itervalues():
+        retrieved_count += len(each)
+    log.debug('Retrieved %d records from edex:', retrieved_count)
     log.debug(pprint.pformat(retrieved, depth=3))
     log.debug('Retrieved %d records from expected data file:', len(expected))
     log.debug(pprint.pformat(expected, depth=3))
-    failures = compare(retrieved, expected)
-    return len(retrieved), len(expected), failures
+    failures = edex_tools.compare(retrieved, expected, ignore_nulls=IGNORE_NULLS)
+    return retrieved_count, len(expected), failures
 
 
 def dump_csv(data):
@@ -429,7 +275,7 @@ def test(my_test_cases):
         t.join()
 
     # wait for all ingestion to complete
-    if not edex_tools.watch_log_for('Ingest: EDEX: Ingest', logfile=logfile,
+    if not edex_tools.watch_log_for('EDEX - Ingest complete for file', logfile=logfile,
                                     expected_count=expected_queue.qsize(), timeout=total_timeout):
         log.error('Timed out waiting for ingest complete message')
 

@@ -8,22 +8,6 @@
         <constructor-arg index="0" value="{{row.name}}_{{row.suffix}}" />
         <constructor-arg index="1" value="#{basePythonCodeLocalizationPath}" />
         <constructor-arg index="2" value="#{basePythonCodeLocalizationPath}/mi/dataset/driver{{row.driver}}" />
-        {% if row.bin %}
-        <constructor-arg index="3" ref="oneHourBin" />
-        {% endif %}
-        {% if row.hashkeys %}
-        {% if row.bin %}
-        <constructor-arg index="4">
-        {% else %}
-        <constructor-arg index="3">
-        {% endif %}
-            <list>
-                {% for hashkey in row.hashkeys %}
-                <value>{{hashkey}}</value>
-                {% endfor %}
-            </list>
-        </constructor-arg>
-        {% endif %}
     </bean>
 
 {% endfor %}{% endfor %}
@@ -53,7 +37,7 @@
             <doTry>
                 <pipeline>
                     <bean ref="{{row.name}}_{{row.suffix}}Processor" />
-                    <to uri="direct-vm:persistIndexAlert" />
+                    <to uri="vm:generate" />
                 </pipeline>
                 <doCatch>
                     <exception>java.lang.Throwable</exception>

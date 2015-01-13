@@ -100,10 +100,15 @@ class Controller(object):
                     evt = evt_socket.recv_json(flags=zmq.NOBLOCK)
                     if evt.get('type') == 'DRIVER_ASYNC_EVENT_SAMPLE':
                         sample = evt.get('value')
+                        del(sample['pkt_version'])
+                        del(sample['pkt_format_id'])
+                        if sample.get('internal_timestamp') is None:
+                            sample['internal_timestamp'] = 0.0
                         stream_name = sample.get('stream_name')
-                        ts = sample.get(sample.get('preferred_timestamp', {}), 0)
+                        ts = sample.get(sample.get('preferred_timestamp', {}), 0.0)
+                        ts = '%12.3f' % ts
                         if stream_name != 'raw' and ts > 0:
-                            self.samples.setdefault(stream_name, {})[ts] = flatten(sample)
+                            self.samples.setdefault(stream_name, []).append(flatten(sample))
                 except zmq.ZMQError:
                     time.sleep(.1)
 

@@ -3,8 +3,11 @@ preload.db
 .idea
 *.xml
 *.pyc
-xml_files
-yml_files
-csv_files
+*.json
+xml_files/
+yml_files/
+csv_files/
+java/
+cql/
 .api_key
 issues.csv

@@ -3,6 +3,7 @@ import glob
 import os
 
 import pprint
+import math
 import ntplib
 import numpy
 
@@ -10,9 +11,13 @@ import qpid.messaging as qm
 import time
 import requests
 import shutil
+import struct
 from logger import get_logger
 import simplejson.scanner
 
+from cassandra.cluster import Cluster
+
+cass = {}
 
 log = get_logger()
 
@@ -83,7 +88,7 @@ def get_record_json(record):
         log.warn('unable to decode record as JSON - %s - skipping data: %r', e, record.content)
         return []
 
-def get_sensor_records_from_edex(hostname, stream_name, sensor, start_time, stop_time, timestamp_as_string):
+def get_sensor_records_from_edex(hostname, stream_name, sensor, start_time, stop_time):
     """
     Retrieve all stored sensor data from edex
     :return: list of edex records
@@ -105,39 +110,52 @@ def get_from_edex(hostname, stream_name, sensor='null', start_time=None, stop_ti
     Retrieve all stored sensor data from edex
     :return: list of edex records
     """
-    sensor_data_records = list()
-
-    if sensor == 'null':
-        url = 'http://%s:12570/sensor/m2m/inv/%s/' % (hostname, stream_name)
-
-        r = requests.get(url)
-        sensors = get_record_json(r)
-
-        for sensor in sensors:
-            d = get_sensor_records_from_edex(hostname, stream_name, sensor, start_time, stop_time, timestamp_as_string)
-            sensor_data_records += d
-    else:
-        d = get_sensor_records_from_edex(hostname, stream_name, sensor, start_time, stop_time, timestamp_as_string)
-        sensor_data_records = d
+    records = get_sensor_records_from_edex(hostname, stream_name, sensor, start_time, stop_time)
 
     log.debug('RETRIEVED:')
-    log.debug(pprint.pformat(sensor_data_records, depth=3))
+    log.debug(pprint.pformat(records, depth=3))
     d = {}
-    for record in sensor_data_records:
-        preferred = record.get('preferred_timestamp')
-        timestamp = record.get(preferred)
+    for record in records:
+        timestamp = record.get('pk', {}).get('time')
+        restore_lists(record)
+
         if timestamp is not None and timestamp_as_string:
             timestamp = '%12.3f' % timestamp
 
-        stream_name = record.get('stream_name')
-        key = (timestamp, stream_name)
-        if key in d:
-            log.debug('Duplicate record found in retrieved values %s', key)
-            if type(d[key]) is list:
-                d[key].append(record)
-        else:
-            d[key] = [record]
+        record['timestamp'] = timestamp
+        d.setdefault((stream_name, timestamp), []).append(record)
+
     return d
+
+
+def nanize(l):
+    rlist = []
+    for x in l:
+        if x == u'NaN':
+            rlist.append(float('nan'))
+        else:
+            rlist.append(x)
+    return rlist
+
+
+def restore_lists(record):
+    shapes = []
+    for k in record:
+        if k.endswith('_shape'):
+            shapes.append(k)
+
+    for k in shapes:
+        array_key = k.replace('_shape','')
+        shape = record[k]
+        array = numpy.array(nanize(record[array_key]))
+
+        if numpy.product(shape) == len(array):
+            array = array.reshape(shape)
+        else:
+            log.error('Shape wrong? %r %d %s', shape, len(array), array)
+        record[array_key] = array.tolist()
+        del(record[k])
+
 
 # noinspection PyClassHasNoInit
 class FAILURES:
@@ -371,3 +389,177 @@ def edex_mio_report(hostname, stream, instrument, output_dir='.'):
                 s = set()
                 s.update(list(value.flatten()))
                 log.info(" - skipping non-numeric data for %s", param)
+
+
+
+
+def check_for_sign_error(a, b):
+    values = []
+
+    for each in [a, b]:
+        if each < 0:
+            if each >= -2**7:
+                dtype = 'b'
+            elif each >= -2**15:
+                dtype = 'h'
+            elif each >= -2**32:
+                dtype = 'i'
+            else:
+                dtype = 'l'
+            values.append(struct.unpack('<%s' % dtype.upper(), struct.pack('<%s' % dtype, each))[0])
+        else:
+            values.append(each)
+
+    if len(values) == 2 and values[0] == values[1]:
+        return True
+
+
+def same(a, b, errors, float_tolerance=0.001):
+    string_types = [str, unicode]
+    # log.info('same(%r,%r) %s %s', a, b, type(a), type(b))
+    if a == b:
+        return True
+
+    if type(a) is not type(b):
+        if type(a) not in string_types and type(b) not in string_types:
+            return False
+
+    if type(a) is dict:
+        if a.keys() != b.keys():
+            return False
+        return all([same(a[k], b[k], errors, float_tolerance=float_tolerance) for k in a])
+
+    if type(a) is list:
+        if len(a) != len(b):
+            return False
+        return all([same(a[i], b[i], errors, float_tolerance=float_tolerance) for i in xrange(len(a))])
+
+    if type(a) is float or type(b) is float:
+        try:
+            if type(a) is unicode:
+                a = str(a)
+            if type(b) is unicode:
+                b = str(b)
+            a = float(a)
+            b = float(b)
+            if abs(a-b) < float_tolerance:
+                return True
+            if math.isnan(a) and math.isnan(b):
+                return True
+        except:
+            pass
+        message = 'FAILED floats: %r %r' % (a, b)
+        errors.append(message)
+
+    if type(a) in string_types and type(b) in string_types:
+        return a.strip() == b.strip()
+
+    if type(a) is int and type(b) is int:
+        if check_for_sign_error(a, b):
+            errors.append('Detected unsigned/signed issue: %r, %r' % a, b)
+
+    return False
+
+
+def compare(stored, expected, ignore_nulls=False, lookup_preferred_timestamp=False):
+    """
+    Compares a set of expected results against the retrieved values
+    :param stored:
+    :param expected:
+    :return: list of failures
+    """
+    failures = []
+    for record in expected:
+        if lookup_preferred_timestamp:
+            timestamp = '%12.3f' % record.get(record.get('preferred_timestamp'), 0.0)
+        else:
+            timestamp = '%12.3f' % record.get('internal_timestamp', 0.0)
+        stream_name = record.get('particle_type') or record.get('stream_name')
+        # Not all YAML files contain the particle type
+        # if we don't find it, let's check the stored data
+        # if all particles are the same type, then we'll proceed
+        if stream_name is None:
+            log.warn('Missing stream name from YML file, attempting to infer')
+            keys = stored.keys()
+            keys = [x[1] for x in keys]
+            keys = set(keys)
+            if len(keys) == 1:
+                key = (timestamp, keys.pop())
+            else:
+                failures.append((FAILURES.AMBIGUOUS, 'Multiple streams in output, no stream in YML'))
+                log.error('Ambiguous stream information in YML file and unable to infer')
+                continue
+
+        matches = []
+        for each in stored.get((stream_name, timestamp), []):
+            if each['stream_name'] == stream_name and each['timestamp'] == timestamp:
+                f, errors = diff(stream_name, record, each, ignore_nulls=ignore_nulls)
+                matches.append((len(f), each, f, errors))
+
+        matches.sort()
+        if len(matches) == 0:
+            m = 'Unable to find a matching sample: %s %s' % (stream_name, timestamp)
+            failures.append((FAILURES.MISSING_SAMPLE, m))
+            log.error(m)
+        if len(matches) > 0:
+            failcount, match, f, errors = matches[0]
+            if failcount > 0:
+                # we had at least one failure, but this record
+                # was the closest match; record the failures
+                failures.append(f)
+                for error in errors:
+                    log.error(error)
+
+    return failures
+
+
+def diff(stream, a, b, ignore=None, rename=None, ignore_nulls=False, float_tolerance=0.001):
+    """
+    Compare two data records
+    :param a:
+    :param b:
+    :param ignore: fields to ignore
+    :param rename: fields to rename before comparison
+    :return: list of failures
+    """
+    if ignore is None:
+        ignore = ['particle_object', 'quality_flag', 'driver_timestamp', 'ingestion_timestamp',
+                  'stream_name', 'preferred_timestamp', 'port_timestamp', 'pk', 'timestamp']
+    if rename is None:
+        rename = {'particle_type': 'stream_name'}
+
+    failures = []
+    errors = []
+
+    # verify from expected to retrieved
+    for k, v in a.iteritems():
+        if k in ignore or k.startswith('_'):
+            continue
+        if k in rename:
+            k = rename[k]
+        if k not in b:
+            message = '%s - missing key: %s in retrieved record' % (stream, k)
+            errors.append(message)
+            if ignore_nulls and v is None:
+                log.info('Ignoring NULL value from expected data')
+            else:
+                failures.append((FAILURES.MISSING_FIELD, message))
+            continue
+
+        if type(v) == dict:
+            v = v.get('value')
+
+        if not same(v, b[k], errors, float_tolerance=float_tolerance):
+            message = '%s - non-matching value: key=%r expected=%r retrieved=%r' % (stream, k, v, b[k])
+            failures.append((FAILURES.BAD_VALUE,
+                             message))
+            errors.append(message)
+
+    # verify no extra (unexpected) keys present in retrieved data
+    for k in b:
+        if k not in a and k not in ignore:
+            failures.append((FAILURES.UNEXPECTED_VALUE, (stream, k)))
+            message = '%s - item in retrieved data not in expected data: %s' % (stream, k)
+            errors.append(message)
+
+    return failures, errors
