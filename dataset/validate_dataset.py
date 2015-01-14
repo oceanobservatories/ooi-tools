@@ -39,6 +39,7 @@ try:
 except ImportError:
     from yaml import Loader, Dumper
 
+errors_to_report = []
 
 NUM_THREADS = 30
 FLOAT_TOLERANCE = 0.001
@@ -157,6 +158,7 @@ def check_for_sign_error(a, b):
 
 
 def same(a, b):
+
     string_types = [str, unicode]
     # log.info('same(%r,%r) %s %s', a, b, type(a), type(b))
     if a == b:
@@ -190,7 +192,8 @@ def same(a, b):
                 return True
         except:
             pass
-        log.info('FAILED floats: %r %r', a, b)
+        message = 'FAILED floats: %r %r' % (a, b)
+        errors_to_report.append(message)
 
     if type(a) in string_types and type(b) in string_types:
         return a.strip() == b.strip()
@@ -200,6 +203,8 @@ def same(a, b):
             log.error('Detected unsigned/signed issue: %r, %r', a, b)
 
     return False
+
+
 
 
 def compare(stored, expected):
@@ -239,10 +244,14 @@ def compare(stored, expected):
                 for each in edex_records:
                     f = diff(stream_name, record, each)
                     if f == []:
+                        errors_to_report = []
                         # no differences, this is a pass
                         break
             else:
                 f = diff(stream_name, record, edex_records)
+            for error in errors_to_report:
+                log.error(error)
+            del(errors_to_report[:])
             if f:
                 failures.append(f)
     return failures
@@ -272,7 +281,7 @@ def diff(stream, a, b, ignore=None, rename=None):
             k = rename[k]
         if k not in b:
             message = '%s - missing key: %s in retrieved record' % (stream, k)
-            log.error(message)
+            errors_to_report.append(message)
             if IGNORE_NULLS and v is None:
                 log.info('Ignoring NULL value from expected data')
             else:
@@ -283,15 +292,17 @@ def diff(stream, a, b, ignore=None, rename=None):
             v = v.get('value')
 
         if not same(v, b[k]):
+            message = '%s - non-matching value: key=%r expected=%r retrieved=%r' % (stream, k, v, b[k])
             failures.append((edex_tools.FAILURES.BAD_VALUE,
-                             'stream=%s key=%s expected=%s retrieved=%s' % (stream, k, v, b[k])))
-            log.error('%s - non-matching value: key=%r expected=%r retrieved=%r', stream, k, v, b[k])
+                             message))
+            errors_to_report.append(message)
 
     # verify no extra (unexpected) keys present in retrieved data
     for k in b:
         if k not in a and k not in ignore:
             failures.append((edex_tools.FAILURES.UNEXPECTED_VALUE, (stream, k)))
-            log.error('%s - item in retrieved data not in expected data: %s', stream, k)
+            message = '%s - item in retrieved data not in expected data: %s' % (stream, k)
+            errors_to_report.append(message)
 
     return failures
 
@@ -349,6 +360,8 @@ def execute_test(test_queue, expected_queue):
 
                 if test_case.sensor is None:
                     sensor = 'VALIDATE-%.1f-%08d' % (time.time(), count)
+                elif test_case.sensor == 'any':
+                    sensor = 'null'
                 else:
                     sensor = test_case.sensor
 
@@ -363,6 +376,7 @@ def execute_test(test_queue, expected_queue):
 
                 log.info('Fetching expected results from YML file: %s', yaml_file)
                 this_expected = get_expected(output_filepath)
+
                 expected_queue.put((test_case.instrument, sensor, test_file, yaml_file, this_expected))
 
             else:
