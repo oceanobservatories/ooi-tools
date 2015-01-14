@@ -39,8 +39,6 @@ try:
 except ImportError:
     from yaml import Loader, Dumper
 
-errors_to_report = []
-
 NUM_THREADS = 30
 FLOAT_TOLERANCE = 0.001
 IGNORE_NULLS = False
@@ -157,8 +155,7 @@ def check_for_sign_error(a, b):
         return True
 
 
-def same(a, b):
-
+def same(a, b, errors):
     string_types = [str, unicode]
     # log.info('same(%r,%r) %s %s', a, b, type(a), type(b))
     if a == b:
@@ -171,12 +168,12 @@ def same(a, b):
     if type(a) is dict:
         if a.keys() != b.keys():
             return False
-        return all([same(a[k], b[k]) for k in a])
+        return all([same(a[k], b[k], errors) for k in a])
 
     if type(a) is list:
         if len(a) != len(b):
             return False
-        return all([same(a[i], b[i]) for i in xrange(len(a))])
+        return all([same(a[i], b[i], errors) for i in xrange(len(a))])
 
     if type(a) is float or type(b) is float:
         try:
@@ -193,18 +190,16 @@ def same(a, b):
         except:
             pass
         message = 'FAILED floats: %r %r' % (a, b)
-        errors_to_report.append(message)
+        errors.append(message)
 
     if type(a) in string_types and type(b) in string_types:
         return a.strip() == b.strip()
 
     if type(a) is int and type(b) is int:
         if check_for_sign_error(a, b):
-            log.error('Detected unsigned/signed issue: %r, %r', a, b)
+            errors.append('Detected unsigned/signed issue: %r, %r', a, b)
 
     return False
-
-
 
 
 def compare(stored, expected):
@@ -240,20 +235,20 @@ def compare(stored, expected):
         else:
             edex_records = stored.get(key)
             f = []
+            errors = []
             if type(edex_records) is list:
                 for each in edex_records:
-                    f = diff(stream_name, record, each)
+                    f, errors = diff(stream_name, record, each)
                     if f == []:
-                        errors_to_report = []
                         # no differences, this is a pass
                         break
             else:
                 f = diff(stream_name, record, edex_records)
-            for error in errors_to_report:
-                log.error(error)
-            del(errors_to_report[:])
+
             if f:
                 failures.append(f)
+                for error in errors:
+                    log.error(error)
     return failures
 
 
@@ -272,6 +267,7 @@ def diff(stream, a, b, ignore=None, rename=None):
         rename = {'particle_type': 'stream_name'}
 
     failures = []
+    errors = []
 
     # verify from expected to retrieved
     for k, v in a.iteritems():
@@ -281,7 +277,7 @@ def diff(stream, a, b, ignore=None, rename=None):
             k = rename[k]
         if k not in b:
             message = '%s - missing key: %s in retrieved record' % (stream, k)
-            errors_to_report.append(message)
+            errors.append(message)
             if IGNORE_NULLS and v is None:
                 log.info('Ignoring NULL value from expected data')
             else:
@@ -291,20 +287,20 @@ def diff(stream, a, b, ignore=None, rename=None):
         if type(v) == dict:
             v = v.get('value')
 
-        if not same(v, b[k]):
+        if not same(v, b[k], errors):
             message = '%s - non-matching value: key=%r expected=%r retrieved=%r' % (stream, k, v, b[k])
             failures.append((edex_tools.FAILURES.BAD_VALUE,
                              message))
-            errors_to_report.append(message)
+            errors.append(message)
 
     # verify no extra (unexpected) keys present in retrieved data
     for k in b:
         if k not in a and k not in ignore:
             failures.append((edex_tools.FAILURES.UNEXPECTED_VALUE, (stream, k)))
             message = '%s - item in retrieved data not in expected data: %s' % (stream, k)
-            errors_to_report.append(message)
+            errors.append(message)
 
-    return failures
+    return failures, errors
 
 
 def wait_for_ingest_complete():
