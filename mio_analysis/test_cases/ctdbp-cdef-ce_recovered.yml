@@ -1,0 +1,6 @@
+endpoint: ctdbp-cdef-ce_recovered 
+instrument: ctdbp-cdef-ce
+resource: CE01ISSM/R00001/instrmt/dcl16/
+timeout: 600
+source_data:
+- CTDBP_sn7241

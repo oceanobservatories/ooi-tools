@@ -1,0 +1,6 @@
+endpoint: spkir-abj-dcl_recovered
+instrument: spkir-abj-dcl
+resource: CE01ISSM/R00001/cg_data/dcl16/
+timeout: 400
+source_data:
+- spkir 

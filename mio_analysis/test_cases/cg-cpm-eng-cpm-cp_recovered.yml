@@ -1,0 +1,10 @@
+endpoint: cg-cpm-eng-cpm_recovered
+instrument: cg-cpm-eng
+resource: CE01ISSM/R00001/cg_data/cpm1/irid2shore
+timeout: 600
+source_data:
+- cpm_status.20140506_0355.txt  
+- cpm_status.20140526_0055.txt  
+- cpm_status.20140616_0055.txt  
+- cpm_status.20140707_0055.txt  
+- cpm_status.20140728_0055.txt

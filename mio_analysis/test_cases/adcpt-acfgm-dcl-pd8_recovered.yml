@@ -1,0 +1,21 @@
+endpoint: adcpt-acfgm-dcl-pd8_recovered
+instrument: adcpt-acfgm-dcl-pd8
+resource: CP01CNSM/X00001/cg_data/dcl35/adcp/ 
+timeout: 120
+source_data:
+- 20131122.adcp.log
+- 20131123.adcp.log
+- 20131124.adcp.log
+- 20131125.adcp.log
+- 20131126.adcp.log
+- 20131127.adcp.log
+- 20131128.adcp.log
+- 20131129.adcp.log
+- 20131130.adcp.log
+- 20131201.adcp.log
+- 20131202.adcp.log
+- 20131203.adcp.log
+- 20131204.adcp.log
+- 20131205.adcp.log
+- 20131206.adcp.log
+- 20131207.adcp.log

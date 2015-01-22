@@ -1,0 +1,6 @@
+endpoint: velpt-ab_recovered
+instrument: velpt-ab-rsn
+resource: CE01ISSM/R00001/instrmt/dcl16
+timeout: 400
+source_data:
+- VELPT_sn8539

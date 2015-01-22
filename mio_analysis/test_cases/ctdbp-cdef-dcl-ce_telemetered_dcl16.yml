@@ -1,0 +1,6 @@
+endpoint: ctdbp-cdef-dcl-cp_telemetered 
+instrument: ctdbp-cdef-dcl
+resource: CE06ISSM/D00001/dcl16
+timeout: 600
+source_data:
+- ctdbp1

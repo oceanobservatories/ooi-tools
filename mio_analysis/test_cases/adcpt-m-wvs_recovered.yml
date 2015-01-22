@@ -1,0 +1,6 @@
+endpoint: adcpt-m-wvs_recovered
+instrument: adcpt-m-wvs
+resource: CE01ISSM/R00001/instrmt/dcl35/ADCPT_sn18225/ce01issm_adcpt_processed_waves_2014-09-17/
+timeout: 400
+source_data:
+- CE01ISSM-ADCPT_20140418_001_TS1404180021.WVS

@@ -1,6 +1,6 @@
 endpoint: flord-l-wfp_recovered
 instrument: flord-l-wfp
-resource:  wfp_eng_stc_imodem
+resource:  dosta_l_wfp/
 timeout: 600
 source_data:
-- CP02PMCO
+- GP02HYPM_R00001_wfp_12774 

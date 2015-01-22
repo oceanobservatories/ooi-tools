@@ -1,0 +1,19 @@
+endpoint: adcpt-m-dspec_recovered
+instrument: adcpt-m-dspec
+resource: CE01ISSM/R00001/instrmt/dcl35/ADCPT_sn18225/ce01issm_adcpt_processed_waves_2014-09-17/
+timeout: 400
+source_data:
+- DSpec1404180021.txt                                                                                                                                                                 
+- DSpec1404180321.txt                                                                                                                                                             
+- DSpec1404180621.txt                                                                                                                                                             
+- DSpec1404180921.txt                                                                                                                                                                 
+- DSpec1404181221.txt                                                                                                                                                                 
+- DSpec1404181521.txt                                                                                                                                                                 
+- DSpec1404181821.txt                                                                                                                                                                 
+- DSpec1404182121.txt                                                                                                                                                             
+- DSpec1404190021.txt                                                                                                                                                                 
+- DSpec1404190321.txt                                                                                                                                                                 
+- DSpec1404190621.txt                                                                                                                                                                 
+- DSpec1404190921.txt                                                                                                                                                             
+- DSpec1404191221.txt                                                                                                                                                             
+- DSpec1404191521.txt   

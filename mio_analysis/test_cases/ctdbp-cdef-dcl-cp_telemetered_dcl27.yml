@@ -1,7 +1,6 @@
 endpoint: ctdbp-cdef-dcl-cp_telemetered 
 instrument: ctdbp-cdef-cp
-resource:  CP01CNSM/X00001/cg_data/dcl37/ctdbp2
+resource: CP01CNSM/D00002/cg_data/dcl27/  
 timeout: 800
 source_data:
-- 20131117.ctdbp2.log
-- 20131203.ctdbp2.log
+- ctdbp1 

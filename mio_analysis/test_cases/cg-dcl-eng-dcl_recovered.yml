@@ -1,0 +1,6 @@
+endpoint: cg-dcl-eng-dcl_recovered
+instrument: cg-cpm-eng-cpm-cp
+resource: CE01ISSM/R00001/cg_data/dcl16
+timeout: 600
+source_data:
+- syslog 

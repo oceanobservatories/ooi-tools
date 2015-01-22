@@ -1,0 +1,6 @@
+endpoint: dosta-ln-wfp_recovered
+instrument: dosta-ln-wfp
+resource:  dosta_l_wfp/
+timeout: 600
+source_data:
+- GP02HYPM_R00001_wfp_12774 
