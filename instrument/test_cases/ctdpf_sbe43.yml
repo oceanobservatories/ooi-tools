@@ -1,4 +1,4 @@
-instrument: ctdpf_sbe43 
+instrument: ctdpf_sbe43-rsn-driver 
 module: mi.instrument.seabird.sbe16plus_v2.ctdpf_sbe43.driver 
 klass: InstrumentDriver
 command_port: 10013

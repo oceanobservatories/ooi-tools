@@ -1,4 +1,4 @@
-instrument: trhph 
+instrument: trhph-rsn-driver
 module: mi.instrument.uw.bars.ooicore.driver 
 klass: InstrumentDriver
 command_port: 10043
