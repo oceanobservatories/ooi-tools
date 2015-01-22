@@ -1,0 +1,5 @@
+endpoint: dosta-abcdjm-cspp_recovered
+instrument: dosta-abcdjm-cspp_recovered
+pairs:
+- [11079894_PPB_OPT.txt, 11079894_PPB_OPT.yml]
+resource: dosta_abcdjm/cspp/resource

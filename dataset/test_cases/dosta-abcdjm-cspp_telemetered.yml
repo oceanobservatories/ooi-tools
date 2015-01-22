@@ -1,0 +1,5 @@
+endpoint: dosta-abcdjm-cspp_telemetered
+instrument: dosta-abcdjm-cspp_telemetered
+pairs:
+- [11194982_PPD_OPT.txt, 11194982_PPD_OPT.yml]
+resource: dosta_abcdjm/cspp/resource
