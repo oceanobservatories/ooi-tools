@@ -1,0 +1,5 @@
+endpoint: velpt-j-cspp_telemetered
+instrument: velpt-j-cspp_telemetered
+pairs:
+- [11079364_PPD_ADCP.txt, 11079364_PPD_ADCP.yml]
+resource: velpt_j/cspp/resource
