@@ -1,0 +1,24 @@
+instrument: nutnr-rsn-driver
+module: mi.instrument.satlantic.suna_deep.ooicore.driver
+klass: InstrumentDriver
+command_port: 10020
+event_port: 10021
+port_agent_config: 
+  addr: 10.0.1.51
+  port: 13054
+  cmd_port: 12054
+startup_config:
+  parameters:
+expected_particles:
+- nutnr_a_sample
+- nutnr_a_status
+- nutnr_a_test
+starting_state: DRIVER_STATE_COMMAND
+script:
+- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+- [execute, DRIVER_EVENT_ACQUIRE_SAMPLE]
+- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+- [sleep, 5]
+- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+- [sleep, 5]
+
