@@ -46,8 +46,8 @@ def purge_edex():
     get_qpid().sender('purgeRequest').send(purge_message)
 
 
-def send_file_to_queue(filename, queue, delivery_type, sensor):
-    props = {'deliveryType': delivery_type, 'sensor': sensor}
+def send_file_to_queue(filename, queue, delivery_type, sensor, deploymentNumber):
+    props = {'deliveryType': delivery_type, 'sensor': sensor, 'deploymentNumber': deploymentNumber}
     ingest_message = qm.Message(content=filename, content_type='text/plain', user_id=user, properties=props)
     get_qpid().sender(queue).send(ingest_message)
 
