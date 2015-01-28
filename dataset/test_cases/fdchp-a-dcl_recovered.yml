@@ -1,0 +1,5 @@
+endpoint: fdchp-a-dcl_recovered
+instrument: fdchp-a-dcl_recovered
+pairs:
+- [long.fdchp.log, long_recov.yml]
+resource: fdchp_a/dcl/resource

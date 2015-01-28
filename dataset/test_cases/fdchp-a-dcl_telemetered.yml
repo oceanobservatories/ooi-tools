@@ -1,0 +1,5 @@
+endpoint: fdchp-a-dcl_telemetered
+instrument: fdchp-a-dcl_telemetered
+pairs:
+- [long.fdchp.log, long_telem.yml]
+resource: fdchp_a/dcl/resource
