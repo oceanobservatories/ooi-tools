@@ -1,5 +1,5 @@
-endpoint: ctdbp_cdef_dcl_ce_telem 
-instrument: ctdbp-cdef-dcl-ce
+endpoint: ctdbp-cdef-dcl-ce_recovered 
+instrument: ctdbp-cdef-dcl
 resource: CE06ISSM/D00001/dcl37/
 timeout: 600
 source_data:

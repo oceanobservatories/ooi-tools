@@ -1,0 +1,8 @@
+endpoint: adcpt-m-wvs_recovered
+instrument: adcpt-m-wvs_recovered
+pairs:
+- [CE01ISSM-ADCPT_20140418_000_TS1404180021 - excerpt.WVS, CE01ISSM-ADCPT_20140418_000_TS1404180021
+    - excerpt.yml]
+- [CE01ISSM-ADCPT_20140418_000_TS1404180021.WVS, CE01ISSM-ADCPT_20140418_000_TS1404180021.yml]
+resource: adcpt_m/wvs/resource
+timeout: 600

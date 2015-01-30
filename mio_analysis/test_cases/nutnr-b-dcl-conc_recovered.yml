@@ -1,0 +1,6 @@
+endpoint: nutnr-b-dcl-conc_recovered
+instrument: nutnr-b-dcl-conc
+resource: CE01ISSM/R00001/cg_data/dcl16
+timeout: 600
+source_data:
+- nutnr
