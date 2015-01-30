@@ -197,7 +197,7 @@ def same(a, b, errors):
 
     if type(a) is int and type(b) is int:
         if check_for_sign_error(a, b):
-            errors.append('Detected unsigned/signed issue: %r, %r', a, b)
+            errors.append('Detected unsigned/signed issue: %r, %r' % (a, b))
 
     return False
 
