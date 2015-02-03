@@ -1,0 +1,7 @@
+endpoint: vel3d-cd-dcl_telemetered
+instrument: vel3d-cd-dcl_telemetered
+pairs:
+- [first_with_timestamp.vel3d.log, first_with_timestamp_telem.yml]
+- [partial_vel_group.vel3d.log, partial_vel_group_telem.yml]
+- [config_only.vel3d.log, config_only_telem.yml]
+resource: vel3d_cd/dcl/resource
