@@ -9,40 +9,29 @@ Options:
   --ignore_null  Don't fail on missing null values
 
 """
-import json
 import os
 import sys
-import struct
-
 
 dataset_dir = os.path.dirname(os.path.realpath('__file__'))
 tools_dir = os.path.dirname(dataset_dir)
 
 sys.path.append(tools_dir)
 
+import json
 import time
-import math
-import Queue
 import pprint
 import ntplib
 import docopt
 import calendar
 
-from threading import Thread
 from qpid.messaging.exceptions import NotFound
 from datetime import datetime
 from yaml import load
 from common import logger
 from common import edex_tools
 
-try:
-    from yaml import CLoader as Loader
-except ImportError:
-    from yaml import Loader, Dumper
-
-NUM_THREADS = 30
 IGNORE_NULLS = False
-
+VALIDATE_TIMESTAMP = time.strftime('%Y%m%d.%H:%M:%S', time.localtime())
 
 startdir = os.path.join(edex_tools.edex_dir, 'data/utility/edex_static/base/ooi/parsers/mi-dataset/mi')
 drivers_dir = os.path.join(startdir, 'dataset/driver')
@@ -68,6 +57,8 @@ class TestCase(object):
         # DEFAULT_STANDARD_TIMEOUT if no yml value was provided.
         self.timeout = config.get('timeout', edex_tools.DEFAULT_STANDARD_TIMEOUT)
         self.sensor = config.get('sensor')
+        self.sensor_ids = []
+        self.expected = []
 
     def __str__(self):
         return pprint.pformat(self.config)
@@ -80,10 +71,10 @@ def read_test_cases(f):
     log.info('Finding test cases in: %s', f)
     if os.path.isdir(f):
         for filename in os.listdir(f):
-            config = load(open(os.path.join(f, filename), 'r'), Loader=Loader)
+            config = load(open(os.path.join(f, filename), 'r'))
             yield TestCase(config)
     elif os.path.isfile(f):
-        config = load(open(f, 'r'), Loader=Loader)
+        config = load(open(f, 'r'))
         yield TestCase(config)
 
 
@@ -100,7 +91,7 @@ def get_expected(filename, cache_dir='.cache'):
     else:
         try:
             fh = open(filename, 'r')
-            data = load(fh, Loader=Loader)
+            data = load(fh)
             log.debug('Raw data from YAML: %s', data)
             header = data.get('header')
             data = data.get('data')
@@ -146,17 +137,14 @@ def get_expected(filename, cache_dir='.cache'):
         return expected_dictionary
 
 
-def wait_for_ingest_complete():
-    """
-    Wait for ingestion to complete.
-    :return:  True when the EDEX log file indicates completion, False if message does not appear within expected
-              timeout.
-    """
-    return edex_tools.watch_log_for('EDEX - Ingest complete for file')
+def test_results(expected, stream_name, sensor, method):
+    subsite, node, sensor = sensor.split('-', 3)
+    start = 3e9
+    stop = 1e10
+    metadata = edex_tools.get_edex_metadata('localhost', subsite, node, sensor)
+    retrieved = edex_tools.get_from_edex('localhost', subsite, node, sensor, method,
+                                         stream_name, start, stop, timestamp_as_string=True)
 
-
-def test_results(expected, stream_name, sensor='null'):
-    retrieved = edex_tools.get_from_edex('localhost', stream_name, timestamp_as_string=True, sensor=sensor)
     retrieved_count = 0
     for each in retrieved.itervalues():
         retrieved_count += len(each)
@@ -164,7 +152,7 @@ def test_results(expected, stream_name, sensor='null'):
     log.debug(pprint.pformat(retrieved, depth=3))
     log.debug('Retrieved %d records from expected data file:', len(expected))
     log.debug(pprint.pformat(expected, depth=3))
-    failures = edex_tools.compare(retrieved, expected, ignore_nulls=IGNORE_NULLS)
+    failures = edex_tools.compare(retrieved, expected, metadata, ignore_nulls=IGNORE_NULLS)
     return retrieved_count, len(expected), failures
 
 
@@ -181,67 +169,47 @@ def dump_csv(data):
     fh.close()
 
 
-def purge_edex(logfile=None):
-    edex_tools.purge_edex()
-    return edex_tools.watch_log_for('Purge Operation: PURGE_ALL_DATA completed', logfile=logfile)
+def execute_test(test_case, index):
+    log.debug('Processing test case: %s index: %d', test_case, index)
 
+    for test_file, yaml_file in test_case.pairs:
+        input_filepath = os.path.join(drivers_dir, test_case.resource, test_file)
+        output_filepath = os.path.join(drivers_dir, test_case.resource, yaml_file)
 
-def execute_test(test_queue, expected_queue):
-    while True:
-        try:
-            test_case, index, count = test_queue.get_nowait()
-            log.debug('Processing test case: %s index: %d', test_case, index)
+        if os.path.exists(input_filepath) and os.path.exists(output_filepath):
 
-            test_file, yaml_file = test_case.pairs[index]
-            input_filepath = os.path.join(drivers_dir, test_case.resource, test_file)
-            output_filepath = os.path.join(drivers_dir, test_case.resource, yaml_file)
+            delivery = test_case.instrument.split('_')[-1]
 
-            if os.path.exists(input_filepath) and os.path.exists(output_filepath):
-
-                delivery = test_case.instrument.split('_')[-1]
-
-                if test_case.sensor is None:
-                    sensor = 'VALIDATE-%.1f-%08d' % (time.time(), count)
-                elif test_case.sensor == 'any':
-                    sensor = 'null'
-                else:
-                    sensor = test_case.sensor
-
-                queue = 'Ingest.%s' % test_case.instrument
-
-                try:
-                    log.info('Sending file (%s) to queue (%s)', test_file, queue)
-                    edex_tools.send_file_to_queue(input_filepath, queue, delivery, sensor, 1)
-                except NotFound:
-                    log.warn('Queue not found: %s', queue)
-                    return None
-
-                log.info('Fetching expected results from YML file: %s', yaml_file)
-                this_expected = get_expected(output_filepath)
-
-                expected_queue.put((test_case.instrument, sensor, test_file, yaml_file, this_expected))
-
+            if test_case.sensor is None:
+                sensor = 'VALIDATE-%s-%03d' % (VALIDATE_TIMESTAMP, index)
+            elif test_case.sensor == 'any':
+                sensor = 'null'
             else:
-                log.error('Missing test data or results: %s %s', input_filepath, output_filepath)
+                sensor = test_case.sensor
 
-        except Queue.Empty:
-            break
+            test_case.sensor_ids.append(sensor)
+
+            queue = 'Ingest.%s' % test_case.instrument
+
+            try:
+                log.info('Sending file (%s) to queue (%s)', test_file, queue)
+                edex_tools.send_file_to_queue(input_filepath, queue, delivery, sensor)
+            except NotFound:
+                log.warn('Queue not found: %s', queue)
+                return None
+
+            log.info('Fetching expected results from YML file: %s', yaml_file)
+            test_case.expected.append(get_expected(output_filepath))
+
+            index += 1
 
 
-def execute_validate(expected_queue, results_queue):
-    while True:
-        try:
-            instrument, sensor, test_file, yaml_file, stream, expected = expected_queue.get_nowait()
+        else:
+            log.error('Missing test data or results: %s %s', input_filepath, output_filepath)
+            test_case.sensor_ids.append(None)
+            test_case.expected.append(None)
 
-            log.info('Testing instrument: %r, sensor: %r, stream: %r', instrument, sensor, stream)
-            results = test_results(expected, stream, sensor=sensor)
-            log.debug('Results for instrument: %s test_file: %s yaml_file: %s stream: %s',
-                      instrument, test_file, yaml_file, stream)
-            log.debug(results)
-            results_queue.put_nowait((instrument, test_file, yaml_file, stream, results))
-
-        except Queue.Empty:
-            break
+    return index
 
 
 def test(my_test_cases):
@@ -251,62 +219,29 @@ def test(my_test_cases):
         log.error('Error fetching latest log file - %s', e)
         return {}
 
-    purge_edex(logfile)
-
     total_timeout = 0
-    test_queue = Queue.Queue()
-    expected_queue = Queue.Queue()
-    results_queue = Queue.Queue()
-    threads = []
+    index = 0
     sc = {}
 
-    # execute all tests and load expected results
-    for count, case in enumerate(my_test_cases):
-        total_timeout += case.timeout
-        for index, _ in enumerate(case.pairs):
-            test_queue.put((case, index, count))
-
-    for _ in xrange(NUM_THREADS):
-        t = Thread(target=execute_test, args=[test_queue, expected_queue])
-        t.start()
-        threads.append(t)
-
-    for t in threads:
-        t.join()
+    for tc in my_test_cases:
+        index = execute_test(tc, index)
+        total_timeout += tc.timeout
 
     # wait for all ingestion to complete
     if not edex_tools.watch_log_for('EDEX - Ingest complete for file', logfile=logfile,
-                                    expected_count=expected_queue.qsize(), timeout=total_timeout):
+                                    expected_count=index, timeout=total_timeout):
         log.error('Timed out waiting for ingest complete message')
 
-    # pull expected results from the queue, break them down into individual streams then put them back in
-    temp_list = []
-    while True:
-        try:
-            instrument, sensor, test_file, yaml_file, expected = expected_queue.get_nowait()
-            for stream in expected:
-                temp_list.append((instrument, sensor, test_file, yaml_file, stream, expected[stream]))
-        except Queue.Empty:
-            break
-
-    for each in temp_list:
-        expected_queue.put_nowait(each)
-
-    # retrieve results and compare with expected
-    for _ in xrange(NUM_THREADS):
-        t = Thread(target=execute_validate, args=[expected_queue, results_queue])
-        t.start()
-        threads.append(t)
-
-    for t in threads:
-        t.join()
-
-    while True:
-        try:
-            instrument, test_file, yaml_file, stream, results = results_queue.get_nowait()
-            sc.setdefault(instrument, {}).setdefault(test_file, {}).setdefault(yaml_file, {})[stream] = results
-        except Queue.Empty:
-            break
+    for tc in my_test_cases:
+        method = tc.instrument.split('_')[-1]
+        for index, sensor in enumerate(tc.sensor_ids):
+            expected = tc.expected[index]
+            if sensor is not None:
+                for stream in expected:
+                    results = test_results(expected[stream], stream, sensor, method)
+                    sc.setdefault(tc.instrument, {}) \
+                        .setdefault(tc.pairs[index][0], {}) \
+                        .setdefault(tc.pairs[index][1], {})[stream] = results
 
     return sc
 

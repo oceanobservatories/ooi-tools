@@ -10,14 +10,10 @@ import numpy
 import qpid.messaging as qm
 import time
 import requests
-import shutil
 import struct
 from logger import get_logger
 import simplejson.scanner
 
-from cassandra.cluster import Cluster
-
-cass = {}
 
 log = get_logger()
 
@@ -35,6 +31,8 @@ port = 5672
 
 DEFAULT_STANDARD_TIMEOUT = 60
 
+EDEX_BASE_URL = 'http://%s:12575/sensor/inv/%s/%s/%s'
+
 
 def get_qpid():
     global qpid_session
@@ -45,10 +43,10 @@ def get_qpid():
     return qpid_session
 
 
-def purge_edex():
-    purge_message = qm.Message(content='PURGE_ALL_DATA', content_type='text/plain', user_id=user)
+def purge_edex(table='PURGE_ALL_DATA'):
+    purge_message = qm.Message(content=table, content_type='text/plain', user_id=user)
     log.info('Purging edex')
-    get_qpid().sender('purgeRequest').send(purge_message)
+    get_qpid().sender('purgeCass').send(purge_message)
 
 
 def send_file_to_queue(filename, queue, delivery_type, sensor, deploymentNumber):
@@ -57,24 +55,11 @@ def send_file_to_queue(filename, queue, delivery_type, sensor, deploymentNumber)
     get_qpid().sender(queue).send(ingest_message)
 
 
-def clear_hdf5():
-    if os.path.exists(hdf5dir):
-        shutil.rmtree(hdf5dir)
-
-
 def ntptime_to_string(t):
     t = ntplib.ntp_to_system_time(t)
     millis = '%f' % (t-int(t))
     millis = millis[1:5]
     return time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime(t)) + millis + 'Z'
-
-
-def get_netcdf(host, stream_name, sensor='null', start_time=None, stop_time=None, output_dir='.'):
-    url = 'http://%s:12570/sensor/m2m/inv/%s/%s' % (host, stream_name, sensor)
-    netcdf_file = os.path.join(output_dir, '%s-%s.nc' % (stream_name, sensor))
-    with open(netcdf_file, 'wb') as fh:
-        r = requests.get(url, params={'format': 'application/netcdf'})
-        fh.write(r.content)
 
 
 def get_record_json(record):
@@ -88,29 +73,44 @@ def get_record_json(record):
         log.warn('unable to decode record as JSON - %s - skipping data: %r', e, record.content)
         return []
 
-def get_sensor_records_from_edex(hostname, stream_name, sensor, start_time, stop_time):
+
+def get_edex_metadata(hostname, subsite, node, sensor):
+    r = requests.get(EDEX_BASE_URL % (hostname, subsite, node, sensor) + '/metadata/parameters')
+    try:
+        r = r.json()
+    except:
+        log.error('Unable to decode parameter metadata from edex: %r', r.content)
+
+    d = {}
+    for each in r:
+        d[each['particleKey']] = each
+
+    return d
+
+
+def get_from_edex(hostname, subsite, node, sensor, method, stream, start_time, stop_time, timestamp_as_string=False, netcdf=False):
     """
     Retrieve all stored sensor data from edex
     :return: list of edex records
     """
-    url = 'http://%s:12570/sensor/m2m/inv/%s/%s' % (hostname, stream_name, sensor)
-    if start_time and stop_time:
-        start_time = ntptime_to_string(start_time-.1)
-        stop_time = ntptime_to_string(stop_time+.1)
-        url += '/%s/%s' % (start_time, stop_time)
+    url = EDEX_BASE_URL % (hostname, subsite, node, sensor) + '/%s/%s' % (method, stream)
+    data = {}
 
-    r = requests.get(url)
+    start_time = ntptime_to_string(start_time-.1)
+    stop_time = ntptime_to_string(stop_time+.1)
+    data['beginDT'] = start_time
+    data['endDT'] = stop_time
+
+    r = requests.get(url, params=data)
+
+    if netcdf:
+        netcdf_file = os.path.join('%s-%s.nc' % (stream, sensor))
+        with open(netcdf_file, 'wb') as fh:
+            r = requests.get(url, params={'format': 'application/netcdf'})
+            fh.write(r.content)
+            return
+
     records = get_record_json(r)
-
-    return records
-
-
-def get_from_edex(hostname, stream_name, sensor='null', start_time=None, stop_time=None, timestamp_as_string=False):
-    """
-    Retrieve all stored sensor data from edex
-    :return: list of edex records
-    """
-    records = get_sensor_records_from_edex(hostname, stream_name, sensor, start_time, stop_time)
 
     log.debug('RETRIEVED:')
     log.debug(pprint.pformat(records, depth=3))
@@ -123,7 +123,7 @@ def get_from_edex(hostname, stream_name, sensor='null', start_time=None, stop_ti
             timestamp = '%12.3f' % timestamp
 
         record['timestamp'] = timestamp
-        d.setdefault((stream_name, timestamp), []).append(record)
+        d.setdefault((stream, timestamp), []).append(record)
 
     return d
 
@@ -197,7 +197,6 @@ def watch_log_for(expected_string, logfile=None, expected_count=1, timeout=DEFAU
             return False
 
     log.info('waiting for %s in logfile: %s', expected_string, logfile.name)
-
     log.info('timeout value: %s', timeout)
 
     end_time = time.time() + timeout
@@ -291,55 +290,6 @@ def parse_scorecard(scorecard):
     return '\n'.join(result), table_data
 
 
-def isnumber(x):
-    """
-    :param x: number to be evaluated
-    :return: true if x has an __int__ method, false otherwise
-    """
-    return hasattr(x, '__int__')
-
-
-def edex_get_streams(hostname):
-    """
-    Get list of available streams
-    :param hostname:  EDEX hostname or qualified IP address
-    :return:  list of streams
-    """
-    url = 'http://%s:12570/sensor/m2m/inv' % hostname
-    record = requests.get(url)
-    return get_record_json(record)
-
-
-def edex_get_instruments(hostname):
-    """
-    Get dictionary of available instruments
-    :param hostname:  EDEX hostname or qualified IP address
-    :return:  dictionary containing stream name with associated instruments
-    """
-    instruments = {}
-    for stream in edex_get_streams(hostname):
-        url = 'http://%s:12570/sensor/m2m/inv/%s' % (hostname, stream)
-        record = requests.get(url)
-        instruments[stream] = get_record_json(record)
-    return instruments
-
-
-def edex_get_json(hostname, stream, sensor, save_sample_data=False, sample_data_file='mda_sample.json'):
-    """
-    Fetch results from EDEX using URL lookup
-    :param hostname:  EDEX host
-    :param stream:  stream name
-    :param sensor:  sensor name
-    :return:  JSON formatted data
-    """
-    url = 'http://%s:12570/sensor/user/inv/%s/%s' % (hostname, stream, sensor)
-    r = requests.get(url)
-    if save_sample_data:
-        with open(sample_data_file, 'wb') as f:
-            f.write(r.content)
-    return get_record_json(r)
-
-
 def edex_mio_report(hostname, stream, instrument, output_dir='.'):
     """
     Calculate statistics for captured data stream and write to CSV file output_dir/<stream>-<instrument>.csv.
@@ -389,8 +339,6 @@ def edex_mio_report(hostname, stream, instrument, output_dir='.'):
                 s = set()
                 s.update(list(value.flatten()))
                 log.info(" - skipping non-numeric data for %s", param)
-
-
 
 
 def check_for_sign_error(a, b):
@@ -461,7 +409,7 @@ def same(a, b, errors, float_tolerance=0.001):
     return False
 
 
-def compare(stored, expected, ignore_nulls=False, lookup_preferred_timestamp=False):
+def compare(stored, expected, metadata, ignore_nulls=False, lookup_preferred_timestamp=False):
     """
     Compares a set of expected results against the retrieved values
     :param stored:
@@ -493,7 +441,7 @@ def compare(stored, expected, ignore_nulls=False, lookup_preferred_timestamp=Fal
         matches = []
         for each in stored.get((stream_name, timestamp), []):
             if each['stream_name'] == stream_name and each['timestamp'] == timestamp:
-                f, errors = diff(stream_name, record, each, ignore_nulls=ignore_nulls)
+                f, errors = diff(stream_name, record, each, metadata, ignore_nulls=ignore_nulls)
                 matches.append((len(f), each, f, errors))
 
         matches.sort()
@@ -513,7 +461,24 @@ def compare(stored, expected, ignore_nulls=False, lookup_preferred_timestamp=Fal
     return failures
 
 
-def diff(stream, a, b, ignore=None, rename=None, ignore_nulls=False, float_tolerance=0.001):
+def check_fill(a, b):
+    if type(a) == int:
+        try:
+            b = int(b)
+            return a == b
+        except:
+            return False
+
+    if type(a) == float:
+        try:
+            b = float(b)
+            return a == b
+        except:
+            return False
+
+    return a == b
+
+def diff(stream, a, b, metadata, ignore=None, rename=None, ignore_nulls=False, float_tolerance=0.001):
     """
     Compare two data records
     :param a:
@@ -550,16 +515,24 @@ def diff(stream, a, b, ignore=None, rename=None, ignore_nulls=False, float_toler
             v = v.get('value')
 
         if not same(v, b[k], errors, float_tolerance=float_tolerance):
-            message = '%s - non-matching value: key=%r expected=%r retrieved=%r' % (stream, k, v, b[k])
-            failures.append((FAILURES.BAD_VALUE,
-                             message))
-            errors.append(message)
+            # check if fill value
+            fill = metadata.get(k, {}).get('fillValue')
+            if fill is not None and check_fill(b[k], fill):
+                log.info('%s - Found fill value: key=%r expected=%r retrieved=%r' % (stream, k, v, b[k]))
+            else:
+                message = '%s - non-matching value: key=%r expected=%r retrieved=%r' % (stream, k, v, b[k])
+                failures.append((FAILURES.BAD_VALUE,
+                                 message))
+                errors.append(message)
 
     # verify no extra (unexpected) keys present in retrieved data
     for k in b:
         if k not in a and k not in ignore:
-            failures.append((FAILURES.UNEXPECTED_VALUE, (stream, k)))
-            message = '%s - item in retrieved data not in expected data: %s' % (stream, k)
-            errors.append(message)
+            # check if fill value
+            fill = metadata.get(k, {}).get('fillValue')
+            if fill is None or not check_fill(b[k], fill):
+                failures.append((FAILURES.UNEXPECTED_VALUE, (stream, k)))
+                message = '%s - item in retrieved data not in expected data: %s' % (stream, k)
+                errors.append(message)
 
     return failures, errors
