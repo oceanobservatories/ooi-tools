@@ -1,0 +1,5 @@
+endpoint: vel3d-cd-dcl_recovered
+instrument: vel3d-cd-dcl_recovered
+pairs:
+- [first_with_timestamp.vel3d.log, first_with_timestamp_recov.yml]
+resource: vel3d_cd/dcl/resource
