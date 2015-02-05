@@ -365,7 +365,7 @@ def execute_test(test_queue, expected_queue):
 
                 try:
                     log.info('Sending file (%s) to queue (%s)', test_file, queue)
-                    edex_tools.send_file_to_queue(input_filepath, queue, delivery, sensor)
+                    edex_tools.send_file_to_queue(input_filepath, queue, delivery, sensor, 1)
                 except NotFound:
                     log.warn('Queue not found: %s', queue)
                     return None
