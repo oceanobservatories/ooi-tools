@@ -4,16 +4,25 @@ import com.raytheon.uf.edex.ooi.cassandra.CassandraParticle;
 import com.raytheon.uf.edex.ooi.cassandra.DataParticleJson;
 
 import org.springframework.data.annotation.Transient;
+import org.springframework.data.cassandra.mapping.CassandraType;
 import org.springframework.data.cassandra.mapping.Column;
 import org.springframework.data.cassandra.mapping.Table;
+
 import java.util.List;
 import java.math.BigInteger;
+
+import static com.datastax.driver.core.DataType.Name.*;
 
 @Table(value = "{{table.name}}")
 public class {{table.classname}} extends CassandraParticle {
     // Cassandra columns
 {% for column in table.columns %}
 
+    {% if column.islist %}
+    @CassandraType(type = LIST, typeArguments = { {{column.cqlanno}} })
+    {% else %}
+    @CassandraType(type = {{column.cqlanno}})
+    {% endif %}
     @Column(value = "{{column.name}}")
     private {{column.javatype}} {{column.javaname}};
 {% endfor %}
@@ -23,7 +32,7 @@ public class {{table.classname}} extends CassandraParticle {
 
     // Fill values
 {% for column in table.columns %}
-{% if column.numeric or column.islist %}
+{% if column.numeric or column.islist and not column.name.endswith("shape")%}
     @Transient
 {% if column.java_object == 'BigInteger' %}
     private {{column.filltype}} {{column.fillvar}} = new BigInteger("{{column.fillvalue}}");

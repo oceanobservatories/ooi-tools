@@ -80,7 +80,7 @@ class Column(object):
         self.numeric = False
         self.fillable = True
 
-        self.cqltype = self.javatype = None
+        self.cqltype = self.javatype = self.cqlanno = None
         self.name = self.javaname = self.setter = self.getter = None
         self.fillvalue = self.fillvar = None
 
@@ -91,6 +91,9 @@ class Column(object):
             value_encoding = 'text'
         else:
             value_encoding = cql_parameter_map.get(param.value_encoding)
+
+        if value_encoding is not None:
+            self.cqlanno = value_encoding.upper()
 
         # unknown encoding - log and mark this column as invalid
         if value_encoding is None:
@@ -192,8 +195,10 @@ class Table(object):
 
                     shape.set_name(column.name + "_shape")
                     shape.cqltype = 'list<int>'
+                    shape.cqlanno = 'INT'
                     shape.javatype = 'List<Integer>'
                     shape.fillable = False
+                    shape.islist = True
 
                     self.columns.append(shape)
             else:
