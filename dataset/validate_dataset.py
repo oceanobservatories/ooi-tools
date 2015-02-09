@@ -139,7 +139,7 @@ def get_expected(filename, cache_dir='.cache'):
 
 def test_results(expected, stream_name, sensor, method):
     subsite, node, sensor = sensor.split('-', 3)
-    start = 3e9
+    start = ntplib.system_to_ntp_time(1)
     stop = 1e10
     metadata = edex_tools.get_edex_metadata('localhost', subsite, node, sensor)
     retrieved = edex_tools.get_from_edex('localhost', subsite, node, sensor, method,
