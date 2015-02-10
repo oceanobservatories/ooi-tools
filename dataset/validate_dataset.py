@@ -10,9 +10,7 @@ Options:
 
 """
 import os
-import random
 import sys
-from concurrent.futures import ThreadPoolExecutor
 
 dataset_dir = os.path.dirname(os.path.realpath('__file__'))
 tools_dir = os.path.dirname(dataset_dir)
@@ -23,6 +21,7 @@ import json
 import time
 import pprint
 import ntplib
+import random
 import docopt
 import calendar
 
@@ -242,7 +241,7 @@ def test(my_test_cases):
     total_timeout = 0
     count = 0
     sc = {}
-    with ThreadPoolExecutor(max_workers=MAX_THREADS) as pool:
+    with ThreadPool(MAX_THREADS) as pool:
 
         pool.map(execute_test, my_test_cases)
 
