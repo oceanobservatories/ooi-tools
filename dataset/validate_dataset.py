@@ -241,21 +241,21 @@ def test(my_test_cases):
     total_timeout = 0
     count = 0
     sc = {}
-    with ThreadPool(MAX_THREADS) as pool:
+    pool = ThreadPool(MAX_THREADS)
 
-        pool.map(execute_test, my_test_cases)
+    pool.map(execute_test, my_test_cases)
 
-        for tc in my_test_cases:
-            total_timeout += tc.timeout
-            count += tc.count
+    for tc in my_test_cases:
+        total_timeout += tc.timeout
+        count += tc.count
 
-        # wait for all ingestion to complete
-        if not edex_tools.watch_log_for('EDEX - Ingest complete for file', logfile=logfile,
-                                        expected_count=count, timeout=total_timeout):
-            log.error('Timed out waiting for ingest complete message')
+    # wait for all ingestion to complete
+    if not edex_tools.watch_log_for('EDEX - Ingest complete for file', logfile=logfile,
+                                    expected_count=count, timeout=total_timeout):
+        log.error('Timed out waiting for ingest complete message')
 
-        for each in pool.map(evaluate_test_case, test_cases):
-            sc.update(each)
+    for each in pool.map(evaluate_test_case, test_cases):
+        sc.update(each)
 
     return sc
 
