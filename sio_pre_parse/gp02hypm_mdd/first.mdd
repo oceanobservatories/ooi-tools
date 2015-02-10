@@ -1,0 +1,154 @@
+the8x3_filename:    00610000
+full_filename:    unit_362-2013-202-2-0
+filename_extension:    mdd
+fileopen_time:    Mon_Jul_22_20:30:32_2013
+mission_name:    DRIFTLP.MI
+transaction_id: 16
+NODE: 60
+PORT: 1
+STARTOFFSET: 0
+ENDOFFSET: 4012
+PS1237201_0F8Au51EBE12B_03_B8AF
+Buffer size: 200000
+
+2013/07/21 13:19:18> Error opening WFP0_PN
+2013/07/21 13:19:18> Error opening WFP1_PN
+2013/07/21 13:19:18> Error opening WFP2_PN
+
+-----------------------------------------------------------------------------------
+   Original parameters
+-----------------------------------------------------------------------------------
+
+
+   batt1_volt_cal          = 11.0
+   low_batt_volt           =  10.0
+   ctd_period              = 900
+   flord_period            = 0
+   dosta_period            = 0
+   phsen_period            = 0
+   adcps_period            = 3600
+   ssioc_period            = 21600
+   status_period           = 3600
+   ctd_delay               = 300
+   flord_delay             = 0
+   dosta_delay             = 0
+   phsen_delay             = 0
+   adcps_delay             = 1200
+   ssioc_delay             = 2100
+   ctd_send_period         = 8
+   flord_send_period       = 1
+   dosta_send_period       = 1
+   phsen_send_period       = 1
+   adcps_send_period       = 2
+   status_send_period      = 24
+   imm_id                  = 1
+   wfp_eng_decimation      = 1
+   wfp_ctd_decimation      = 1
+   wfp_acm_decimation      = 1
+   wfp_acomm_decimation    = 1
+
+   CTD ID's stored: 67 29 20 19 54 62 60 52 15 56 57 26 
+
+   ADCPS ID's stored: 11 
+
+   SSIOC ID's stored: 12 
+
+   WFP 0 has done 0 profile(s) so far
+
+   WFP 1 has done 0 profile(s) so far
+
+   WFP 2 has done 0 profile(s) so far
+
+
+-----------------------------------------------------------------------------------
+   New parameters
+-----------------------------------------------------------------------------------
+
+
+   batt1_volt_cal          = 10.9
+   low_batt_volt           =  10.0
+   ctd_period              = 900
+   flord_period            = 0
+   dosta_period            = 0
+   phsen_period            = 0
+   adcps_period            = 3600
+   ssioc_period            = 21600
+   status_period           = 3600
+   ctd_delay               = 300
+   flord_delay             = 0
+   dosta_delay             = 0
+   phsen_delay             = 0
+   adcps_delay             = 1200
+   ssioc_delay             = 2300
+   ctd_send_period         = 8
+   flord_send_period       = 1
+   dosta_send_period       = 1
+   phsen_send_period       = 1
+   adcps_send_period       = 2
+   status_send_period      = 24
+   imm_id                  = 1
+   wfp_eng_decimation      = 1
+   wfp_ctd_decimation      = 1
+   wfp_acm_decimation      = 1
+   wfp_acomm_decimation    = 1
+
+   CTD ID's stored: 67 29 20 19 54 62 60 52 15 56 57 26 
+
+   ADCPS ID's stored: 11 
+
+   SSIOC ID's stored: 12 
+
+   WFP 0 has done 0 profile(s) so far
+
+   WFP 1 has done 0 profile(s) so far
+
+   WFP 2 has done 0 profile(s) so far
+
+
+-----------------------------------------------------------------------------------
+   Actual deployment parameters
+-----------------------------------------------------------------------------------
+
+
+   batt1_volt_cal          = 10.9
+   low_batt_volt           =  10.0
+   ctd_period              = 900
+   flord_period            = 0
+   dosta_period            = 0
+   phsen_period            = 0
+   adcps_period            = 3600
+   ssioc_period            = 21600
+   status_period           = 3600
+   ctd_delay               = 300
+   flord_delay             = 0
+   dosta_delay             = 0
+   phsen_delay             = 0
+   adcps_delay             = 1200
+   ssioc_delay             = 2300
+   ctd_send_period         = 8
+   flord_send_period       = 1
+   dosta_send_period       = 1
+   phsen_send_period       = 1
+   adcps_send_period       = 2
+   status_send_period      = 24
+   imm_id                  = 1
+   wfp_eng_decimation      = 1
+   wfp_ctd_decimation      = 1
+   wfp_acm_decimation      = 1
+   wfp_acomm_decimation    = 1
+
+   CTD ID's stored: 67 29 20 19 54 62 60 52 15 56 57 26 
+
+   ADCPS ID's stored: 11 
+
+   SSIOC ID's stored: 12 
+
+   WFP 0 has done 0 profile(s) so far
+
+   WFP 1 has done 0 profile(s) so far
+
+   WFP 2 has done 0 profile(s) so far
+
+
+Deploy loop started on Sun Jul 21 13:24:40 2013
+
