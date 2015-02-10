@@ -10,7 +10,9 @@ Options:
 
 """
 import os
+import random
 import sys
+from concurrent.futures import ThreadPoolExecutor
 
 dataset_dir = os.path.dirname(os.path.realpath('__file__'))
 tools_dir = os.path.dirname(dataset_dir)
@@ -30,8 +32,12 @@ from yaml import load
 from common import logger
 from common import edex_tools
 
+from multiprocessing.pool import ThreadPool
+
 IGNORE_NULLS = False
 VALIDATE_TIMESTAMP = time.strftime('%Y%m%d.%H:%M:%S', time.localtime())
+
+MAX_THREADS = 30
 
 startdir = os.path.join(edex_tools.edex_dir, 'data/utility/edex_static/base/ooi/parsers/mi-dataset/mi')
 drivers_dir = os.path.join(startdir, 'dataset/driver')
@@ -59,6 +65,7 @@ class TestCase(object):
         self.sensor = config.get('sensor')
         self.sensor_ids = []
         self.expected = []
+        self.count = 0
 
     def __str__(self):
         return pprint.pformat(self.config)
@@ -169,8 +176,10 @@ def dump_csv(data):
     fh.close()
 
 
-def execute_test(test_case, index):
+def execute_test(test_case):
+    index = random.randint(0, 999)
     log.debug('Processing test case: %s index: %d', test_case, index)
+    test_case.count = 0
 
     for test_file, yaml_file in test_case.pairs:
         input_filepath = os.path.join(drivers_dir, test_case.resource, test_file)
@@ -200,8 +209,8 @@ def execute_test(test_case, index):
 
             log.info('Fetching expected results from YML file: %s', yaml_file)
             test_case.expected.append(get_expected(output_filepath))
+            test_case.count += 1
 
-            index += 1
 
 
         else:
@@ -209,8 +218,19 @@ def execute_test(test_case, index):
             test_case.sensor_ids.append(None)
             test_case.expected.append(None)
 
-    return index
 
+def evaluate_test_case(tc):
+    sc = {}
+    method = tc.instrument.split('_')[-1]
+    for index, sensor in enumerate(tc.sensor_ids):
+        expected = tc.expected[index]
+        if sensor is not None:
+            for stream in expected:
+                results = test_results(expected[stream], stream, sensor, method)
+                sc.setdefault(tc.instrument, {}) \
+                    .setdefault(tc.pairs[index][0], {}) \
+                    .setdefault(tc.pairs[index][1], {})[stream] = results
+    return sc
 
 def test(my_test_cases):
     try:
@@ -220,28 +240,23 @@ def test(my_test_cases):
         return {}
 
     total_timeout = 0
-    index = 0
+    count = 0
     sc = {}
+    with ThreadPoolExecutor(max_workers=MAX_THREADS) as pool:
 
-    for tc in my_test_cases:
-        index = execute_test(tc, index)
-        total_timeout += tc.timeout
+        pool.map(execute_test, my_test_cases)
 
-    # wait for all ingestion to complete
-    if not edex_tools.watch_log_for('EDEX - Ingest complete for file', logfile=logfile,
-                                    expected_count=index, timeout=total_timeout):
-        log.error('Timed out waiting for ingest complete message')
+        for tc in my_test_cases:
+            total_timeout += tc.timeout
+            count += tc.count
 
-    for tc in my_test_cases:
-        method = tc.instrument.split('_')[-1]
-        for index, sensor in enumerate(tc.sensor_ids):
-            expected = tc.expected[index]
-            if sensor is not None:
-                for stream in expected:
-                    results = test_results(expected[stream], stream, sensor, method)
-                    sc.setdefault(tc.instrument, {}) \
-                        .setdefault(tc.pairs[index][0], {}) \
-                        .setdefault(tc.pairs[index][1], {})[stream] = results
+        # wait for all ingestion to complete
+        if not edex_tools.watch_log_for('EDEX - Ingest complete for file', logfile=logfile,
+                                        expected_count=count, timeout=total_timeout):
+            log.error('Timed out waiting for ingest complete message')
+
+        for each in pool.map(evaluate_test_case, test_cases):
+            sc.update(each)
 
     return sc
 
