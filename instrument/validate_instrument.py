@@ -76,14 +76,13 @@ class Scorecard(object):
             }
 
     def record(self, stream, expected_count, retrieved_count, failures):
-        failure_types = [x[0] for x in failures]
         self.init_stream(stream)
         if failures:
-            self.results[stream]['fail'] = len(failures)
-            self.results[stream]['failures'] = failures
-        self.results[stream]['pass'] = expected_count - len(failures)
-        self.results[stream]['expected'] = expected_count
-        self.results[stream]['retrieved'] = retrieved_count
+            self.results[stream]['fail'] += len(failures)
+            self.results[stream]['failures'] += failures
+        self.results[stream]['pass'] += expected_count - len(failures)
+        self.results[stream]['expected'] += expected_count
+        self.results[stream]['retrieved'] += retrieved_count
 
     def __repr__(self):
         return repr(self.results)
@@ -108,23 +107,35 @@ class Scorecard(object):
         return '\n'.join(result)
 
 
-def test_results(hostname, instrument, expected_results, scorecard=None):
+def test_results(hostname, instrument, expected_results, scorecard=None, CHUNKSIZE=5000):
     num_items = sum([len(x) for x in expected_results.values()])
     log.info('testing %d results (%s)', num_items, type(expected_results))
     if scorecard is None:
         scorecard = Scorecard()
 
-    for stream in expected_results:
-        times = [x.get(x.get('preferred_timestamp'), 0.0) for x in expected_results[stream]]
-        retrieved = edex_tools.get_from_edex(hostname,
-                                             timestamp_as_string=True,
-                                             stream_name=stream,
-                                             sensor=instrument,
-                                             start_time=times[0],
-                                             stop_time=times[-1])
+    subsite, node, sensor = instrument.split('-', 3)
+    metadata = edex_tools.get_edex_metadata('localhost', subsite, node, sensor)
 
-        failures = edex_tools.compare(retrieved, expected_results[stream], lookup_preferred_timestamp=True)
-        scorecard.record(stream, len(expected_results[stream]), len(retrieved), failures)
+    for stream in expected_results:
+        # slice up the stream into manageable chunks, query and compare
+        for start in xrange(0, len(expected_results[stream]), CHUNKSIZE):
+            stop = start + CHUNKSIZE
+            stop = len(expected_results[stream]) if stop > len(expected_results[stream]) else stop
+            slice = expected_results[stream][start:stop]
+            times = [x.get(x.get('preferred_timestamp'), 0.0) for x in slice]
+
+            retrieved = edex_tools.get_from_edex(hostname,
+                                                 subsite,
+                                                 node,
+                                                 sensor,
+                                                 'streamed',
+                                                 stream,
+                                                 times[0]-1,
+                                                 times[-1]+1,
+                                                 timestamp_as_string=True)
+
+            failures = edex_tools.compare(retrieved, slice, metadata, lookup_preferred_timestamp=True)
+            scorecard.record(stream, len(slice), len(retrieved), failures)
 
     return scorecard
 
