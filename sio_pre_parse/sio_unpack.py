@@ -140,9 +140,6 @@ class SioParse(object):
         else:
             self.update_state_file_length(file_state, file_len)
 
-        # increment output index each time we read this file
-        file_state[StateKey.OUTPUT_INDEX] += 1
-
         fid_in = open(full_path_in, 'rb')
 
         newly_processed_blocks = []
@@ -158,11 +155,6 @@ class SioParse(object):
 
                 # get the file string associated with this instrument ID from the sio header
                 file_type = ID_MAP.get(match.group(SIO_HEADER_GROUP_ID))
-                # insert the file type into the file name
-                full_path_out = mdd_config.datafile(file_out_start + '.' + file_type + file_out_end)
-
-                # open the output file in append mode, creating if it doesn't exist
-                fid_out = open(full_path_out, 'a+')
 
                 # get length of data packet carried within this sio header
                 data_len = int(match.group(SIO_HEADER_GROUP_DATA_LENGTH), 16)
@@ -183,6 +175,13 @@ class SioParse(object):
 
                 if end_match_idx < len(match_block) and match_block[end_match_idx] == SIO_BLOCK_END:
                     # found the matching end of the packet, this block is complete,
+
+                    # insert the file type into the file name
+                    full_path_out = mdd_config.datafile(file_out_start + '.' + file_type + file_out_end)
+
+                    # open the output file in append mode, creating if it doesn't exist
+                    fid_out = open(full_path_out, 'a+')
+
                     # write it to output file
                     fid_out.write(match_block[:end_match_idx + 1])
 
@@ -191,14 +190,19 @@ class SioParse(object):
                     end_file_idx = end_block_idx + n_replaced + unproc[START_IDX]
                     newly_processed_blocks.append([start_file_idx, end_file_idx])
 
-                fid_out.close()
+                    fid_out.close()
 
-        # pre combine blocks so there aren't so many to loop over
-        newly_processed_blocks = SioParse._combine_adjacent_packets(newly_processed_blocks)
+        # check for newly processed blocks
+        if newly_processed_blocks:
+            # increment output index if we have found new data to parse in this file
+            file_state[StateKey.OUTPUT_INDEX] += 1
 
-        # remove the processed blocks from the unprocessed file state
-        for new_block in newly_processed_blocks:
-            self.update_processed_file_state(file_state, new_block[START_IDX], new_block[END_IDX])
+            # pre combine blocks so there aren't so many to loop over
+            newly_processed_blocks = SioParse._combine_adjacent_packets(newly_processed_blocks)
+
+            # remove the processed blocks from the unprocessed file state
+            for new_block in newly_processed_blocks:
+                self.update_processed_file_state(file_state, new_block[START_IDX], new_block[END_IDX])
 
         fid_in.close()
 
@@ -216,26 +220,28 @@ class SioParse(object):
         :param file_len: Length of file
         """
         last_size = file_state[StateKey.FILE_SIZE]
-        if file_state[StateKey.UNPROCESSED_DATA] == [] and last_size < file_len:
-            # we have processed up to the last file size, append a new block that
-            # goes from the last file size to the new file size
-            file_state[StateKey.UNPROCESSED_DATA].append([last_size, file_len])
-            file_state[StateKey.FILE_SIZE] = file_len
-
-        elif file_state[StateKey.UNPROCESSED_DATA] != [] and \
-                file_state[StateKey.UNPROCESSED_DATA][-1][END_IDX] < file_len:
-
-            if last_size > file_state[StateKey.UNPROCESSED_DATA][-1][END_IDX]:
-                # the previous file size is greater than the last unprocessed index so
-                # we have processed up to the last file size, append a new block
-                # that goes from the last file size to the new file size
-                file_state[StateKey.UNPROCESSED_DATA].append(last_size, file_len)
+        # check if the file length has changed
+        if last_size != file_len:
+            if file_state[StateKey.UNPROCESSED_DATA] == [] and last_size < file_len:
+                # we have processed up to the last file size, append a new block that
+                # goes from the last file size to the new file size
+                file_state[StateKey.UNPROCESSED_DATA].append([last_size, file_len])
                 file_state[StateKey.FILE_SIZE] = file_len
 
-            elif last_size == file_state[StateKey.UNPROCESSED_DATA][-1][END_IDX]:
-                # if the last unprocessed is the last file size, just increase the last index
-                file_state[StateKey.UNPROCESSED_DATA][-1][1] = file_len
-                file_state[StateKey.FILE_SIZE] = file_len
+            elif file_state[StateKey.UNPROCESSED_DATA] != [] and \
+                    file_state[StateKey.UNPROCESSED_DATA][-1][END_IDX] < file_len:
+
+                if last_size > file_state[StateKey.UNPROCESSED_DATA][-1][END_IDX]:
+                    # the previous file size is greater than the last unprocessed index so
+                    # we have processed up to the last file size, append a new block
+                    # that goes from the last file size to the new file size
+                    file_state[StateKey.UNPROCESSED_DATA].append([last_size, file_len])
+                    file_state[StateKey.FILE_SIZE] = file_len
+
+                elif last_size == file_state[StateKey.UNPROCESSED_DATA][-1][END_IDX]:
+                    # if the last unprocessed is the last file size, just increase the last index
+                    file_state[StateKey.UNPROCESSED_DATA][-1][1] = file_len
+                    file_state[StateKey.FILE_SIZE] = file_len
 
     def update_processed_file_state(self, file_state, start_idx, end_idx):
         """

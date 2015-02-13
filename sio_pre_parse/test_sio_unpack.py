@@ -247,6 +247,137 @@ class TestSioUnpack(unittest.TestCase):
      
         self.compare_node58()
 
+    def test_update_file_state(self):
+        """
+        Test the missing update file state cases
+        """
+        # blocks [0 4012], based on unit_362-2013-202-2-0.mdd
+        test_file1 = os.path.join(INPUT_HYPM_PATH, 'first.mdd')
+
+        # parse the first .mdd files into the node and instrument group files
+        mdd.procall([test_file1])
+
+        file_state = self.get_file_state('node60p1.dat')
+        expected_file_state_1 = {StateKey.UNPROCESSED_DATA: [],
+                                 StateKey.FILE_SIZE: 4012,
+                                 StateKey.OUTPUT_INDEX: 1}
+
+        if file_state != expected_file_state_1:
+            print "file state try 1: '%s'" % file_state
+            self.fail("Expected file state 1 does not match")
+
+        test_file2 = os.path.join(INPUT_HYPM_PATH, 'unit_362-2013-202-2-0.mdd')
+
+        # parse the first .mdd files into the node and instrument group files
+        mdd.procall([test_file2])
+
+        file_state = self.get_file_state('node60p1.dat')
+        expected_file_state_2 = {StateKey.UNPROCESSED_DATA: [[4736, 8192]],
+                                 StateKey.FILE_SIZE: 8192,
+                                 StateKey.OUTPUT_INDEX: 2}
+
+        if file_state != expected_file_state_2:
+            print "file state try 2: '%s'" % file_state
+            self.fail("Expected file state 2 does not match")
+
+        # start second test, switch to node58
+        # blocks [0 3583] [3840 4058]
+        test_file1 = os.path.join(INPUT_HYPM_PATH, 'unit_364-2013-206-2-0.mdd')
+        mdd.procall([test_file1])
+
+        file_state = self.get_file_state('node58p1.dat')
+        expected_file_state = {StateKey.UNPROCESSED_DATA: [[3189, 3945]],
+                               StateKey.FILE_SIZE: 4059,
+                               StateKey.OUTPUT_INDEX: 1}
+
+        if file_state != expected_file_state:
+            print file_state
+            self.fail("Expected file state 3 does not match")
+
+        # blocks [0 1279] [1536 1791] [2048 2303] [2560 2815] [3072 4059]
+        test_file2 = os.path.join(INPUT_HYPM_PATH, 'unit_364-2013-206-3-0.mdd')
+
+        # parse the two .mdd files into the node and instrument group files
+        mdd.procall([test_file2])
+
+        file_state = self.get_file_state('node58p1.dat')
+        # there is an unprocessed '/n' in between records
+        expected_file_state = {StateKey.UNPROCESSED_DATA: [[4059, 4060]],
+                               StateKey.FILE_SIZE: 4060,
+                               StateKey.OUTPUT_INDEX: 2}
+
+        if file_state != expected_file_state:
+            print file_state
+            self.fail("Expected file state 4 does not match")
+
+    def test_empty_sequence(self):
+        """
+        Test to ensure empty sequence files are not created if no new data is found
+        """
+
+        # blocks [0 3583] [3840 4058]
+        test_file1 = os.path.join(INPUT_HYPM_PATH, 'unit_364-2013-206-2-0.mdd')
+        # blocks [0 1279] [1536 1791] [2048 2303] [2560 2815] [3072 4059]
+        test_file2 = os.path.join(INPUT_HYPM_PATH, 'unit_364-2013-206-3-0.mdd')
+
+        # parse the two .mdd files into the node and instrument group files
+        mdd.procall([test_file1, test_file2])
+
+        file_state = self.get_file_state('node58p1.dat')
+        # there is an unprocessed '/n' in between records
+        expected_file_state_1 = {StateKey.UNPROCESSED_DATA: [[4059, 4060]],
+                                 StateKey.FILE_SIZE: 4060,
+                                 StateKey.OUTPUT_INDEX: 1}
+
+        if file_state != expected_file_state_1:
+            print "file state try 1: '%s'" % file_state
+            self.fail("Expected file state 1 does not match")
+
+        # try to parse again with the same files
+        mdd.procall([test_file1, test_file2])
+
+        file_state = self.get_file_state('node58p1.dat')
+
+        if file_state != expected_file_state_1:
+            print "file state try 2: '%s'" % file_state
+            self.fail("Expected file state 2 does not match")
+
+        # blocks [0 2047] [2304 4095] [4096 7451]
+        test_file3 = os.path.join(INPUT_HYPM_PATH, 'unit_364-2013-206-6-0.mdd')
+
+        # parse another .mdd file adding on to the node file, and making
+        # another sequence of instrument group files
+        mdd.procall([test_file3])
+
+        file_state = self.get_file_state('node58p1.dat')
+        expected_file_state_2 = {StateKey.UNPROCESSED_DATA: [[4059, 4060]],
+                                 StateKey.FILE_SIZE: 7452,
+                                 StateKey.OUTPUT_INDEX: 2}
+
+        if file_state != expected_file_state_2:
+            print "file state try 3: '%s'" % file_state
+            self.fail("Expected file state 3 does not match")
+
+        # parse the same file a second time
+        mdd.procall([test_file3])
+
+        # the state should stay the same as before
+        file_state = self.get_file_state('node58p1.dat')
+
+        if file_state != expected_file_state_2:
+            print "file state try 4: '%s'" % file_state
+            self.fail("Expected file state 3 does not match")
+
+        # try the first ones again, should still stay the same
+        mdd.procall([test_file1, test_file2])
+
+        # the state should stay the same as before
+        file_state = self.get_file_state('node58p1.dat')
+
+        if file_state != expected_file_state_2:
+            print "file state try 5: '%s'" % file_state
+            self.fail("Expected file state 3 does not match")
+
     def test_sects(self):
         """
         Test that a processing done in the getmdd script succeeds, since we don't have enough config to run the script
