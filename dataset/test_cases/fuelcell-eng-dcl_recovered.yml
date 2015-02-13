@@ -1,0 +1,5 @@
+endpoint: fuelcell-eng-dcl_recovered
+instrument: fuelcell-eng-dcl_recovered
+pairs:
+- [20141207s.pwrsys.log, recovered_20141207s.pwrsys.yml]
+resource: fuelcell_eng/dcl/resource
