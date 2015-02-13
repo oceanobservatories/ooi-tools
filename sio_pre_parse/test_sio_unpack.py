@@ -60,17 +60,17 @@ class TestSioUnpack(unittest.TestCase):
         # confirm this file only has the allowed instrument IDs
         self.check_sio_type(data_out, ['PS', 'CS'])
 
-        data_out_wa = self.read_full_file('node58p1_0.wa_wfp.dat')
+        data_out_wa = self.read_full_file('node58p1_0.wa_wfp_1236820.dat')
         # confirm this file only has the allowed instrument IDs
         self.check_sio_type(data_out_wa, ['WA'])
         data_out += data_out_wa
 
-        data_out_wc = self.read_full_file('node58p1_0.wc_wfp.dat')
+        data_out_wc = self.read_full_file('node58p1_0.wc_wfp_1236820.dat')
         # confirm this file only has the allowed instrument IDs
         self.check_sio_type(data_out_wc, ['WC'])
         data_out += data_out_wc
 
-        data_out_we = self.read_full_file('node58p1_0.we_wfp.dat')
+        data_out_we = self.read_full_file('node58p1_0.we_wfp_1236820.dat')
         # confirm this file only has the allowed instrument IDs
         self.check_sio_type(data_out_wc, ['WE'])
         data_out += data_out_we
@@ -123,13 +123,13 @@ class TestSioUnpack(unittest.TestCase):
 
         # read the data from all generated files into one data string
         data_out = self.read_full_file('node58p1_0.status.dat')
-        data_out += self.read_full_file('node58p1_0.wa_wfp.dat')
-        data_out += self.read_full_file('node58p1_0.wc_wfp.dat')
-        data_out += self.read_full_file('node58p1_0.we_wfp.dat')
+        data_out += self.read_full_file('node58p1_0.wa_wfp_1236820.dat')
+        data_out += self.read_full_file('node58p1_0.wc_wfp_1236820.dat')
+        data_out += self.read_full_file('node58p1_0.we_wfp_1236820.dat')
         data_out += self.read_full_file('node58p1_1.status.dat')
-        data_out += self.read_full_file('node58p1_1.wa_wfp.dat')
-        data_out += self.read_full_file('node58p1_1.wc_wfp.dat')
-        data_out += self.read_full_file('node58p1_1.we_wfp.dat')
+        data_out += self.read_full_file('node58p1_1.wa_wfp_1236822.dat')
+        data_out += self.read_full_file('node58p1_1.wc_wfp_1236822.dat')
+        data_out += self.read_full_file('node58p1_1.we_wfp_1236822.dat')
 
         # confirm data in the node file matches those output in the instrument groups
         if not TestSioUnpack.compare_sio_matches(data_orig, data_out):
@@ -404,9 +404,12 @@ class TestSioUnpack(unittest.TestCase):
         else:
             data_out = '' 
         data_out += self.read_full_file('node58p1_' + str(index) + '.status.dat')
-        data_out += self.read_full_file('node58p1_' + str(index) + '.wa_wfp.dat')
-        data_out += self.read_full_file('node58p1_' + str(index) + '.wc_wfp.dat')
-        data_out += self.read_full_file('node58p1_' + str(index) + '.we_wfp.dat')
+        data_out += self.read_full_file('node58p1_' + str(index) + '.wa_wfp_1236820.dat')
+        data_out += self.read_full_file('node58p1_' + str(index) + '.wc_wfp_1236820.dat')
+        data_out += self.read_full_file('node58p1_' + str(index) + '.we_wfp_1236820.dat')
+        data_out += self.read_full_file('node58p1_' + str(index) + '.wa_wfp_1236822.dat')
+        data_out += self.read_full_file('node58p1_' + str(index) + '.wc_wfp_1236822.dat')
+        data_out += self.read_full_file('node58p1_' + str(index) + '.we_wfp_1236822.dat')
 
         if not TestSioUnpack.compare_sio_matches(data_orig, data_out):
             self.fail("Failed sio block compare")
@@ -445,9 +448,13 @@ class TestSioUnpack(unittest.TestCase):
         :return: file data
         """
         output_file = os.path.join(OUTPUT_PATH, filename)
-        fid = open(output_file, 'rb')
-        data_out = fid.read()
-        fid.close()
+        data_out = ''
+        if os.path.exists(output_file):
+            fid = open(output_file, 'rb')
+            data_out = fid.read()
+            fid.close()
+        else:
+            print('No file %s', filename)
         return data_out
 
     def get_file_state(self, filename):
