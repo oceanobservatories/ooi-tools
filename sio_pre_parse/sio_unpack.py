@@ -13,8 +13,8 @@ SIO_BLOCK_END = b'\x03'
 # SIO controller header:
 SIO_HEADER_REGEX = b'\x01'                  # Start of SIO Header (start of SIO block)
 SIO_HEADER_REGEX += b'(AD|CT|CO|DO|FL|PH|CS|PS|WA|WC|WE)'  # 2 char Instrument IDs
-SIO_HEADER_REGEX += b'[0-9]{5}'             # Controller ID
-SIO_HEADER_REGEX += b'[0-9]{2}'             # Number of Instrument / Inductive ID
+SIO_HEADER_REGEX += b'([0-9]{5}'            # Controller ID
+SIO_HEADER_REGEX += b'[0-9]{2})'            # Number of Instrument / Inductive ID
 SIO_HEADER_REGEX += b'_'                    # Spacer (0x5F)
 SIO_HEADER_REGEX += b'([0-9a-fA-F]{4})'     # Number of Data Bytes (hex)
 SIO_HEADER_REGEX += b'[0-9A-Za-z]'          # MFLM Processing Flag (coded value)
@@ -30,7 +30,8 @@ SIO_HEADER_LENGTH = 34
 
 # sio header group match index
 SIO_HEADER_GROUP_ID = 1           # Instrument ID
-SIO_HEADER_GROUP_DATA_LENGTH = 2  # Number of Data Bytes
+SIO_HEADER_GROUP_DATA_LENGTH = 3  # Number of Data Bytes
+SIO_HEADER_GROUP_CTRL_ID = 2      # controller and instrument number
 
 sio_db_file = mdd_config.datafile('sio.pckl')
 
@@ -72,7 +73,6 @@ class SioState(object):
         """
         try:
             self.sio_db = pickle.load(open(sio_db_file))
-            print "Starting state from file: %s" % self.sio_db.file_state
         except IOError:
             self.sio_db = SioFileStateInit()
 
@@ -174,10 +174,18 @@ class SioParse(object):
                 match_block += data_block[end_block_idx:end_block_idx + n_replaced]
 
                 if end_match_idx < len(match_block) and match_block[end_match_idx] == SIO_BLOCK_END:
-                    # found the matching end of the packet, this block is complete,
+                    # found the matching end of the packet, this block is complete
+
+                    if file_type.find('w') != -1:
+                        # this is a wire following profiler block (WA, WC, or WE), need to separate multiple wire
+                        # following profilers by controller / instrument number into different files
+                        ctrl_id = match.group(SIO_HEADER_GROUP_CTRL_ID)
+                        file_out = file_out_start + '.' + file_type + '_' + ctrl_id + file_out_end
+                    else:
+                        file_out = file_out_start + '.' + file_type + file_out_end
 
                     # insert the file type into the file name
-                    full_path_out = mdd_config.datafile(file_out_start + '.' + file_type + file_out_end)
+                    full_path_out = mdd_config.datafile(file_out)
 
                     # open the output file in append mode, creating if it doesn't exist
                     fid_out = open(full_path_out, 'a+')
