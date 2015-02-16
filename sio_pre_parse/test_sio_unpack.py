@@ -56,7 +56,7 @@ class TestSioUnpack(unittest.TestCase):
         data_orig = self.read_full_file('node58p1.dat')
 
         # read the data from all generated files into one data string
-        data_out = self.read_full_file('node58p1_0.status.dat')
+        data_out = self.read_full_file('node58p1_0.status_1236801.dat')
         # confirm this file only has the allowed instrument IDs
         self.check_sio_type(data_out, ['PS', 'CS'])
 
@@ -122,11 +122,11 @@ class TestSioUnpack(unittest.TestCase):
         data_orig = self.read_full_file('node58p1.dat')
 
         # read the data from all generated files into one data string
-        data_out = self.read_full_file('node58p1_0.status.dat')
+        data_out = self.read_full_file('node58p1_0.status_1236801.dat')
         data_out += self.read_full_file('node58p1_0.wa_wfp_1236820.dat')
         data_out += self.read_full_file('node58p1_0.wc_wfp_1236820.dat')
         data_out += self.read_full_file('node58p1_0.we_wfp_1236820.dat')
-        data_out += self.read_full_file('node58p1_1.status.dat')
+        data_out += self.read_full_file('node58p1_1.status_1236801.dat')
         data_out += self.read_full_file('node58p1_1.wa_wfp_1236822.dat')
         data_out += self.read_full_file('node58p1_1.wc_wfp_1236822.dat')
         data_out += self.read_full_file('node58p1_1.we_wfp_1236822.dat')
@@ -172,26 +172,32 @@ class TestSioUnpack(unittest.TestCase):
 
         data_orig = self.read_full_file('node59p1.dat')
 
-        data_out = self.read_full_file('node59p1_0.status.dat')
-        self.check_sio_type(data_out, ['CS', 'PS'])
+        # two status files from different controllers, 12371 and 12365
+        data_out_71 = self.read_full_file('node59p1_0.status_1237101.dat')
+        self.check_sio_type(data_out_71, ['CS', 'PS'])
+        data_out_65 = self.read_full_file('node59p1_0.status_1236501.dat')
+        self.check_sio_type(data_out_65, ['CS', 'PS'])
+        data_out = data_out_71
+        data_out += data_out_65
 
-        data_adcps = self.read_full_file('node59p1_0.adcps.dat')
+
+        data_adcps = self.read_full_file('node59p1_0.adcps_1237111.dat')
         self.check_sio_type(data_adcps, ['AD'])
         data_out += data_adcps
 
-        data_ctdmo = self.read_full_file('node59p1_0.ctdmo.dat')
+        data_ctdmo = self.read_full_file('node59p1_0.ctdmo_1237100.dat')
         self.check_sio_type(data_ctdmo, ['CT', 'CO'])
         data_out += data_ctdmo
 
-        data_dosta = self.read_full_file('node59p1_0.dosta.dat')
+        data_dosta = self.read_full_file('node59p1_0.dosta_1236501.dat')
         self.check_sio_type(data_dosta, ['DO'])
         data_out += data_dosta
 
-        data_flort = self.read_full_file('node59p1_0.flort.dat')
+        data_flort = self.read_full_file('node59p1_0.flort_1236501.dat')
         self.check_sio_type(data_flort, ['FL'])
         data_out += data_flort
 
-        data_phsen = self.read_full_file('node59p1_0.phsen.dat')
+        data_phsen = self.read_full_file('node59p1_0.phsen_1236501.dat')
         self.check_sio_type(data_phsen, ['PH'])
         data_out += data_phsen
 
@@ -403,7 +409,7 @@ class TestSioUnpack(unittest.TestCase):
             data_out = data_in
         else:
             data_out = '' 
-        data_out += self.read_full_file('node58p1_' + str(index) + '.status.dat')
+        data_out += self.read_full_file('node58p1_' + str(index) + '.status_1236801.dat')
         data_out += self.read_full_file('node58p1_' + str(index) + '.wa_wfp_1236820.dat')
         data_out += self.read_full_file('node58p1_' + str(index) + '.wc_wfp_1236820.dat')
         data_out += self.read_full_file('node58p1_' + str(index) + '.we_wfp_1236820.dat')
@@ -429,12 +435,13 @@ class TestSioUnpack(unittest.TestCase):
         else:
             data_out = ''
         # append new set of data to the original
-        data_out += self.read_full_file('node59p1_' + str(index) + '.status.dat')
-        data_out += self.read_full_file('node59p1_' + str(index) + '.adcps.dat')
-        data_out += self.read_full_file('node59p1_' + str(index) + '.ctdmo.dat')
-        data_out += self.read_full_file('node59p1_' + str(index) + '.dosta.dat')
-        data_out += self.read_full_file('node59p1_' + str(index) + '.flort.dat')
-        data_out += self.read_full_file('node59p1_' + str(index) + '.phsen.dat')
+        data_out += self.read_full_file('node59p1_' + str(index) + '.status_1237101.dat')
+        data_out += self.read_full_file('node59p1_' + str(index) + '.status_1236501.dat')
+        data_out += self.read_full_file('node59p1_' + str(index) + '.adcps_1237111.dat')
+        data_out += self.read_full_file('node59p1_' + str(index) + '.ctdmo_1237100.dat')
+        data_out += self.read_full_file('node59p1_' + str(index) + '.dosta_1236501.dat')
+        data_out += self.read_full_file('node59p1_' + str(index) + '.flort_1236501.dat')
+        data_out += self.read_full_file('node59p1_' + str(index) + '.phsen_1236501.dat')
 
         if not TestSioUnpack.compare_sio_matches(data_orig, data_out):
             self.fail("Failed sio block compare")

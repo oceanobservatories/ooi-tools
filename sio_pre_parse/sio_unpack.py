@@ -176,13 +176,10 @@ class SioParse(object):
                 if end_match_idx < len(match_block) and match_block[end_match_idx] == SIO_BLOCK_END:
                     # found the matching end of the packet, this block is complete
 
-                    if file_type.find('w') != -1:
-                        # this is a wire following profiler block (WA, WC, or WE), need to separate multiple wire
-                        # following profilers by controller / instrument number into different files
-                        ctrl_id = match.group(SIO_HEADER_GROUP_CTRL_ID)
-                        file_out = file_out_start + '.' + file_type + '_' + ctrl_id + file_out_end
-                    else:
-                        file_out = file_out_start + '.' + file_type + file_out_end
+                    # include controller / instrument number in file name so different instruments are in
+                    # different files
+                    ctrl_id = match.group(SIO_HEADER_GROUP_CTRL_ID)
+                    file_out = file_out_start + '.' + file_type + '_' + ctrl_id + file_out_end
 
                     # insert the file type into the file name
                     full_path_out = mdd_config.datafile(file_out)
