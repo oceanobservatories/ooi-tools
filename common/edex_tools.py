@@ -489,7 +489,7 @@ def diff(stream, a, b, metadata, ignore=None, rename=None, ignore_nulls=False, f
     """
     if ignore is None:
         ignore = ['particle_object', 'quality_flag', 'driver_timestamp', 'ingestion_timestamp',
-                  'stream_name', 'preferred_timestamp', 'port_timestamp', 'pk', 'timestamp']
+                  'stream_name', 'preferred_timestamp', 'port_timestamp', 'pk', 'timestamp', 'provenance']
     if rename is None:
         rename = {'particle_type': 'stream_name'}
 
