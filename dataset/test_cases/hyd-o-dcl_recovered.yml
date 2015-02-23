@@ -1,0 +1,5 @@
+endpoint: hyd-o-dcl_recovered
+instrument: hyd-o-dcl_recovered
+pairs:
+- [first.hyd1.log, first_recov.yml]
+resource: hyd_o/dcl/resource
