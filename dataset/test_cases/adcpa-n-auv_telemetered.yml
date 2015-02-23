@@ -1,0 +1,5 @@
+endpoint: adcpa-n-auv_telemetered
+instrument: adcpa-n-auv_telemetered
+pairs:
+- [subset_reduced.csv, adcpa_n_auv_22.yml]
+resource: adcpa_n/auv/resource
