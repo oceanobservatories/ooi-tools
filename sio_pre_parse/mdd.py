@@ -34,50 +34,87 @@ class mdd(object):
         self.node = None
         self.port = None
         while True:
-            (tag, value, offset) = self.nextag(offset)
-            if not tag:
+            # find and set tag values for the next group, overwriting previous values
+            offset = self.get_next_tag_group(offset)
+            if offset is None:
+                # no more tags were found, this is the end of the file
                 break
-            self.__setattr__(tag, value)
-            # once all tags have been set, this header has been read and section is complete
-            if self.port is not None and self.node is not None and \
-                    self.endoffset is not None and self.startoffset is not None:
+
+            # Need all tags to have been set, if one has not been set yet this section cannot be processed
+            if self.port is not None and self.node is not None and self.endoffset is not None and \
+                    self.startoffset is not None:
                 dlen = 1 + self.endoffset - self.startoffset
                 sdata = self.data[offset:offset + dlen]
                 s = mdd_data.data_section(self.node, self.port, self.startoffset, self.endoffset, sdata)
                 self.sections.append(s)
-                # clear tags for next increment, node and port might not be present
-                self.endoffset = None
-                self.startoffset = None
+
+    def get_next_tag_group(self, offset):
+        """
+        find a group of tags on consecutive lines and set their values, which must include start and end offset tags
+        :param offset: The input offset to start searching at
+        """
+
+        # make an array to keep track of tag start indices
+        tag_idx = []
+        found_start = False
+        found_end = False
+
+        # loop over possible tags, storing their next starting index if found
+        for tag in MDD_TAGS:
+            found_idx = self.data.find(tag, offset)
+            if found_idx != -1:
+                # store the index of the start of the tag line that has been identified
+                tag_idx.append(found_idx)
+                # start and end are required, make sure they are in the group
+                if tag is MDD_TAGS[2]:
+                    found_start = True
+                elif tag is MDD_TAGS[3]:
+                    found_end = True
+
+        if tag_idx and found_start and found_end:
+            # tags were found, including both start and end tags
+            start_line = min(tag_idx)
+
+            # loop over the tags and set their values for the tags in this group
+            while start_line in tag_idx:
+                end_line = self.set_tag_value(start_line)
+                # add one to get to the start of the next line
+                start_line = end_line + 1
+
+            # return the start of the line following the tag group
+            return start_line
+
+        # no tags were found
+        return None
+
+    def set_tag_value(self, tag_start):
+        """
+        Retrieve tag name and value from a line known to contain a tag, and set the corresponding tag variable value
+        :param tag_start: The starting index of the tag line
+        """
+
+        # find the index of the end of the tag lin
+        end_line = self.data.find('\n', tag_start)
+        # split the line into tag and value
+        (tag, value) = self.data[tag_start:end_line].split(':')
+        # format tag and value
+        tag = tag.lower()
+        value = int(value.strip())
+        # set the tag value
+        self.__setattr__(tag, value)
+        # return the end of the line
+        return end_line
 
     def gettag(self, tag):
+        """
+        Get the value associated with the input tag
+        :param tag: The text of the input tag to locate the value for
+        """
         # find first occurence of this tag
         found = self.data.find(tag + ':') + len(tag) + 1
         # find next new line after tag
         end = self.data.find('\n', found)
         return self.data[found:end].strip()
-
-    def nextag(self, offset=0):
-        # search the data and find the next tag starting at offset
-        tag = None
-        value = None
-        end = 0
-        min_found = len(self.data)
-        # loop over MDD tags, updating with min tag index
-        for seek in MDD_TAGS:
-            found_idx = self.data.find(seek, offset)
-            if 0 <= found_idx < min_found:
-                min_found = found_idx
-
-        if min_found != len(self.data):
-            # get the index of the end of the tag line
-            end = self.data.find('\n', min_found)
-            # pull out value from tag and value line
-            (tag, value) = self.data[min_found:end].split(':')
-            # format tag and value
-            tag = tag.lower()
-            value = int(value.strip())
-
-        return tag, value, end + 1
 
 
 def procall(fns):

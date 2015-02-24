@@ -19,6 +19,7 @@ from sio_unpack import SIO_HEADER_MATCHER, SIO_HEADER_GROUP_DATA_LENGTH, \
 
 INPUT_HYPM_PATH = 'gp02hypm_mdd'  # deployment 1 .mdd files
 INPUT_FLMB_PATH = 'gp03flmb_mdd'  # deployment 1 .mdd files
+INPUT_GI_PATH = 'gi_mdd'          # recent global irminger .mdd files
 OUTPUT_PATH = 'data'
 
 
@@ -179,7 +180,6 @@ class TestSioUnpack(unittest.TestCase):
         self.check_sio_type(data_out_65, ['CS', 'PS'])
         data_out = data_out_71
         data_out += data_out_65
-
 
         data_adcps = self.read_full_file('node59p1_0.adcps_1237111.dat')
         self.check_sio_type(data_adcps, ['AD'])
@@ -389,12 +389,165 @@ class TestSioUnpack(unittest.TestCase):
         Test that a processing done in the getmdd script succeeds, since we don't have enough config to run the script
         """
 
-        test_files = glob.glob(INPUT_HYPM_PATH + '/*.mdd')
-        test_files.extend(glob.glob(INPUT_FLMB_PATH + '/*.mdd'))
+        test_files = glob.glob(INPUT_HYPM_PATH + '/unit_*.mdd')
+        test_files.extend(glob.glob(INPUT_FLMB_PATH + '/unit_*.mdd'))
 
         sects = mdd.procall(test_files)
 
         TestSioUnpack.latest(sects)
+
+    def test_recent_format(self):
+        """
+        Test that the recent format can also be parsed
+        """
+        test_files = glob.glob(INPUT_GI_PATH + '/unit_*.mdd')
+
+        mdd.procall(test_files)
+
+        self.compare_node14()
+        self.compare_node16()
+        self.compare_node17()
+
+    def test_no_tags(self):
+        """
+        test that the data files do not contain the header tags
+        """
+        test_files = glob.glob(INPUT_GI_PATH + '/gi_*.mdd')
+
+        mdd.procall(test_files)
+
+        data = self.read_full_file('node16p1.dat')
+        if not self.check_for_tags(data):
+            self.fail("Found header tag in data file")
+
+        data = self.read_full_file('node17p1.dat')
+        if not self.check_for_tags(data):
+            self.fail("Found header tag in data file")
+
+        data = self.read_full_file('node14p1.dat')
+        if not self.check_for_tags(data):
+            self.fail("Found header tag in data file")
+
+    def test_gi_state(self):
+        # offsets 346640-347663, 348176-348943, 349456-349711
+        test_file1 = os.path.join(INPUT_GI_PATH, 'gi_477-2015-006-0-0.mdd')
+        mdd.procall([test_file1])
+
+        file_state = self.get_file_state('node14p1.dat')
+        # first full record starts 32 bytes later, 346640+32=346672, then 250 bytes valid, then no more valid records
+        expected_file_state_1 = {StateKey.UNPROCESSED_DATA: [[0, 346672], [346922, 349712]],
+                                 StateKey.FILE_SIZE: 349712,
+                                 StateKey.OUTPUT_INDEX: 1}
+
+        if file_state != expected_file_state_1:
+            print "file state try 1: '%s'" % file_state
+            self.fail("Expected file state 1 does not match")
+
+        test_file2 = os.path.join(INPUT_GI_PATH, 'gi_477-2014-355-0-0.mdd')
+        mdd.procall([test_file2])
+
+        file_state = self.get_file_state('node14p1.dat')
+        expected_file_state_2 = {StateKey.UNPROCESSED_DATA: [[0, 296406], [298500, 311147], [311328, 330181],
+                                                             [330514, 346672], [346922, 349712]],
+                                 StateKey.FILE_SIZE: 349712,
+                                 StateKey.OUTPUT_INDEX: 2}
+
+        if file_state != expected_file_state_2:
+            print "file state try 2: '%s'" % file_state
+            self.fail("Expected file state 2 does not match")
+
+    def test_old_format_for_tags(self):
+        """
+        Same as test for tags to see if there are header tags in the data for the older deployments
+        """
+        test_files = glob.glob(INPUT_HYPM_PATH + '/unit_*.mdd')
+        test_files.extend(glob.glob(INPUT_FLMB_PATH + '/unit_*.mdd'))
+
+        mdd.procall(test_files)
+
+        data = self.read_full_file('node58p1.dat')
+        if not self.check_for_tags(data):
+            self.fail("Found header tag in data file")
+
+        data = self.read_full_file('node59p1.dat')
+        if not self.check_for_tags(data):
+            self.fail("Found header tag in data file")
+
+    def check_for_tags(self, data_in):
+        """
+        Return False if a tag is found in the file, otherwise return true
+        :param data_in: The input data to inspect for header tags
+        :return:
+        """
+        # possible header tags
+        tags = ['NODE:', 'PORT:', 'STARTOFFSET:', 'ENDOFFSET:']
+
+        # check for tags
+        for tag in tags:
+            if data_in.find(tag) != -1:
+                print "Found tag %s in data file" % tag
+                return False
+
+        return True
+
+    def compare_node14(self, index=0):
+        """
+        Compare node 14 port 1 output and generated instrument files
+        @param index - the index of the sequence of the instrument files to check
+        """
+        data_orig = self.read_full_file('node14p1.dat')
+
+        # append new sets of data
+        data_out = self.read_full_file('node14p1_' + str(index) + '.status_1327701.dat')
+        data_out += self.read_full_file('node14p1_' + str(index) + '.ctdmo_1327700.dat')
+        data_out += self.read_full_file('node14p1_' + str(index) + '.wa_wfp_1327721.dat')
+        data_out += self.read_full_file('node14p1_' + str(index) + '.wc_wfp_1327721.dat')
+        data_out += self.read_full_file('node14p1_' + str(index) + '.we_wfp_1327721.dat')
+
+        if not TestSioUnpack.compare_sio_matches(data_orig, data_out):
+            self.fail("Failed sio block compare")
+
+    def compare_node16(self, index=0):
+        """
+        Compare node 16 port 1 output and generated instrument files
+        @param index - the index of the sequence of the instrument files to check
+        """
+        data_orig = self.read_full_file('node16p1.dat')
+
+        # append new sets of data
+        data_out = self.read_full_file('node16p1_' + str(index) + '.status_1328001.dat')
+        data_out += self.read_full_file('node16p1_' + str(index) + '.status_1328601.dat')
+        data_out += self.read_full_file('node16p1_' + str(index) + '.adcps_1328603.dat')
+        data_out += self.read_full_file('node16p1_' + str(index) + '.ctdmo_1328600.dat')
+        data_out += self.read_full_file('node16p1_' + str(index) + '.dosta_1328001.dat')
+        data_out += self.read_full_file('node16p1_' + str(index) + '.flort_1328001.dat')
+        data_out += self.read_full_file('node16p1_' + str(index) + '.phsen_1328001.dat')
+
+        if not TestSioUnpack.compare_sio_matches(data_orig, data_out):
+            self.fail("Failed sio block compare")
+
+        return data_out
+
+    def compare_node17(self, index=0):
+        """
+        Compare node 17 port 1 output and generated instrument files
+        @param index - the index of the sequence of the instrument files to check
+        """
+        data_orig = self.read_full_file('node17p1.dat')
+
+        # append new sets of data
+        data_out = self.read_full_file('node17p1_' + str(index) + '.status_1328501.dat')
+        data_out += self.read_full_file('node17p1_' + str(index) + '.status_1236901.dat')
+        data_out += self.read_full_file('node17p1_' + str(index) + '.adcps_1328503.dat')
+        data_out += self.read_full_file('node17p1_' + str(index) + '.ctdmo_1328500.dat')
+        data_out += self.read_full_file('node17p1_' + str(index) + '.dosta_1236901.dat')
+        data_out += self.read_full_file('node17p1_' + str(index) + '.flort_1236901.dat')
+        data_out += self.read_full_file('node17p1_' + str(index) + '.phsen_1236901.dat')
+
+        if not TestSioUnpack.compare_sio_matches(data_orig, data_out):
+            self.fail("Failed sio block compare")
+
+        return data_out
 
     def compare_node58(self, index=0, data_in=None):
         """
