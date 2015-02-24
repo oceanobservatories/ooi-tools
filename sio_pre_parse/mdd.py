@@ -5,6 +5,7 @@
 # 8aug2013	dpingal@teledyne.com	Fix bug parsing fileopen_time with single digit day
 # 5jun2014	dpingal@teledyne.com	Fix compatability with 7.14 glider firmware
 # 9dec2014  ehahn@bbn.com           Add sio parsing into individual instrument group files
+# 24feb2015 ehahn@bbn.com           Fixed handling old and new .mdd header format
 
 import calendar
 import mdd_config
