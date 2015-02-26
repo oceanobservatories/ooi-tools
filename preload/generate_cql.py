@@ -45,6 +45,7 @@ cql_parameter_map = {
     'string': 'text',
     'float32': 'double',
     'float64': 'double',
+    'opaque': 'blob',
 }
 
 java_parameter_map = {
@@ -63,12 +64,26 @@ java_promoted_map = {
     'double': 'Double'
 }
 
-def camelize(s, all=False):
+map = {
+#    ('blob', 'array<quantity>'): ('blob', 'ByteBuffer', 'Byte'),
+    ('int', 'category<int8:str>'): ('int', 'int', 'int', 'Integer', False),
+    ('int', 'boolean'): ('int', 'int', 'int', 'Integer', False),
+    ('int', 'quantity'): ('int', 'int', 'int', 'Integer', False),
+    ('int', 'array<quantity>'): ('blob', 'ByteBuffer', 'int', 'Integer', True),
+    ('bigint', 'quantity'): ('bigint', 'long', 'long', 'Long', False),
+    ('bigint', 'array<quantity>'): ('blob', 'ByteBuffer', 'long', 'Long', True),
+    ('double', 'quantity'): ('double', 'double', 'double', 'Double', False),
+    ('double', 'array<quantity>'): ('blob', 'ByteBuffer', 'double', 'Double', True),
+    ('text', 'quantity'): ('text', 'String', 'String', 'String', False),
+    ('text', 'array<quantity>'): ('list<text>', 'List<String>', 'String', 'String', True),
+}
+
+def camelize(s, skipfirst=False):
     parts = s.split('_')
-    if all:
-        parts = [x.capitalize() for x in parts]
-    else:
+    if skipfirst:
         parts = parts[:1] + [x.capitalize() for x in parts[1:]]
+    else:
+        parts = [x.capitalize() for x in parts]
     return ''.join(parts)
 
 class Column(object):
@@ -92,24 +107,13 @@ class Column(object):
         else:
             value_encoding = cql_parameter_map.get(param.value_encoding)
 
-        if value_encoding is not None:
-            self.cqlanno = value_encoding.upper()
-
-        # unknown encoding - log and mark this column as invalid
-        if value_encoding is None:
+        if map.get((value_encoding, param.parameter_type)) is None:
             log.error('unknown encoding type for parameter: %s', param)
             self.valid = False
+            return
 
-        if 'array' in param.parameter_type:
-            self.islist = True
-            self.cqltype = 'list<%s>' % value_encoding
-            self.javatype = 'List<%s>' % java_promoted_map.get(value_encoding)
-            self.filltype = java_parameter_map.get(value_encoding)
-            self.java_object = java_promoted_map.get(value_encoding)
-        else:
-            self.cqltype = value_encoding
-            self.javatype = self.filltype = java_parameter_map.get(value_encoding)
-            self.java_object = java_promoted_map.get(value_encoding)
+        self.cqltype, self.javatype, self.filltype, self.java_object, self.islist = map.get((value_encoding,
+                                                                                             param.parameter_type))
 
         if 'sparse' in param.parameter_type:
             self.sparse = True
@@ -161,11 +165,10 @@ class Column(object):
         self.filler = "fill" + self.name[0].capitalize() + self.name[1:]
 
 
-
 class Table(object):
     def __init__(self, name, params):
         self.name = name.strip()
-        self.classname = camelize(self.name, all=True)
+        self.classname = camelize(self.name, skipfirst=False)
         self.params = params
         self.basecolumns = ['driver_timestamp', 'ingestion_timestamp', 'internal_timestamp',
                             'preferred_timestamp', 'time', 'port_timestamp']
@@ -195,7 +198,6 @@ class Table(object):
 
                     shape.set_name(column.name + "_shape")
                     shape.cqltype = 'list<int>'
-                    shape.cqlanno = 'INT'
                     shape.javatype = 'List<Integer>'
                     shape.fillable = False
                     shape.islist = True
