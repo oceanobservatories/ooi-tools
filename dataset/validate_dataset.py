@@ -70,7 +70,7 @@ class TestCase(object):
         return pprint.pformat(self.config)
 
     def __repr__(self):
-        return self.config.__repr__()
+        return self.__dict__.__repr__()
 
 
 def read_test_cases(f):
@@ -92,41 +92,43 @@ def get_expected(filename, cache_dir='.cache'):
     """
     cached_path = os.path.join(cache_dir, filename.split('mi-dataset/')[1])
     if os.path.exists(cached_path):
-        log.info('found cached results file...')
-        return json.load(open(cached_path))
-    else:
         try:
-            fh = open(filename, 'r')
-            data = load(fh)
-            log.debug('Raw data from YAML: %s', data)
-            header = data.get('header')
-            data = data.get('data')
-            particle_type = header.get('particle_type')
-            if particle_type is not None:
-                if particle_type != 'MULTIPLE':
-                    for record in data:
-                        record['particle_type'] = particle_type
-        except (IOError, KeyError):
-            data = []
+            return json.load(open(cached_path))
+        except:
+            log.warn('Exception reading JSON cache, parsing YML')
 
-        for record in data:
-            timestamp = record.get('internal_timestamp')
-            if type(timestamp) == str:
-                if not timestamp.endswith('Z'):
-                    timestamp += 'Z'
-                # Check to see if we have a timestamp with a decimal point which
-                # means we have the millis included
-                if '.' in timestamp:
-                    timestamp_to_use = timestamp
-                else:
-                    # So now we will add the millis, eliminating the Z (i.e. [:-1])
-                    # and reappend the Z
-                    timestamp_to_use = timestamp[:-1] + '.0Z'
-                dt = datetime.strptime(timestamp_to_use, '%Y-%m-%dT%H:%M:%S.%fZ')
-                timestamp = ntplib.system_to_ntp_time(
-                    calendar.timegm(dt.timetuple()) + (dt.microsecond / 1000000.0))
+    try:
+        fh = open(filename, 'r')
+        data = load(fh)
+        log.debug('Raw data from YAML: %s', data)
+        header = data.get('header')
+        data = data.get('data')
+        particle_type = header.get('particle_type')
+        if particle_type is not None:
+            if particle_type != 'MULTIPLE':
+                for record in data:
+                    record['particle_type'] = particle_type
+    except (IOError, KeyError):
+        data = []
 
-                record['internal_timestamp'] = timestamp
+    for record in data:
+        timestamp = record.get('internal_timestamp')
+        if type(timestamp) == str:
+            if not timestamp.endswith('Z'):
+                timestamp += 'Z'
+            # Check to see if we have a timestamp with a decimal point which
+            # means we have the millis included
+            if '.' in timestamp:
+                timestamp_to_use = timestamp
+            else:
+                # So now we will add the millis, eliminating the Z (i.e. [:-1])
+                # and reappend the Z
+                timestamp_to_use = timestamp[:-1] + '.0Z'
+            dt = datetime.strptime(timestamp_to_use, '%Y-%m-%dT%H:%M:%S.%fZ')
+            timestamp = ntplib.system_to_ntp_time(
+                calendar.timegm(dt.timetuple()) + (dt.microsecond / 1000000.0))
+
+            record['internal_timestamp'] = timestamp
 
         expected_dictionary = {}
 
@@ -147,18 +149,28 @@ def test_results(expected, stream_name, sensor, method):
     subsite, node, sensor = sensor.split('-', 3)
     start = ntplib.system_to_ntp_time(1)
     stop = 1e10
+
+    stream_code = '%s_%s_%s' % (stream_name, sensor, method)
+
+    log.info('Retrieving data (%s)', stream_code)
+    now = time.time()
     metadata = edex_tools.get_edex_metadata('localhost', subsite, node, sensor)
     retrieved = edex_tools.get_from_edex('localhost', subsite, node, sensor, method,
                                          stream_name, start, stop, timestamp_as_string=True)
-
+    elapsed = time.time() - now
     retrieved_count = 0
     for each in retrieved.itervalues():
         retrieved_count += len(each)
-    log.debug('Retrieved %d records from edex:', retrieved_count)
+
+    log.info('Retrieved %d records (%s) in %.4f secs', retrieved_count, stream_code, elapsed)
+
     log.debug(pprint.pformat(retrieved, depth=3))
     log.debug('Retrieved %d records from expected data file:', len(expected))
     log.debug(pprint.pformat(expected, depth=3))
+    now = time.time()
     failures = edex_tools.compare(retrieved, expected, metadata, ignore_nulls=IGNORE_NULLS)
+    elapsed = time.time() - now
+    log.info('Compared %d records (%s) in %.4f secs', retrieved_count, stream_code, elapsed)
     return retrieved_count, len(expected), failures
 
 
@@ -195,8 +207,6 @@ def execute_test(test_case):
             else:
                 sensor = test_case.sensor
 
-            test_case.sensor_ids.append(sensor)
-
             queue = 'Ingest.%s' % test_case.instrument
 
             try:
@@ -207,10 +217,9 @@ def execute_test(test_case):
                 return None
 
             log.info('Fetching expected results from YML file: %s', yaml_file)
+            test_case.sensor_ids.append(sensor)
             test_case.expected.append(get_expected(output_filepath))
             test_case.count += 1
-
-
 
         else:
             log.error('Missing test data or results: %s %s', input_filepath, output_filepath)
@@ -219,16 +228,22 @@ def execute_test(test_case):
 
 
 def evaluate_test_case(tc):
+    log.info('Evaluating test case: %s', tc.instrument)
     sc = {}
     method = tc.instrument.split('_')[-1]
-    for index, sensor in enumerate(tc.sensor_ids):
-        expected = tc.expected[index]
-        if sensor is not None:
-            for stream in expected:
-                results = test_results(expected[stream], stream, sensor, method)
-                sc.setdefault(tc.instrument, {}) \
-                    .setdefault(tc.pairs[index][0], {}) \
-                    .setdefault(tc.pairs[index][1], {})[stream] = results
+    try:
+        for index, sensor in enumerate(tc.sensor_ids):
+            log.error('%s %s', index, sensor)
+            expected = tc.expected[index]
+            if sensor is not None:
+                for stream in expected:
+                    results = test_results(expected[stream], stream, sensor, method)
+                    sc.setdefault(tc.instrument, {}) \
+                        .setdefault(tc.pairs[index][0], {}) \
+                        .setdefault(tc.pairs[index][1], {})[stream] = results
+
+    except Exception as e:
+        log.error('Exception processing test case %r: %s', tc, e)
     return sc
 
 def test(my_test_cases):
@@ -253,6 +268,8 @@ def test(my_test_cases):
     if not edex_tools.watch_log_for('EDEX - Ingest complete for file', logfile=logfile,
                                     expected_count=count, timeout=total_timeout):
         log.error('Timed out waiting for ingest complete message')
+
+    log.info('All files ingested, testing results')
 
     for each in pool.map(evaluate_test_case, test_cases):
         sc.update(each)

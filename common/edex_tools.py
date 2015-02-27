@@ -33,6 +33,8 @@ DEFAULT_STANDARD_TIMEOUT = 60
 
 EDEX_BASE_URL = 'http://%s:12575/sensor/inv/%s/%s/%s'
 
+results_cache = {}
+
 
 def get_qpid():
     global qpid_session
@@ -101,8 +103,6 @@ def get_from_edex(hostname, subsite, node, sensor, method, stream, start_time, s
     data['beginDT'] = start_time
     data['endDT'] = stop_time
 
-    r = requests.get(url, params=data)
-
     if netcdf:
         netcdf_file = os.path.join('%s-%s.nc' % (stream, sensor))
         with open(netcdf_file, 'wb') as fh:
@@ -110,10 +110,25 @@ def get_from_edex(hostname, subsite, node, sensor, method, stream, start_time, s
             fh.write(r.content)
             return
 
-    records = get_record_json(r)
+    results_key = (url, start_time, stop_time)
 
-    log.debug('RETRIEVED:')
-    log.debug(pprint.pformat(records, depth=3))
+    if results_key not in results_cache:
+        now = time.time()
+        r = requests.get(url, params=data)
+        elapsed = time.time() - now
+        log.info('Took %.2f secs to retrieve data from: %s', elapsed, r.url)
+
+        now = time.time()
+        records = get_record_json(r)
+        elapsed = time.time() - now
+        log.info('Took %.2f secs to de-jsonify the data', elapsed)
+
+        results_cache[results_key] = records
+
+    records = results_cache[results_key]
+
+    #log.debug('RETRIEVED:')
+    #log.debug(pprint.pformat(records, depth=3))
     d = {}
     for record in records:
         timestamp = record.get('pk', {}).get('time')
