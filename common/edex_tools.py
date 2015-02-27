@@ -147,7 +147,7 @@ def restore_lists(record):
     for k in shapes:
         array_key = k.replace('_shape','')
         shape = record[k]
-        array = numpy.array(nanize(record[array_key]))
+        array = numpy.array(nanize(record.get(array_key, [])))
 
         if numpy.product(shape) == len(array):
             array = array.reshape(shape)
