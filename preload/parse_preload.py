@@ -126,11 +126,13 @@ def populate_table(conn, name, rows):
     conn.commit()
 
 def create_db(conn):
+    sheets_to_process = ['parameterdefs', 'parameterfunctions', 'parameterdictionary']
     for name, sheet in sheet_generator():
-        log.debug('Creating table: %s', name)
-        name = sanitize_names(name)
-        create_table(conn, name, sheet[0].keys())
-        populate_table(conn, name, sheet[1:])
+        if name.lower() in sheets_to_process:
+            log.debug('Creating table: %s', name)
+            name = sanitize_names(name)
+            create_table(conn, name, sheet[0].keys())
+            populate_table(conn, name, sheet[1:])
 
 def test_param_function_map(conn):
     c = conn.cursor()
