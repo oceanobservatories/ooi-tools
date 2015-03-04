@@ -456,6 +456,35 @@ class TestSioUnpack(unittest.TestCase):
             print "file state try 2: '%s'" % file_state
             self.fail("Expected file state 2 does not match")
 
+    def test_verify_mdd(self):
+        # offsets 346640-347663, 348176-348943, 349456-349711
+        test_file1 = os.path.join(INPUT_GI_PATH, 'gi_477-2015-006-0-0.mdd')
+        mdd.procall([test_file1])
+
+        fid = open(test_file1)
+        mdd_data = fid.read()
+        fid.close()
+
+        fid = open(os.path.join(OUTPUT_PATH, 'node14p1.dat'))
+        node_data = fid.read()
+        fid.close()
+
+        # manually inspected file to locate start and end offset of data block
+        # start/end offset 346640 - 347663
+        if node_data[346640:347664] != mdd_data[240:1264]:
+            print "First data block does not match"
+            self.fail('First data block does not match')
+
+        # start/end offset 348176 - 348943
+        if node_data[348176:348944] != mdd_data[1311:2079]:
+            print "Second data block does not match"
+            self.fail('Second data block does not match')
+
+        # start/end offset 349456 - 349711
+        if node_data[349456:349712] != mdd_data[2126:2382]:
+            print "Third data block does not match"
+            self.fail('Third data block does not match')
+
     def test_old_format_for_tags(self):
         """
         Same as test for tags to see if there are header tags in the data for the older deployments
