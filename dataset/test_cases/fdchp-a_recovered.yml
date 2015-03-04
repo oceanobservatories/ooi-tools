@@ -1,0 +1,5 @@
+endpoint: fdchp-a_recovered
+instrument: fdchp-a_recovered
+pairs:
+- [fdchp_1201_short.dat, fdchp_1201_short.yml]
+resource: fdchp_a/resource
