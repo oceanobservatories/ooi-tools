@@ -1,0 +1,5 @@
+endpoint: dosta-ln-auv_telemetered
+instrument: dosta-ln-auv_telemetered
+pairs:
+- [subset_reduced.csv, dosta_ln_telem_20.yml]
+resource: dosta_ln/auv/resource/

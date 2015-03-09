@@ -1,0 +1,5 @@
+endpoint: hyd-o-dcl_telemetered
+instrument: hyd-o-dcl_telemetered
+pairs:
+- [first.hyd1.log, first_telem.yml]
+resource: hyd_o/dcl/resource

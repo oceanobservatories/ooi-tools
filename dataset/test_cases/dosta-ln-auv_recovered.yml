@@ -1,0 +1,5 @@
+endpoint: dosta-ln-auv_recovered
+instrument: dosta-ln-auv_recovered
+pairs:
+- [subset_reduced.csv, dosta_ln_recov_20.yml]
+resource: dosta_ln/auv/resource/

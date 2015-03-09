@@ -1,0 +1,5 @@
+endpoint: ctdav-n-auv_telemetered
+instrument: ctdav-n-auv_telemetered
+pairs:
+- [subset_reduced.csv, ctdav_n_auv_telem_21.yml]
+resource: ctdav_n/auv/resource/
