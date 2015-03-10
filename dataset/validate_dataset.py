@@ -130,19 +130,22 @@ def get_expected(filename, cache_dir='.cache'):
 
             record['internal_timestamp'] = timestamp
 
-        expected_dictionary = {}
+    expected_dictionary = {}
 
-        for record in data:
-            expected_dictionary.setdefault(record.get('particle_type'), []).append(record)
+    for record in data:
+        expected_dictionary.setdefault(record.get('particle_type'), []).append(record)
 
-        dirname = os.path.dirname(cached_path)
-        log.info('caching yml results for faster testing next run...')
+    dirname = os.path.dirname(cached_path)
+    log.info('caching yml results for faster testing next run...')
+    try:
         if not os.path.exists(dirname):
             log.info('creating dir: %s', dirname)
             os.makedirs(dirname)
         json.dump(expected_dictionary, open(cached_path, 'wb'))
+    except OSError:
+        pass
 
-        return expected_dictionary
+    return expected_dictionary
 
 
 def test_results(expected, stream_name, sensor, method):
@@ -233,7 +236,6 @@ def evaluate_test_case(tc):
     method = tc.instrument.split('_')[-1]
     try:
         for index, sensor in enumerate(tc.sensor_ids):
-            log.error('%s %s', index, sensor)
             expected = tc.expected[index]
             if sensor is not None:
                 for stream in expected:
@@ -243,8 +245,11 @@ def evaluate_test_case(tc):
                         .setdefault(tc.pairs[index][1], {})[stream] = results
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         log.error('Exception processing test case %r: %s', tc, e)
     return sc
+
 
 def test(my_test_cases):
     try:
@@ -271,8 +276,8 @@ def test(my_test_cases):
 
     log.info('All files ingested, testing results')
 
-    for each in pool.map(evaluate_test_case, test_cases):
-        sc.update(each)
+    for tc in pool.map(evaluate_test_case, test_cases):
+        sc.update(tc)
 
     return sc
 
