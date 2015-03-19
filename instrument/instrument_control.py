@@ -203,6 +203,9 @@ class Controller(object):
                 if command == 'sleep':
                     log.info('Sleep %d seconds', args)
                     time.sleep(args)
+                elif command == 'set_resource':
+                    log.info('sending set_resource with args: %r', args)
+                    self.set_resource(**args)
                 elif command == 'wait_state':
                     state, length = args
                     self.wait_state(state, length)

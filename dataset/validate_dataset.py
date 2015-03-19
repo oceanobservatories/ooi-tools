@@ -32,6 +32,9 @@ from common import logger
 from common import edex_tools
 
 from multiprocessing.pool import ThreadPool
+from threading import RLock
+
+rlock = RLock()
 
 IGNORE_NULLS = False
 VALIDATE_TIMESTAMP = time.strftime('%Y%m%d.%H:%M:%S', time.localtime())
@@ -137,13 +140,15 @@ def get_expected(filename, cache_dir='.cache'):
 
     dirname = os.path.dirname(cached_path)
     log.info('caching yml results for faster testing next run...')
-    try:
-        if not os.path.exists(dirname):
-            log.info('creating dir: %s', dirname)
-            os.makedirs(dirname)
-        json.dump(expected_dictionary, open(cached_path, 'wb'))
-    except OSError:
-        pass
+    # only allow one thread to write a cache file at a time
+    with rlock:
+        try:
+            if not os.path.exists(dirname):
+                log.info('creating dir: %s', dirname)
+                os.makedirs(dirname)
+            json.dump(expected_dictionary, open(cached_path, 'wb'))
+        except OSError:
+            pass
 
     return expected_dictionary
 

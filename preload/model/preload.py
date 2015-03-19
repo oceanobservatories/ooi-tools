@@ -53,19 +53,6 @@ class ParameterFunction(Base):
     description = Column(String(4096))
 
 
-class ParameterMap(Base):
-    __tablename__ = 'parameter_map'
-    id = Column(Integer, primary_key=True)
-    name = Column(String(250), nullable=False)
-    value = Column(String(250), nullable=False)
-
-
-class ParameterParameterMap(Base):
-    __tablename__ = 'parameter_parameter_map'
-    parameter_id = Column(Integer, ForeignKey('parameter.id'), primary_key=True)
-    parameter_map_id = Column(Integer, ForeignKey('parameter_map.id'), primary_key=True)
-
-
 class Parameter(Base):
     __tablename__ = 'parameter'
     id = Column(Integer, primary_key=True)

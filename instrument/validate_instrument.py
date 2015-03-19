@@ -113,7 +113,7 @@ def test_results(hostname, instrument, expected_results, scorecard=None, CHUNKSI
     if scorecard is None:
         scorecard = Scorecard()
 
-    subsite, node, sensor = instrument.split('-', 3)
+    subsite, node, sensor = instrument.split('-', 2)
     metadata = edex_tools.get_edex_metadata('localhost', subsite, node, sensor)
 
     for stream in expected_results:

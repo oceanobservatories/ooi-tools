@@ -37,7 +37,7 @@
             <doTry>
                 <pipeline>
                     <bean ref="{{row.name}}_{{row.suffix}}Processor" />
-                    <to uri="vm:generate" />
+                    <to uri="vm:generate?concurrentConsumers=10" />
                 </pipeline>
                 <doCatch>
                     <exception>java.lang.Throwable</exception>
