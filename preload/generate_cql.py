@@ -1,14 +1,28 @@
 #!/usr/bin/env python
 import codecs
-
 import os
+import shutil
 import sqlite3
 import logging
 import jinja2
-from parse_preload import create_db, load_paramdicts, load_paramdefs
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from config import SQLALCHEMY_DATABASE_URI
+from model.preload import Stream
 
+engine = create_engine(SQLALCHEMY_DATABASE_URI)
+Session = sessionmaker(bind=engine)
+session = Session()
 
-dbfile = 'preload.db'
+DROP_KEYSPACE = 'drop keyspace ooi;\n\n'
+
+CREATE_KEYSPACE = "create keyspace ooi with replication = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };\n\n"
+
+CREATE_METADATA = '''create table ooi.stream_metadata
+( subsite text, node text, sensor text, method text, stream text, count bigint, first double, last double,
+primary key ((subsite, node, sensor), method, stream));
+
+'''
 
 
 def get_logger():
@@ -67,6 +81,7 @@ java_promoted_map = {
 map = {
 #    ('blob', 'array<quantity>'): ('blob', 'ByteBuffer', 'Byte'),
     ('int', 'category<int8:str>'): ('int', 'int', 'int', 'Integer', False),
+    ('int', 'category<uint8:str>'): ('int', 'int', 'int', 'Integer', False),
     ('int', 'boolean'): ('int', 'int', 'int', 'Integer', False),
     ('int', 'quantity'): ('int', 'int', 'int', 'Integer', False),
     ('int', 'array<quantity>'): ('blob', 'ByteBuffer', 'int', 'Integer', True),
@@ -78,6 +93,7 @@ map = {
     ('text', 'array<quantity>'): ('list<text>', 'List<String>', 'String', 'String', True),
 }
 
+
 def camelize(s, skipfirst=False):
     parts = s.split('_')
     if skipfirst:
@@ -85,6 +101,7 @@ def camelize(s, skipfirst=False):
     else:
         parts = [x.capitalize() for x in parts]
     return ''.join(parts)
+
 
 class Column(object):
     def __init__(self):
@@ -102,26 +119,31 @@ class Column(object):
     def parse(self, param):
         self.set_name(param.name)
         # preferred timestamp is enum in preload, string in practice
+
+        value_encoding = param.value_encoding.value if param.value_encoding is not None else None
+        parameter_type = param.parameter_type.value if param.parameter_type is not None else None
+        fill_value = param.fill_value.value if param.fill_value is not None else None
+
         if self.name == 'preferred_timestamp':
             value_encoding = 'text'
         else:
-            value_encoding = cql_parameter_map.get(param.value_encoding)
+            value_encoding = cql_parameter_map.get(value_encoding)
 
-        if map.get((value_encoding, param.parameter_type)) is None:
-            log.error('unknown encoding type for parameter: %s', param)
+        if map.get((value_encoding, parameter_type)) is None:
+            log.error('unknown encoding type for parameter: %d %s %s', param.id, value_encoding, parameter_type)
             self.valid = False
             return
 
         self.cqltype, self.javatype, self.filltype, self.java_object, self.islist = map.get((value_encoding,
-                                                                                             param.parameter_type))
+                                                                                             parameter_type))
 
-        if 'sparse' in param.parameter_type:
+        if 'sparse' in parameter_type:
             self.sparse = True
 
         if self.javatype in ['int', 'long', 'double', 'BigInteger']:
             self.numeric = True
 
-        self.fillvalue = param.fill_value
+        self.fillvalue = fill_value
 
         if self.java_object == 'Double':
             # ignore preload, this will always be NaN
@@ -166,10 +188,10 @@ class Column(object):
 
 
 class Table(object):
-    def __init__(self, name, params):
-        self.name = name.strip()
+    def __init__(self, stream):
+        self.name = stream.name
         self.classname = camelize(self.name, skipfirst=False)
-        self.params = params
+        self.params = stream.parameters
         self.basecolumns = ['driver_timestamp', 'ingestion_timestamp', 'internal_timestamp',
                             'preferred_timestamp', 'time', 'port_timestamp']
         self.valid = True
@@ -178,12 +200,14 @@ class Table(object):
         self.build_columns()
 
     def build_columns(self):
+        # sort in name alphabetical order (retrieved in numerical order by ID)
         params = [(p.name, p) for p in self.params]
         params.sort()
         params = [p[1] for p in params]
+
         for param in params:
             # function? skip
-            if param.name in self.basecolumns or param.parameter_type == 'function':
+            if param.name in self.basecolumns or param.parameter_type.value == 'function':
                 continue
             column = Column()
             column.parse(param)
@@ -208,35 +232,27 @@ class Table(object):
                 break
 
 
-def massage_value(x):
-    if x is None:
-        return ''
-    return unicode(x.strip())
-
-
-def generate(stream_dict, param_dict, java_template, cql_template, mapper_template):
+def generate(java_template, cql_template, cql_drop_template, mapper_template):
     for d in ['cql', 'java/tables']:
         if not os.path.exists(d):
             os.makedirs(d)
 
     tables = []
     with codecs.open('cql/all.cql', 'wb', 'utf-8') as all_cql_fh:
-        for stream in stream_dict.itervalues():
-            if stream.parameter_ids is not None:
-                params = []
-                for param in stream.parameter_ids.split(','):
-                    param = param_dict.get(param)
-                    if param is None:
-                        continue
-                    params.append(param)
-                t = Table(stream.name, params)
-                tables.append(t)
-                all_cql_fh.write(cql_template.render(table=t))
-                all_cql_fh.write('\n\n')
-                with codecs.open('java/tables/%s.java' % t.classname, 'wb', 'utf-8') as fh:
-                    fh.write(java_template.render(table=t))
-                with codecs.open('cql/%s.cql' % t.name, 'wb', 'utf-8') as fh:
-                    fh.write(cql_template.render(table=t))
+        all_cql_fh.write(DROP_KEYSPACE)
+        all_cql_fh.write(CREATE_KEYSPACE)
+        all_cql_fh.write(CREATE_METADATA)
+        streams = session.query(Stream).all()
+        for stream in streams:
+            t = Table(stream)
+            tables.append(t)
+            all_cql_fh.write(cql_template.render(table=t))
+            all_cql_fh.write('\n\n')
+            with codecs.open('java/tables/%s.java' % t.classname, 'wb', 'utf-8') as fh:
+                fh.write(java_template.render(table=t))
+            with codecs.open('cql/%s.cql' % t.name, 'wb', 'utf-8') as fh:
+                fh.write(cql_drop_template.render(table=t) + '\n\n')
+                fh.write(cql_template.render(table=t))
 
     # sort the list of tables by name for the mapper class
     tables = [(table.name, table) for table in tables]
@@ -246,21 +262,22 @@ def generate(stream_dict, param_dict, java_template, cql_template, mapper_templa
         mapper_fh.write(mapper_template.render(tables=tables))
 
 
+def cleanup():
+    dirs = ['cql', 'java']
+    for d in dirs:
+        if os.path.exists(d) and os.path.isdir(d):
+            shutil.rmtree(d)
+
+
 def main():
-    templateLoader = jinja2.FileSystemLoader(searchpath="templates")
-    templateEnv = jinja2.Environment(loader=templateLoader, trim_blocks=True, lstrip_blocks=True)
-    java_template = templateEnv.get_template('java.jinja')
-    cql_template = templateEnv.get_template('cql.jinja')
-    mapper_template = templateEnv.get_template('mapper.jinja')
-
-    if not os.path.exists(dbfile):
-        conn = sqlite3.connect(dbfile)
-        create_db(conn)
-
-    conn = sqlite3.connect(dbfile)
-    stream_dict = load_paramdicts(conn)[1]
-    param_dict = load_paramdefs(conn)
-    generate(stream_dict, param_dict, java_template, cql_template, mapper_template)
+    loader = jinja2.FileSystemLoader(searchpath="templates")
+    env = jinja2.Environment(loader=loader, trim_blocks=True, lstrip_blocks=True)
+    java_template = env.get_template('java.jinja')
+    cql_template = env.get_template('cql.jinja')
+    cql_drop_template = env.get_template('cql_drop.jinja')
+    mapper_template = env.get_template('mapper.jinja')
+    cleanup()
+    generate(java_template, cql_template, cql_drop_template, mapper_template)
 
 
 main()

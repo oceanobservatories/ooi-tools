@@ -1,15 +1,17 @@
 #!/usr/bin/env python
-import codecs
 
-import os
-import sqlite3
+import codecs
 import logging
-import sys
-from parse_preload import create_db, load_paramdicts, load_paramdefs
 from xml.etree.ElementTree import Element, SubElement, tostring
 from xml.dom import minidom
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from config import SQLALCHEMY_DATABASE_URI
+from model.preload import Stream, Parameter
 
-dbfile = 'preload.db'
+engine = create_engine(SQLALCHEMY_DATABASE_URI)
+Session = sessionmaker(bind=engine)
+session = Session()
 
 streams_template = '''<?xml version="1.0" encoding="UTF-8"?>
 <streamDefinitions>
@@ -20,7 +22,7 @@ stream_template = '''  <streamDefinition streamName="%s">
 %s
   </streamDefinition>'''
 
-stream_param_template = '''    <parameterId>%s</parameterId> <!-- %s -->'''
+stream_param_template = '''    <parameterId>PD%d</parameterId> <!-- %s -->'''
 
 
 def get_logger():
@@ -51,54 +53,35 @@ def massage_value(x):
     return unicode(x.strip())
 
 
-def streams_to_xml(stream_dict, param_dict, outputfile):
+def streams_to_xml(outputfile):
+    streams = session.query(Stream).all()
     rendered_streams = []
-    for stream in stream_dict.itervalues():
+    for stream in streams:
+        params = stream.parameters
         rendered_params = []
-        params = stream.parameter_ids
-        if params is None: continue
-        params = params.split(',')
-        for param_id in params:
-            param = param_dict.get(param_id.strip())
+        for param in params:
+            rendered_params.append(stream_param_template % (param.id, param.name))
 
-            if param is None:
-                rendered_params.append(stream_param_template % (param_id.strip(), "NOT FOUND"))
-            else:
-                if not param.name.strip() in ['time', 'ingestion_timestamp']:
-                    rendered_params.append(stream_param_template % (param.id.strip(), param.name.strip()))
         rendered_streams.append(stream_template % (stream.name, '\n'.join(rendered_params)))
     output = streams_template % '\n'.join(rendered_streams)
     outputfile.write(output)
 
 
-# 'id, scenario, hid, parameter_type, value_encoding, units, display_name, precision, '
-# 'parameter_function_id, parameter_function_map, dpi'
-def params_to_xml(param_dict, outputfile):
+def params_to_xml(outputfile):
     root = Element('parameterContainer')
-    for param in param_dict.itervalues():
-        SubElement(root, 'parameter',
-                   attrib={'pd_id': massage_value(param.id),
-                           'name': massage_value(param.name),
-                           'type': massage_value(param.parameter_type),
-                           'unit': massage_value(param.units),
-                           'fill': massage_value(param.fill_value),
-                           'encoding': massage_value(param.value_encoding),
-                           'precision': massage_value(param.precision)}
-        )
+    for param in session.query(Parameter).all():
+        d = param.asdict()
+        for k in d:
+            if d[k] is None:
+                d[k] = u''
+            else:
+                d[k] = unicode(d[k])
+        SubElement(root, 'parameter', attrib=d)
     outputfile.write(
         minidom.parseString(tostring(root, encoding='UTF-8')).toprettyxml())
 
-def main():
-    if not os.path.exists(dbfile):
-        conn = sqlite3.connect(dbfile)
-        create_db(conn)
 
-    conn = sqlite3.connect(dbfile)
-    stream_dict = load_paramdicts(conn)[1]
-    param_dict = load_paramdefs(conn)
-    streams_to_xml(stream_dict, param_dict, codecs.open('streams.xml', 'w', encoding='utf-8'))
-    params_to_xml(param_dict, codecs.open('params.xml', 'w', encoding='utf-8'))
-
-
-main()
+if __name__ == '__main__':
+    streams_to_xml(codecs.open('streams.xml', 'w', encoding='utf-8'))
+    params_to_xml(codecs.open('params.xml', 'w', encoding='utf-8'))
 

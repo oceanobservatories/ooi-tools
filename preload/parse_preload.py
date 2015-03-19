@@ -1,281 +1,221 @@
 #!/usr/bin/env python
-"""
-    Usage:
-        ./parse_preload.py [--rebuild] [--key=key]
-"""
-from collections import namedtuple, Counter
 import json
-
 import os
-import sqlite3
-import logging
-import gdata.spreadsheet.service
-import docopt
+import gdata.spreadsheet.service as service
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from model.preload import Stream, Base
+from model.preload import ParameterFunction
+from model.preload import FunctionType
+from model.preload import Parameter
+from model.preload import ParameterType
+from model.preload import ValueEncoding
+from model.preload import CodeSet
+from model.preload import Unit
+from model.preload import FillValue
 
-__author__ = 'pcable'
+from config import SPREADSHEET_KEY
+from config import SQLALCHEMY_DATABASE_URI
+from config import USE_CACHED_SPREADSHEET
 
-key = '1jIiBKpVRBMU5Hb1DJqyR16XCkiX-CuTsn1Z1VnlRV4I'
 
-IA_SELECT = """
-SELECT id, scenario, iadriveruri, iadrivermodule, iadriverclass, streamconfigurations, agentdefaultconfig
-FROM instrumentagent
-WHERE id like 'IA%%'
-"""
+key = SPREADSHEET_KEY
+use_cache = USE_CACHED_SPREADSHEET
+cachedir = '.cache'
 
-STREAM_SELECT = """
-SELECT id, scenario, cfgstreamtype, cfgstreamname, cfgparameterdictionaryname
-FROM streamconfiguration
-WHERE id like 'SC%'
-"""
+engine = create_engine(SQLALCHEMY_DATABASE_URI)
+Session = sessionmaker(bind=engine)
+session = Session()
 
-PARAMDICT_SELECT = """
-SELECT id, scenario, name, parameterids, temporalparameter
-FROM parameterdictionary
-WHERE id like 'DICT%'
-"""
+IGNORE_SCENARIOS = ['VOID', 'TEST', 'LC_TEST', 'JN', 'ANTELOPE', 'xADCPSL_CSTL', 'EXAMPLE1', 'EXAMPLE2', 'NOSE']
 
-PARAMDEF_SELECT = """
-SELECT id, scenario, name, hid, parametertype, valueencoding, unitofmeasure, fillvalue, displayname,
-        precision, parameterfunctionid, parameterfunctionmap, dataproductidentifier
-FROM parameterdefs
-WHERE id like 'PD%'
-"""
 
-temp = 'temp.xlsx'
-dbfile = 'preload.db'
+def sheet_generator(name):
+    cache_path = os.path.join(cachedir, name)
+    rows = []
+    if use_cache and os.path.exists(cache_path):
+        try:
+            rows.extend(json.load(open(cache_path)))
+            print 'used cache'
+            for row in rows:
+                yield row
+            return
+        except:
+            pass
 
-def get_logger():
-    logger = logging.getLogger('driver_control')
-    logger.setLevel(logging.DEBUG)
-
-    # create console handler and set level to debug
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-
-    # create formatter
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-    # add formatter to ch
-    ch.setFormatter(formatter)
-
-    # add ch to logger
-    logger.addHandler(ch)
-    return logger
-
-log = get_logger()
-
-def sheet_generator():
-    client = gdata.spreadsheet.service.SpreadsheetsService()
-    sheets = {}
+    print 'fetching from google'
+    client = service.SpreadsheetsService()
     for sheet in client.GetWorksheetsFeed(key, visibility='public', projection='basic').entry:
         title = sheet.title.text
-        id = sheet.id.text.split('/')[-1]
+        rowid = sheet.id.text.split('/')[-1]
 
-        log.debug('Fetching sheet %s from googles', title)
-        rows = []
-        for x in client.GetListFeed(key, id, visibility='public', projection='values').entry:
-            d = {}
-            for k, v in x.custom.items():
-                if v.text is not None:
-                    d[k] = v.text.strip()
+        if title == name:
+            for x in client.GetListFeed(key, rowid, visibility='public', projection='values').entry:
+                d = {}
+                for k, v in x.custom.items():
+                    if v.text is not None:
+                        d[k] = v.text.strip()
+                    else:
+                        d[k] = None
+
+                rows.append(d)
+                yield d
+
+    if use_cache and not os.path.exists(cachedir):
+        os.makedirs(cachedir)
+    if use_cache:
+        print 'Caching data for future runs'
+        json.dump(rows, open(cache_path, 'wb'))
+
+
+def get_simple_field(field_class, value):
+    if value is None:
+        return value
+    item = session.query(field_class).filter(field_class.value == value).first()
+    if item is None:
+        item = field_class(value=value)
+        session.add(item)
+        session.commit()
+
+    return item
+
+
+def validate_parameter_row(row):
+    mandatory = ['id', 'name', 'parametertype', 'valueencoding']
+    for field in mandatory:
+        if row.get(field) is None:
+            return False
+
+    if not row.get('id').startswith('PD'):
+        return False
+
+    if row.get('scenario') is not None:
+        scenarios = [s.strip() for s in row.get('scenario').split(',')]
+        for scenario in scenarios:
+            if scenario in IGNORE_SCENARIOS:
+                return False
+
+    return True
+
+
+def validate_stream_row(row):
+    mandatory = ['id', 'name', 'parameterids']
+    for field in mandatory:
+        if row.get(field) is None:
+            return False
+
+    if not row.get('id').startswith('DICT'):
+        return False
+
+    if row.get('scenario') is not None:
+        scenarios = [s.strip() for s in row.get('scenario').split(',')]
+        for scenario in scenarios:
+            if scenario in IGNORE_SCENARIOS:
+                return False
+
+    return True
+
+
+def validate_parameter_func_row(row):
+    mandatory = ['id', 'name', 'functiontype', 'function']
+    for field in mandatory:
+        if row.get(field) is None:
+            return False
+
+    if not row.get('id').startswith('PFID'):
+        return False
+
+    scenario = row.get('scenario')
+    if scenario is not None and 'VOID' in scenario:
+        return False
+
+    return True
+
+
+def get_function(pfid):
+    return session.query(ParameterFunction).get(pfid)
+
+
+def get_parameter(pdid):
+    return session.query(Parameter).get(pdid)
+
+
+def process_parameters(sheet):
+    print 'Processing parameters'
+    for row in sheet:
+        if validate_parameter_row(row):
+            parameter = Parameter()
+            parameter.id = int(row.get('id')[2:])
+            parameter.name = row.get('name')
+            parameter.parameter_type = get_simple_field(ParameterType, row.get('parametertype'))
+            parameter.value_encoding = get_simple_field(ValueEncoding, row.get('valueencoding'))
+            parameter.code_set = get_simple_field(CodeSet, row.get('codeset'))
+            parameter.unit = get_simple_field(Unit, row.get('unitofmeasure'))
+            parameter.fill_value = get_simple_field(FillValue, row.get('fillvalue'))
+            parameter.display_name = row.get('displayname')
+            parameter.precision = row.get('precision')
+            parameter.data_product_identifier = row.get('dataproductidentifier')
+            parameter.description = row.get('description')
+            if row.get('parameterfunctionid') is not None:
+                id = row.get('parameterfunctionid')
+                if id.startswith('PFID'):
+                    parameter.parameter_function = get_function(int(id[4:]))
+
+            if row.get('parameterfunctionmap') is not None:
+                try:
+                    param_map = row.get('parameterfunctionmap')
+                    parameter.parameter_function_map = eval(param_map)
+                except SyntaxError as e:
+                    print row.get('id'), e
+
+            session.add(parameter)
+    session.commit()
+
+
+def process_parameter_funcs(sheet):
+    print 'Processing parameter functions'
+    for row in sheet:
+        if validate_parameter_func_row(row):
+            func = ParameterFunction()
+            func.id = int(row.get('id')[4:])
+            func.name = row.get('name')
+            func.function_type = get_simple_field(FunctionType, row.get('functiontype'))
+            func.function = row.get('function')
+            func.owner = row.get('owner')
+            func.description = row.get('description')
+            session.add(func)
+    session.commit()
+
+
+def process_streams(sheet):
+    print 'Processing streams'
+    common_fields = [7, 10, 11, 12, 16, 863]
+    for row in sheet:
+        if validate_stream_row(row):
+            stream = Stream()
+            stream.id = int(row.get('id')[4:])
+            stream.name = row.get('name')
+            params = row.get('parameterids').split(',')
+            params = common_fields + [int(p.strip()[2:]) for p in params if p.startswith('PD')]
+            params = sorted(list(set(params)))
+            for each in params:
+                parameter = get_parameter(each)
+                if parameter is not None:
+                    stream.parameters.append(parameter)
                 else:
-                    d[k] = None
-            rows.append(d)
-        yield title, rows
+                    print "ACK! missing parameter: %d for stream: %s" % (each, stream.name)
+            if len(stream.parameters) > 0:
+                session.add(stream)
 
-def get_parameters(param_list, param_dict):
-    params = {}
-    for param in param_list:
-        param = param_dict.get(param)
-        if param is None: return
-        params[param['Name']] = param
-    return params
+    session.commit()
 
-def sanitize_for_sql(row):
-    subs = {
-        ' ': '_',
-        '-': '_',
-        '/': '_',
-        '(': '',
-        ')': '',
-    }
-    new_row = []
-    for val in row:
-        for x,y in subs.iteritems():
-            val = val.replace(x,y)
-        new_row.append(val)
-    return new_row
 
-def sanitize_names(name):
-    subs = {
-        'Constraint': 'Constraints',
-    }
-    return subs.get(name, name)
-
-def create_table(conn, name, row):
-    row = sanitize_for_sql(row)
-    log.debug('CREATE TABLE: %s %r', name, row)
-    c = conn.cursor()
-    try:
-        c.execute('DROP TABLE %s' % name)
-    except:
-        pass
-    c.execute('CREATE TABLE %s (%s)' % (name, ', '.join(row)))
-    conn.commit()
-
-def populate_table(conn, name, rows):
-    log.debug('POPULATE TABLE: %s NUM ROWS: %d', name, len(rows))
-    keys = rows[0].keys()
-    values = [[r[k] for k in keys] for r in rows]
-    c = conn.cursor()
-    c.executemany('INSERT INTO %s (%s) VALUES (%s)' % (name, ','.join(keys), ','.join(['?']*len(keys))), values)
-    conn.commit()
-
-def create_db(conn):
-    sheets_to_process = ['parameterdefs', 'parameterfunctions', 'parameterdictionary']
-    for name, sheet in sheet_generator():
-        if name.lower() in sheets_to_process:
-            log.debug('Creating table: %s', name)
-            name = sanitize_names(name)
-            create_table(conn, name, sheet[0].keys())
-            populate_table(conn, name, sheet[1:])
-
-def test_param_function_map(conn):
-    c = conn.cursor()
-    c.execute("select id,parameterfunctionmap from parameterdefs where parameterfunctionmap not like ''")
-    for row in c:
-        try:
-            if row[0].startswith('PD'):
-                obj = eval(row[1])
-                json_string = json.dumps(obj)
-                # log.error('PARSED %s %s %r %r %r', str(row[1]) == json_string, row[0], row[1], obj, json_string)
-                # c.execute("update parameterdefs set parameter_function_map=%s where id='%r'" % (json_string, row[0]))
-        except Exception as e:
-            log.error('ERROR PARSING %s %r %s', row[0], row[1], e)
-
-ParameterDef = namedtuple('ParameterDef',
-                          'id, scenario, name, hid, parameter_type, value_encoding, units, fill_value, '
-                          'display_name, precision, parameter_function_id, parameter_function_map, dpi')
-# CREATE TABLE ParameterDefs (Scenario, confluence, Name, ID, HID, HID_Conflict, Parameter_Type, Value_Encoding,
-# Code_Set, Unit_of_Measure, Fill_Value, Display_Name, Precision, visible, Parameter_Function_ID,
-# Parameter_Function_Map, Lookup_Value, QC_Functions, Standard_Name, Data_Product_Identifier, Reference_URLS,
-# Description, Review_Status, Review_Comment, Long_Name, SKIP);
-def load_paramdefs(conn):
-    log.debug('Loading Parameter Definitions')
-    c = conn.cursor()
-    c.execute(PARAMDEF_SELECT)
-    params = map(ParameterDef._make, c.fetchall())
-    param_dict = {x.id:x for x in params}
-    check_for_dupes(params, "id")
-    check_for_dupes(params, "hid")
-    return param_dict
-
-ParameterDictionary = namedtuple('ParameterDictionary', 'id, scenario, name, parameter_ids, temporal_parameter')
-# CREATE TABLE ParameterDictionary (Scenario, ID, confluence, name, parameter_ids,
-# temporal_parameter, parameters, Review_Status, SKIP);
-def load_paramdicts(conn):
-    log.debug('Loading Parameter Dictionary')
-    c = conn.cursor()
-    c.execute(PARAMDICT_SELECT)
-    params = map(ParameterDictionary._make, c.fetchall())
-    param_dicts_by_id = {p.id:p for p in params}
-    param_dicts_by_name = {p.name:p for p in params}
-    check_for_dupes(params, 'id')
-    check_for_dupes(params, 'name')
-
-    return param_dicts_by_id, param_dicts_by_name
-
-StreamConfig = namedtuple('StreamConfig', 'id, scenario, stream_type, stream_name, dict_name')
-# CREATE TABLE StreamConfiguration (Scenario, COMMENT, ID, cfg_stream_type,
-# cfg_stream_name, cfg_parameter_dictionary_name, attr_display_name, comment2);
-def load_streams(conn):
-    log.debug('Loading Stream Configurations')
-    c = conn.cursor()
-    c.execute(STREAM_SELECT)
-    streams = map(StreamConfig._make, c.fetchall())
-    stream_dict = {stream.id:stream for stream in streams}
-    check_for_dupes(streams, 'id')
-    return stream_dict
-
-def check_streams(agent, streams, dicts, defs):
-    stream_names = []
-    for stream in agent.streams.split(','):
-        stream = streams.get(stream)
-        if stream is None:
-            log.error('UNDEFINED STREAM: %s', stream)
-            continue
-        if not agent.scenario in stream.scenario.split(','):
-            if not 'BETA' in stream.scenario.split(','):
-                log.error('Scenario %s missing from %s', agent.scenario, stream)
-        stream_names.append(stream.stream_name)
-        paramdict = dicts.get(stream.stream_name)
-        if paramdict is None:
-            log.error('Unable to find stream %s in ParameterDictionary', stream.stream_name)
-        for param in paramdict.parameter_ids.split(','):
-            paramdef = defs.get(param)
-            if paramdef is None:
-                log.error('Unable to find param: %s from stream: %s', param, stream.stream_name)
-                continue
-            check_for_missing_values(paramdef,
-                                     ['dpi', 'parameter_function_id', 'parameter_function_map','units', 'precision'])
-    return stream_names
-
-def check_agent_config(agent, stream_names):
-    config = agent.config.split(',')
-    my_stream_names = []
-    try:
-        config_dict = {each.split(':')[0]:each.split(':')[1] for each in config}
-        for k,v in config_dict.iteritems():
-            if k != k.strip():
-                # log.warn('Whitespace in agent_default_config [%s] entry could break naive parsing! %s',
-                #          agent.id, config_dict)
-                pass
-            try:
-                v = int(v)
-            except:
-                log.error('Non-numeric value on right-hand-side of agent [%s] config entry %s',
-                          agent.id, config_dict)
-            my_stream_names.append(k.strip().split('.')[-1])
-
-    except Exception as e:
-        log.error(e)
-        log.error('Unparseable agent_default_config: %s', agent)
-
-    stream_names.sort()
-    my_stream_names.sort()
-    if my_stream_names != stream_names:
-        log.error('Mismatch in streams for agent [%s] %s %s', agent.id, my_stream_names, stream_names)
-
-def check_for_missing_values(data, optional=None):
-    if optional is None:
-        optional = []
-    for k, v in data._asdict().iteritems():
-        if k in optional: continue
-        if v is None:
-            log.warn('Missing value (%s) from %s %s', k, type(data).__name__, data.id)
-
-def check_for_dupes(data, field):
-    name = type(data[0]).__name__
-    counter = Counter([getattr(each, field) for each in data])
-    for k, v in counter.iteritems():
-        if v > 1:
-            log.warn('Duplicate record found [%s][%s] ID: %s COUNT: %d', name, field, k, v)
-
-def main():
-    global key
-    options = docopt.docopt(__doc__)
-    if options['--key'] is not None:
-        key = options['--key']
-    log.debug('Opening database...')
-
-    if options['--rebuild'] or not os.path.exists(dbfile):
-        conn = sqlite3.connect(dbfile)
-        create_db(conn)
-
-    conn = sqlite3.connect(dbfile)
-    test_param_function_map(conn)
+def create_db():
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
+    process_parameter_funcs(sheet_generator('ParameterFunctions'))
+    process_parameters(sheet_generator('ParameterDefs'))
+    process_streams(sheet_generator('ParameterDictionary'))
 
 if __name__ == '__main__':
-    main()
-
-
+    create_db()
