@@ -1,0 +1,5 @@
+endpoint: parad-n-auv_telemetered
+instrument: parad-n-auv_telemetered
+pairs:
+- [subset_reduced.csv, parad_n_auv_telem_22.yml]
+resource: parad_n/auv/resource/
