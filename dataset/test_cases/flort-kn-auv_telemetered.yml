@@ -1,0 +1,5 @@
+endpoint: flort-kn-auv_telemetered
+instrument: flort-kn-auv_telemetered
+pairs:
+- [subset_reduced.csv, flort_kn_auv_telem_45.yml]
+resource: flort_kn/auv/resource/
