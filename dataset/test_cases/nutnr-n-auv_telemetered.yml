@@ -1,0 +1,5 @@
+endpoint: nutnr-n-auv_telemetered
+instrument: nutnr-n-auv_telemetered
+pairs:
+- [subset2_reduced.csv, nutnr_n_auv_telem_23.yml]
+resource: nutnr_n/auv/resource/
