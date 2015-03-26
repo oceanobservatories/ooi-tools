@@ -1,0 +1,5 @@
+endpoint: adcpa-n_recovered
+instrument: adcpa-n_recovered
+pairs:
+- [adcp_auv_51.pd0, adcp_auv_51.yml]
+resource: adcpa_n/resource/
