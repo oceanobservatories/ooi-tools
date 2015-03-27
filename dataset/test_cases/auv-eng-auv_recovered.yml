@@ -1,0 +1,5 @@
+endpoint: auv-eng-auv_recovered
+instrument: auv-eng-auv_recovered
+pairs:
+- [subset2_reduced.csv, subset2_reduced_recov.yml]
+resource: auv_eng/auv/resource

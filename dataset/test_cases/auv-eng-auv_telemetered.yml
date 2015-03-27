@@ -1,0 +1,5 @@
+endpoint: auv-eng-auv_telemetered
+instrument: auv-eng-auv_telemetered
+pairs:
+- [subset2_reduced.csv, subset2_reduced_telem.yml]
+resource: auv_eng/auv/resource
