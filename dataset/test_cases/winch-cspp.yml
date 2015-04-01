@@ -1,0 +1,5 @@
+endpoint: winch-cspp_telemetered 
+instrument: winch-cspp_telemetered
+pairs:
+- [20141114-194242-WINCH_2.LOG, winch_cspp_test_data.yml]
+resource: winch_cspp/resource
