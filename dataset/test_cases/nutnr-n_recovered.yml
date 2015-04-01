@@ -1,0 +1,5 @@
+endpoint: nutnr-n_recovered
+instrument: nutnr-n_recovered
+pairs:
+- [suna_long.sun, suna_long.yml]
+resource: nutnr_n/resource

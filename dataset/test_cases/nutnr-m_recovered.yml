@@ -1,0 +1,5 @@
+endpoint: nutnr-m_recovered
+instrument: nutnr-m_recovered
+pairs:
+- [nl_long.bin, nl_long.yml]
+resource: nutnr_m/resource

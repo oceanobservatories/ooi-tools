@@ -1,0 +1,5 @@
+endpoint: nutnr-m-glider_telemetered
+instrument: nutnr-m-glider_telemetered
+pairs:
+- [many.mrg, many.yml]
+resource: nutnr_m/glider/resource
