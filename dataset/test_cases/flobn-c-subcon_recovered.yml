@@ -1,0 +1,5 @@
+endpoint: flobn-c-subcon_recovered
+instrument: flobn-c-subcon_recovered
+pairs:
+- [FLOBN-C_Sample_Record_ver_0-05.csv, FLOBN-C_Sample_Record_ver_0-05.yml]
+resource: flobn/resource
