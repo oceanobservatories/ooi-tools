@@ -1,0 +1,5 @@
+endpoint: rasfl-a-subcon_recovered
+instrument: rasfl-a-subcon_recovered
+pairs:
+- [rasfl_chemdata_example.csv, rasfl_chemdata_example.yml]
+resource: rasfl/resource

@@ -1,0 +1,5 @@
+endpoint: flobn-m-subcon-temperature_recovered
+instrument: flobn-m-subcon-temperature_recovered
+pairs:
+- [FLOBN-M_Temp_Record_ver_0-05.csv, FLOBN-M_Temp_Record_ver_0-05.yml]
+resource: flobn/resource

@@ -1,0 +1,5 @@
+endpoint: ppsdn-a-subcon_recovered
+instrument: ppsdn-a-subcon_recovered
+pairs:
+- [ppsdn_gendata_example.csv, ppsdn_gendata_example.yml]
+resource: ppsdn/resource

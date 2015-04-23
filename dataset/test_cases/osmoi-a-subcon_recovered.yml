@@ -1,0 +1,5 @@
+endpoint: osmoi-a-subcon_recovered
+instrument: osmoi-a-subcon_recovered
+pairs:
+- [osmoi_chemdata_example.csv, osmoi_chemdata_example.yml]
+resource: osmoi/resource
