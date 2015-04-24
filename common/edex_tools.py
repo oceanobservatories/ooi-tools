@@ -455,7 +455,10 @@ def compare(stored, expected, metadata, ignore_nulls=False, lookup_preferred_tim
 
         matches = []
         for each in stored.get((stream_name, timestamp), []):
-            if each['stream_name'] == stream_name and each['timestamp'] == timestamp:
+            stored_name = each.get('stream_name')
+            if stored_name is None:
+                stored_name = each.get('pk', {}).get('stream_name')
+            if stored_name == stream_name and each['timestamp'] == timestamp:
                 f, errors = diff(stream_name, record, each, metadata, ignore_nulls=ignore_nulls)
                 matches.append((len(f), each, f, errors))
 
