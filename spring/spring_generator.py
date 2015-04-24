@@ -94,7 +94,7 @@ class Row(object):
         self.context = row_dict.get('context')
         self.name = row_dict.get('name')
         self.suffix = row_dict.get('suffix')
-        self.driver = row_dict.get('driver')
+        self.driver = row_dict.get('driver').replace("/",".")[:-3]
         self.sensor = row_dict.get('sensor')
         self.regex = row_dict.get('regex')
         self.resource = row_dict.get('resource')
