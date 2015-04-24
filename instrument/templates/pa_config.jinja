@@ -1,0 +1,18 @@
+log_dir pa_logs
+pid_dir pa_pids
+data_dir pa_data
+instrument_type {{instrument_type}}
+instrument_addr {{instrument_addr}}
+{% if instrument_type == 'rsn' %}
+instrument_data_port {{instrument_data_port}}
+instrument_command_port {{instrument_command_port}}
+{% endif %}
+{% if instrument_type == 'tcp' %}
+instrument_data_port {{instrument_data_port}}
+{% endif %}
+{% if instrument_type == 'botpt' %}
+instrument_data_rx_port {{instrument_data_rx_port}}
+instrument_data_tx_port {{instrument_data_tx_port}}
+{% endif %}
+data_port {{data_port}}
+command_port {{command_port}}
