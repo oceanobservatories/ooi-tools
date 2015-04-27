@@ -23,6 +23,20 @@ CREATE_METADATA = '''create table ooi.stream_metadata
 primary key ((subsite, node, sensor), method, stream));
 
 '''
+CREATE_PROVENANCE = '''
+CREATE TABLE ooi.dataset_l0_provenance (
+subsite text,
+node text,
+sensor text,
+method text,
+deployment int,
+id uuid,
+fileName text,
+parserName text,
+parserVersion text,
+PRIMARY KEY((subsite, node, sensor), method, deployment, id)
+);
+'''
 
 
 def get_logger():
@@ -242,6 +256,7 @@ def generate(java_template, cql_template, cql_drop_template, mapper_template):
         all_cql_fh.write(DROP_KEYSPACE)
         all_cql_fh.write(CREATE_KEYSPACE)
         all_cql_fh.write(CREATE_METADATA)
+        all_cql_fh.write(CREATE_PROVENANCE)
         streams = session.query(Stream).all()
         for stream in streams:
             t = Table(stream)

@@ -12,7 +12,7 @@ CREATE TABLE ooi.{{table.name}} (
     port_timestamp double,
     preferred_timestamp text,
     quality_flag text,
-    provenance int,
+    provenance uuid,
 {% for column in table.columns %}
     {{column.name}} {{column.cqltype}},
 {% endfor %}
