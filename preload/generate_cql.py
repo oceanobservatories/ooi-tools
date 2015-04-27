@@ -38,6 +38,12 @@ PRIMARY KEY((subsite, node, sensor), method, deployment, id)
 );
 '''
 
+CREATE_METADATA_HOURLY = '''create table ooi.stream_metadata_hourly
+( subsite text, node text, sensor text, method text, stream text, count bigint, first double, last double, hour int,
+primary key ((subsite, node, sensor), method, stream, hour));
+
+'''
+
 
 def get_logger():
     logger = logging.getLogger('generate_cql')
@@ -257,6 +263,7 @@ def generate(java_template, cql_template, cql_drop_template, mapper_template):
         all_cql_fh.write(CREATE_KEYSPACE)
         all_cql_fh.write(CREATE_METADATA)
         all_cql_fh.write(CREATE_PROVENANCE)
+        all_cql_fh.write(CREATE_METADATA_HOURLY)
         streams = session.query(Stream).all()
         for stream in streams:
             t = Table(stream)
