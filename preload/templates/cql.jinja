@@ -16,5 +16,5 @@ CREATE TABLE ooi.{{table.name}} (
 {% for column in table.columns %}
     {{column.name}} {{column.cqltype}},
 {% endfor %}
-    PRIMARY KEY((subsite, node, sensor), method, time, id)
+    PRIMARY KEY((subsite, node, sensor), method, time, deployment, id)
 );
