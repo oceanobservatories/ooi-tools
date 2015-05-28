@@ -66,7 +66,7 @@ def create_supervisord_config(name, pa_dict):
     for name in pa_dict:
         each = pa_dict[name]
         group = each['group']
-        groups.setdefault(group, []).append(name)
+        groups.setdefault(group, []).append(each)
     return super_template.render(name=name, groups=groups)
 
 

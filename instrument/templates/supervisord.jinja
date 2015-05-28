@@ -26,15 +26,17 @@ supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
 serverurl=unix://supervisor.sock ; use a unix:// URL  for a unix socket
 
 {% for group in groups %}
-{% for name in groups[group] %}
-[program:{{ name }}]
-command=./port_agent -c configs/{{ name }}.conf -s -v
+{% for config in groups[group] %}
+[program:{{ config.refdes }}]
+;command=./port_agent -c configs/{{ config.refdes }}.conf -s -v
+{% if config.instrument_type == 'rsn' %}
+command=port_agent rsn {{config.data_port}} {{config.command_port}} {{config.instrument_addr}} {{config.instrument_data_port}} {{config.instrument_command_port}} --name={{config.refdes}} --sniff={{config.sniffer_port}}
+{% elif config.instrument_type == 'tcp' %}
+command=port_agent tcp {{config.data_port}} {{config.command_port}} {{config.instrument_addr}} {{config.instrument_data_port}} --name={{config.refdes}} --sniff={{config.sniffer_port}}
+{% elif config.instrument_type == 'botpt' %}
+command=port_agent botpt {{config.data_port}} {{config.command_port}} {{config.instrument_addr}} {{config.instrument_data_rx_port}} {{config.instrument_data_tx_port}} --name={{config.refdes}} --sniff={{config.sniffer_port}}
+{% endif %}
 autostart=false
 
 {% endfor %}
-{% endfor %}
-{% for group in groups %}
-[group:{{ group }}]
-programs={{ ','.join(groups[group]) }}
-
 {% endfor %}
