@@ -228,7 +228,7 @@ def main():
 
     if options['<name>'] is None:
         # return a list of running agents
-        print get_running(options['<host>'])
+        print '\n'.join(get_running(options['<host>']))
         sys.exit()
 
     c = Controller(options['<host>'],
