@@ -196,7 +196,7 @@ class Controller(object):
                 return
         raise Exception('Timed out waiting for state: %s' % state)
 
-    def run_script(self, script):
+    def run_script(self, script, terminate=True):
         self.samples = {}
         try:
             for command, args in script:
@@ -221,7 +221,8 @@ class Controller(object):
                             raise Exception('Exception from driver: %s' % reply['value'])
 
         finally:
-            self.stop_driver()
+            if terminate:
+                self.stop_driver()
 
 def main():
     options = docopt.docopt(__doc__)
