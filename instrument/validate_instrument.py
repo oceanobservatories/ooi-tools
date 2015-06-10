@@ -39,7 +39,7 @@ class TestCase(object):
         self.event_port = config.get('event_port')
         self.port_agent_config = config.get('port_agent_config')
         self.startup_config = config.get('startup_config')
-        self.script = config.get('script')
+        self.script = config.get('script', [])
         self.expected_particles = config.get('expected_particles')
         self.starting_state = config.get('starting_state')
 
@@ -152,16 +152,18 @@ def test(test_case, hostname):
     controller.initialize_driver(test_case.starting_state,
                                  test_case.port_agent_config,
                                  test_case.startup_config)
-    controller.run_script(test_case.script)
-    # ensure ALL particles have been persisted (accumulator currently configured to publish every 5s)
-    time.sleep(5)
-    scorecard[test_case.instrument] = test_results(hostname, test_case.instrument, controller.samples)
 
-    for instrument, card in scorecard.iteritems():
-        print
-        print instrument
-        print
-        print card
+    if len(test_case.script) > 0:
+        controller.run_script(test_case.script)
+        # ensure ALL particles have been persisted (accumulator currently configured to publish every 5s)
+        time.sleep(5)
+        scorecard[test_case.instrument] = test_results(hostname, test_case.instrument, controller.samples)
+
+        for instrument, card in scorecard.iteritems():
+            print
+            print instrument
+            print
+            print card
 
 
 if __name__ == '__main__':
