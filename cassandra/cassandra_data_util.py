@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 Usage:
-  cassandra_data_util.py <dir> (--load|--dump) [--filter=<regex>] [--keyspace=<name>] [--contact=<ip_address>]
+  cassandra_data_util.py <dir> (--load|--dump) [--filter=<regex>] [--keyspace=<name>] [--contact=<ip_address>] [--upgrade=<upgrade_id>]
   cassandra_data_util.py --direct --remote_contact=<ip_address> --remote_keyspace=<name> [--keyspace=<name>] [--contact=<contact>]
 
 Options:
@@ -11,7 +11,7 @@ Options:
 import glob
 import os
 import uuid
-from cassandra.query import dict_factory
+from cassandra.query import dict_factory, _clean_column_name
 from cassandra.cluster import Cluster
 import re
 import msgpack
@@ -20,7 +20,7 @@ import sys
 
 
 def dump_data(directory, filter_string, contact_point, keyspace):
-    cluster = Cluster([contact_point])
+    cluster = Cluster([contact_point], control_connection_timeout=60)
     session = cluster.connect(keyspace)
     session.row_factory = dict_factory
     tables = []
@@ -43,14 +43,18 @@ def dump_data(directory, filter_string, contact_point, keyspace):
         print 'dumping table: %s' % table
         with open('%s.mpk' % table, 'wb') as fh:
             for row in session.execute('select * from %s' % table, timeout=None):
-                row['id'] = str(row['id'])
+                for k in row:
+                    if type(row[k]) == uuid.UUID:
+                        row[k] = str(row[k])
                 fh.write(msgpack.packb(row))
+    session.shutdown()
+    cluster.shutdown()
 
 
-def insert_data(directory, contact_point, keyspace):
+def insert_data(directory, contact_point, keyspace, upgrade_id=None):
     os.chdir(directory)
 
-    cluster = Cluster([contact_point])
+    cluster = Cluster([contact_point], control_connection_timeout=60)
     session = cluster.connect(keyspace)
 
     for mpk in glob.glob('*.mpk'):
@@ -62,13 +66,19 @@ def insert_data(directory, contact_point, keyspace):
             ps = None
             for index, record in enumerate(unpacker):
                 if first:
-                    keys = record.keys()
+                    cols = cluster.metadata.keyspaces[keyspace].tables[tablename].columns
+                    keys = map(_clean_column_name, cols.keys())
+                    uuids = [k for k in keys if cols[k].typestring == 'uuid']
                     ps = session.prepare('insert into %s (%s) values (%s)'
                                          % (tablename, ','.join(keys), ','.join('?' for _ in keys)))
                     first = False
 
-                if 'id' in record:
-                    record['id'] = uuid.UUID(record['id'])
+                for k in uuids:
+                    if record[k] is not None:
+                        record[k] = uuid.UUID(record[k])
+
+                if upgrade_id is not None:
+                    record = upgrade(record, upgrade_id, tablename)
 
                 session.execute(ps, record)
 
@@ -76,6 +86,14 @@ def insert_data(directory, contact_point, keyspace):
                     sys.stdout.write('.')
                     sys.stdout.flush()
             print
+    session.shutdown()
+    cluster.shutdown()
+
+
+def upgrade(record, upgrade, tablename):
+    if upgrade == '5.1-to-5.2' and tablename != 'stream_metadata':
+        record['bin'] = int(record['time'] / (24 * 60 * 60))
+    return record
 
 
 def main():
@@ -84,7 +102,7 @@ def main():
     if options['--dump']:
         dump_data(options['<dir>'], options['--filter'], options['--contact'], options['--keyspace'])
     elif options['--load']:
-        insert_data(options['<dir>'], options['--contact'], options['--keyspace'])
+        insert_data(options['<dir>'], options['--contact'], options['--keyspace'], options['--upgrade'])
     elif options['--direct']:
         print 'not yet implemented'
 
