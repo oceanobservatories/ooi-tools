@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 Usage:
-  cassandra_data_util.py <dir> (--load|--dump) [--filter=<regex>] [--keyspace=<name>] [--contact=<ip_address>] [--upgrade=<upgrade_id>]
+  cassandra_data_util.py <dir> (--load|--dump) [--filter=<regex>] [--keyspace=<name>] [--contact=<ip_address>] [--upgrade=<upgrade_id>] [--preload=<preload>]
   cassandra_data_util.py --direct --remote_contact=<ip_address> --remote_keyspace=<name> [--keyspace=<name>] [--contact=<contact>]
 
 Options:
@@ -17,6 +17,8 @@ import re
 import msgpack
 from docopt import docopt
 import sys
+import numpy
+import struct
 
 
 def dump_data(directory, filter_string, contact_point, keyspace):
@@ -93,11 +95,58 @@ def insert_data(directory, contact_point, keyspace, upgrade_id=None):
 def upgrade(record, upgrade, tablename):
     if upgrade == '5.1-to-5.2' and tablename != 'stream_metadata':
         record['bin'] = int(record['time'] / (24 * 60 * 60))
+        convert_to_msgpack(record)
     return record
+
+
+pname_map = {}
+def convert_to_msgpack(r):
+    for pname in r:
+        data = r[pname]
+        shape_name = pname + '_shape'
+        if shape_name in r:
+            shape = r[shape_name]
+            value_encoding = pname_map.get(pname);
+            if value_encoding is None:
+                from preload_database.model.preload import Parameter
+                p = Parameter.query.filter(Parameter.name == pname).first()
+                value_encoding = p.value_encoding.value
+                pname_map[pname] = value_encoding
+            if value_encoding != 'string':
+                data = handle_byte_buffer(data, value_encoding, shape)
+                r[pname] = msgpack.packb(data.tolist())
+
+
+def handle_byte_buffer(data, encoding, shape):
+    if encoding in ['int8', 'int16', 'int32', 'uint8', 'uint16']:
+        format_string = 'i'
+        count = len(data) / 4
+    elif encoding in ['uint32', 'int64']:
+        format_string = 'q'
+        count = len(data) / 8
+    elif encoding in ['uint64']:
+        format_string = 'Q'
+        count = len(data) / 8
+    elif 'float' in encoding:
+        format_string = 'd'
+        count = len(data) / 8
+    else:
+        raise Exception('Unknown encoding %s' % (encoding))
+
+    data = numpy.array(struct.unpack('>%d%s' % (count, format_string), data))
+    data = data.reshape(shape)
+    return data
 
 
 def main():
     options = docopt(__doc__)
+
+    if options['--preload']:
+        import sys
+        sys.path.append(options['--preload'])
+        import preload_database.database
+        preload_database.database.initialize_connection(preload_database.database.PreloadDatabaseMode.POPULATED_FILE)
+        preload_database.database.open_connection()
 
     if options['--dump']:
         dump_data(options['<dir>'], options['--filter'], options['--contact'], options['--keyspace'])
