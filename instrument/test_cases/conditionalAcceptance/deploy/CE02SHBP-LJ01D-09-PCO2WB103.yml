@@ -1,0 +1,16 @@
+instrument: CE02SHBP-LJ01D-09-PCO2WB103
+module: mi.instrument.sunburst.sami2_pco2.pco2b.driver
+klass: InstrumentDriver
+event_port: 14169
+command_port: 15169
+port_agent_config: 
+  addr: uft20
+  port: 12169
+  cmd_port: 13169
+startup_config:
+  parameters:
+    external_pump_delay: 10
+    bit_switches: 0x01
+expected_particles: [pco2w_b_data_record, pco2w_b_dev1_data_record, pco2w_b_regular_status, pco2w_b_battery_voltage, pco2w_b_thermistor_voltage, pco2w_b_configuration, pco2w_b_sami_data_record]
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:

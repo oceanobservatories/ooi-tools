@@ -1,0 +1,60 @@
+instrument: RS01SUM1-MJ01B-12-ADCPSK101
+module: mi.instrument.teledyne.workhorse.adcp.driver
+klass: InstrumentDriver
+event_port: 14124
+command_port: 15124
+port_agent_config: 
+  addr: uft20
+  port: 12124
+  cmd_port: 13124
+startup_config:
+  parameters:
+            CF : '11110'
+            CH : False
+            CI: 0
+            CL: 0
+            CN: True
+            CP: False
+            CQ: 255
+            EC: 1485
+            EP: 0
+            ER: 0
+            ES: 35
+            EX: '00111'
+            TE: '00:00:00.00'
+            #TG: '00:01.00'
+            WA: '050,001'
+            WB: 0
+            WC: 64
+            WD: '111100000'
+            WE: 2000
+            WF: 704
+            WI: 0
+            WJ: 1
+            WN: 100
+            WP: 1
+            WS: 800
+            WT: 0
+            WU: 0
+            WV: 175
+            CX: 0
+            EA: +00000
+            EB: +00000
+            ED: 8000
+            PD: 0
+            TC: 0
+            WQ: 0
+            TX: '00:00:00'
+expected_particles:
+- adcp_pd0_beam_parsed
+- adcp_pd0_earth_parsed
+- adcp_system_configuration
+- adcp_compass_calibration
+- adcp_ancillary_system_data
+- adcp_transmit_path
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 8]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+#- [sleep, 5]

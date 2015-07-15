@@ -1,0 +1,22 @@
+instrument: RS10ENGC-XX00X-00-TRHPHA001
+module: mi.instrument.uw.bars.ooicore.driver
+klass: InstrumentDriver
+command_port: 14020
+event_port: 15020
+port_agent_config:
+  addr: 128.6.240.37
+  port: 12020
+  cmd_port: 13020
+expected_particles:
+- trhph_sample
+- trhph_status
+startup_config:
+  parameters:
+starting_state: DRIVER_STATE_COMMAND
+#script:
+#- [sleep, 10]
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [sleep, 20]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 86400]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

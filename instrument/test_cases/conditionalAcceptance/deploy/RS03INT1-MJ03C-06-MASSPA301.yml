@@ -1,0 +1,47 @@
+instrument: RS03INT1-MJ03C-06-MASSPA301
+module: mi.instrument.harvard.massp.ooicore.driver
+klass: InstrumentDriver
+event_port: 14152
+command_port: 15152
+port_agent_config:
+    rga:
+       addr: uft20
+       port: 12152
+       cmd_port: 13152
+    turbo:
+       addr: uft20
+       port: 12183
+       cmd_port: 13183
+    mcu:
+       addr: uft20
+       port: 12184
+       cmd_port: 13184
+startup_config:
+  parameters: 
+    massp_sample_interval: 3600
+    mcu_telegram_interval: 30000
+    mcu_sample_time: 10
+    turbo_status_update_interval: 5
+    turbo_max_temp_bearing: 65
+    turbo_max_temp_motor: 90
+    turbo_max_drive_current: 250
+    turbo_min_speed: 80000
+    turbo_target_speed: 90000
+    rga_electron_energy: 70
+    rga_ion_energy: 1
+    rga_focus_voltage: 90
+    rga_noise_floor: 3
+    rga_steps_per_amu: 10
+    rga_initial_mass: 1
+    rga_final_mass: 100
+    rga_filament_emission_set: 1.0
+    rga_high_voltage_cdem: 0
+expected_particles: [massp_mcu_status, massp_turbo_status, massp_rga_status, massp_rga_sample]
+starting_state: DRIVER_STATE_UNKNOWN
+#script:
+#- [wait_state, [DRIVER_STATE_COMMAND, 60]]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [wait_state, [DRIVER_STATE_AUTOSAMPLE, 60]]
+#- [sleep, 14400]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+#- [wait_state, [DRIVER_STATE_COMMAND, 3800]]

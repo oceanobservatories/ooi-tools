@@ -1,0 +1,27 @@
+instrument: CE04OSPS-PC01B-05-ZPLSCB102
+module: mi.instrument.kut.ek60.ooicore.driver
+klass: InstrumentDriver
+event_port: 14176
+command_port: 15176
+#port_agent_config: {} - this is what it should look like
+# adding dummy port agent config for workaround #3373
+port_agent_config:
+  addr: uft20 
+  port: 12176
+  cmd_port: 13176
+startup_config:
+  parameters: 
+#   ftp_ip_address: '128.193.64.201'
+#   ftp_port: '80'
+   ftp_ip_address: '10.33.13.7'
+   ftp_port: 8080
+expected_particles: []
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 60]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+#- [sleep, 5]

@@ -1,0 +1,25 @@
+instrument: RS10ENGC-XX00X-00-CAMDSB001
+module: mi.instrument.kml.cam.camds.driver
+klass: InstrumentDriver
+event_port: 14014
+command_port: 15014
+port_agent_config:
+  addr: 128.6.240.39
+  port: 12014
+  cmd_port: 13014
+startup_config:
+  parameters:
+   camds_video: 1
+   camds_image_metadata: 1
+   camds_health_status: 1
+   camds_disk_status: 1
+expected_particles:
+- camds_video
+- camds_image_metadata
+- camds_health_status
+- camds_disk_status
+starting_state: DRIVER_STATE_COMMAND
+#script:
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

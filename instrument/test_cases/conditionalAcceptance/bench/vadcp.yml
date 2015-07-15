@@ -1,0 +1,31 @@
+instrument: RS10ENGC-XX00X-00-VADCPA011
+module: mi.instrument.teledyne.workhorse.vadcp.driver
+klass: InstrumentDriver
+event_port: 14009
+command_port: 15009
+port_agent_config: 
+    4Beam:
+       addr: uft20 
+       port: 12009
+       cmd_port: 13009
+    5thBeam:
+       addr: uft20 
+       port: 12010
+       cmd_port: 13010
+startup_config:
+  parameters: {}
+expected_particles:
+- vadcp_4beam_system_configuration
+- vadcp_5thbeam_system_configuration
+- vadcp_ancillary_system_data
+- vadcp_transmit_path
+- vadcp_5thbeam_pd0_beam_parsed
+- vadcp_5thbeam_pd0_earth_parsed
+- vadcp_5thbeam_compass_calibration
+starting_state: DRIVER_STATE_COMMAND
+#script:
+#- [execute, PROTOCOL_EVENT_GET_CALIBRATION]
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

@@ -1,0 +1,20 @@
+instrument: RS10ENGC-XX00X-00-VEL3DC001
+module: mi.instrument.nortek.vector.ooicore.driver 
+klass: InstrumentDriver
+event_port: 14012
+command_port: 15012
+port_agent_config:
+  addr: 128.6.240.39
+  port: 12012
+  cmd_port: 13012
+startup_config:
+  parameters: {}
+expected_particles:
+- [vel3d_cd_velocity_data, vel3d_cd_data_header, vel3d_cd_system_data]
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [execute, DRIVER_EVENT_ACQUIRE_SAMPLE]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

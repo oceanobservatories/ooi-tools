@@ -1,0 +1,24 @@
+instrument: RS10ENGC-XX00X-00-PARADA001
+module: mi.instrument.satlantic.par_ser_600m.ooicore.driver
+klass: InstrumentDriver
+event_port: 14019
+command_port: 15019
+port_agent_config:
+  addr: uft20
+  port: 12019
+  cmd_port: 13019
+startup_config:
+  parameters:
+   'firmware': '1.0.0'
+   'serial': '4278190306'
+   'instrument': 'SATPAR'
+expected_particles:
+- parad_sa_sample
+- parad_sa_config
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [execute, DRIVER_EVENT_ACQUIRE_SAMPLE]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

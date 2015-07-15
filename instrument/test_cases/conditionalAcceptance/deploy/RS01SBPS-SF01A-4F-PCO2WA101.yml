@@ -1,0 +1,13 @@
+instrument: RS01SBPS-SF01A-4F-PCO2WA101
+module: mi.instrument.sunburst.sami2_pco2.pco2a.driver 
+klass: InstrumentDriver
+event_port: 14112
+command_port: 15112
+port_agent_config:
+  addr: uft20
+  port: 12112
+  cmd_port: 13112
+startup_config:
+  parameters:
+expected_particles: [pco2w_a_configuration, pco2w_a_regular_status, pco2w_a_control_record]
+starting_state: DRIVER_STATE_AUTOSAMPLE

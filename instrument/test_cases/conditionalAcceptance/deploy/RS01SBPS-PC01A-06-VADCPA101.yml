@@ -1,0 +1,38 @@
+instrument: RS01SBPS-PC01A-06-VADCPA101
+module: mi.instrument.teledyne.workhorse.vadcp.driver
+klass: InstrumentDriver
+event_port: 14105
+command_port: 15105
+port_agent_config: 
+    4Beam:
+       addr: uft20
+       port: 12105
+       cmd_port: 13105
+    5thBeam:
+       addr: uft20
+       port: 12106
+       cmd_port: 13106
+startup_config:
+  parameters:
+   vadcp_4beam_system_configuration: 1
+   vadcp_5thbeam_system_configuration: 1
+   vadcp_ancillary_system_data: 1
+   vadcp_transmit_path: 1
+   vadcp_5thbeam_pd0_beam_parsed: 1
+   vadcp_5thbeam_pd0_earth_parsed: 1
+   vadcp_5thbeam_compass_calibration: 1
+expected_particles:
+- vadcp_4beam_system_configuration
+- vadcp_5thbeam_system_configuration
+- vadcp_ancillary_system_data
+- vadcp_transmit_path
+- vadcp_5thbeam_pd0_beam_parsed
+- vadcp_5thbeam_pd0_earth_parsed
+- vadcp_5thbeam_compass_calibration
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:
+#- [execute, PROTOCOL_EVENT_GET_CALIBRATION]
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

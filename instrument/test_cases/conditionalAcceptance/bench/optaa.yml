@@ -1,0 +1,16 @@
+instrument: RS10ENGC-XX00X-00-OPTAAD001
+module: mi.instrument.wetlabs.ac_s.ooicore.driver
+klass: InstrumentDriver
+command_port: 14022
+event_port: 15022
+port_agent_config:
+  addr: uft20
+  port: 12022
+  cmd_port: 13022
+startup_config:
+  parameters:
+expected_particles:
+- optaa_sample
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:
+#- [sleep, 36]

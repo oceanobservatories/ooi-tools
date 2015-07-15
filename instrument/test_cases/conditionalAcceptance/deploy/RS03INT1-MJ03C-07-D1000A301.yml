@@ -1,0 +1,21 @@
+instrument: RS03INT1-MJ03C-07-D1000A301
+module: mi.instrument.mclane.ras.d1000.driver
+klass: InstrumentDriver
+command_port: 14155
+event_port: 15155
+port_agent_config:
+  addr: uft20 
+  port: 12155
+  cmd_port: 13155
+startup_config:
+  parameters:
+    output_period: 6
+expected_particles: [d1000_sample]
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#DRIVER_STATE_COMMAND
+#script:
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 60]
+#- [sleep, 86400]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+#- [sleep, 10]

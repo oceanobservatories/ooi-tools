@@ -1,0 +1,20 @@
+instrument: CE02SHBP-LJ01D-07-VEL3DC108
+module: mi.instrument.nortek.vector.ooicore.driver 
+klass: InstrumentDriver
+event_port: 14171
+command_port: 15171
+port_agent_config:
+  addr: uft20
+  port: 12171
+  cmd_port: 13171
+startup_config:
+  parameters: {}
+expected_particles:
+- [vel3d_cd_velocity_data, vel3d_cd_data_header, vel3d_cd_system_data]
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [execute, DRIVER_EVENT_ACQUIRE_SAMPLE]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

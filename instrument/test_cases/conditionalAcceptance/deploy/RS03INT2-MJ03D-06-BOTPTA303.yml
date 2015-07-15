@@ -1,0 +1,23 @@
+instrument: RS03INT2-MJ03D-06-BOTPTA303
+module: mi.instrument.noaa.botpt.ooicore.driver
+klass: InstrumentDriver
+event_port: 14158
+command_port: 15158
+port_agent_config:
+  addr: uft20
+  port: 12158
+  cmd_port: 13158
+startup_config:
+  parameters:
+    auto_relevel: False
+    relevel_timeout: 600
+    xtilt_relevel_trigger: 300
+    ytilt_relevel_trigger: 300
+    heat_duration: 1
+    output_rate_hz: 20
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+#- [sleep, 1]

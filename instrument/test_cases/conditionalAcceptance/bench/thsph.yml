@@ -1,0 +1,19 @@
+instrument: RS10ENGC-XX00X-00-THSPHA001
+module: mi.instrument.um.thsph.ooicore.driver 
+klass: InstrumentDriver
+event_port: 14004
+command_port: 15004
+port_agent_config:
+  addr: 128.6.240.37
+  port: 12004
+  cmd_port: 13004
+expected_particles:
+- thsph_sample
+startup_config:
+  parameters:
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:
+#- [execute, DRIVER_EVENT_ACQUIRE_SAMPLE]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

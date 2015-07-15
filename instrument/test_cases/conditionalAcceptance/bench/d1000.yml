@@ -1,0 +1,21 @@
+instrument: RS10ENGC-XX00X-00-D1000A001
+module: mi.instrument.mclane.ras.d1000.driver
+klass: InstrumentDriver
+command_port: 14015
+event_port: 15015
+port_agent_config:
+  addr: uft21 
+  port: 12015
+  cmd_port: 13015
+startup_config:
+  parameters:
+    output_period: 6
+expected_particles: [d1000_sample]
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#DRIVER_STATE_COMMAND
+#script:
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 60]
+#- [sleep, 86400]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+#- [sleep, 10]

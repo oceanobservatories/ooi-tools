@@ -1,0 +1,20 @@
+instrument: RS03INT1-MJ03C-09-THSPHA301
+module: mi.instrument.um.thsph.ooicore.driver 
+klass: InstrumentDriver
+event_port: 14156
+command_port: 15156
+port_agent_config:
+  addr: uft20
+  port: 12156
+  cmd_port: 13156
+expected_particles:
+- thsph_sample
+startup_config:
+  parameters:
+   InstrumentSeries: C
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:
+#- [execute, DRIVER_EVENT_ACQUIRE_SAMPLE]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

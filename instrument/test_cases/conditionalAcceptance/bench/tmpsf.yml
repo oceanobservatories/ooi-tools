@@ -1,0 +1,23 @@
+instrument: RS10ENGC-XX00X-00-TMPSFA001
+module: mi.instrument.rbr.xr_420_thermistor_24.ooicore.driver
+klass: InstrumentDriver
+command_port: 14021 
+event_port: 15021
+port_agent_config:
+  addr: 128.6.240.37
+  port: 12021
+  cmd_port: 13021
+startup_config:
+  parameters:
+expected_particles:
+- tmpsf_sample
+- tmpsf_engineering
+starting_state: DRIVER_STATE_COMMAND
+#script:
+#- [sleep, 60]
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [sleep, 60]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 86400]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+#- [sleep, 10]

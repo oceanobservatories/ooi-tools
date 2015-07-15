@@ -1,0 +1,20 @@
+instrument: RS10ENGC-XX00X-00-VEL3DB001
+module: mi.instrument.nobska.mavs4.ooicore.driver
+klass: mavs4InstrumentDriver
+event_port: 14018
+command_port: 15018
+port_agent_config:
+  addr: uft21
+  port: 12018
+  cmd_port: 13018
+startup_config:
+  parameters:
+expected_particles:
+- vel3d_b_sample
+- vel3d_b_engineering
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

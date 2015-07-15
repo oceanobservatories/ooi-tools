@@ -1,0 +1,16 @@
+instrument: RS03AXPS-LJ03A-11-OPTAAC303
+module: mi.instrument.wetlabs.ac_s.ooicore.driver
+klass: InstrumentDriver
+command_port: 14148
+event_port: 15148
+port_agent_config:
+  addr: uft20
+  port: 12148
+  cmd_port: 13148
+startup_config:
+  parameters:
+expected_particles:
+- optaa_sample
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:
+#- [sleep, 86400]

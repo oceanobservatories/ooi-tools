@@ -1,0 +1,23 @@
+instrument: RS03ASHS-MJ03B-07-TMPSFA301
+module: mi.instrument.rbr.xr_420_thermistor_24.ooicore.driver
+klass: InstrumentDriver
+event_port: 14149
+command_port: 15149
+port_agent_config:
+  addr: uft20
+  port: 12149
+  cmd_port: 13149
+startup_config:
+  parameters:
+expected_particles:
+- tmpsf_sample
+- tmpsf_engineering
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:
+#- [sleep, 60]
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [sleep, 60]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 60]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+#- [sleep, 400]
