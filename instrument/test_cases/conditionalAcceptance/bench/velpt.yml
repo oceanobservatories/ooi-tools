@@ -1,0 +1,32 @@
+instrument: RS10ENGC-XX00X-00-VELPTD001
+module: mi.instrument.nortek.aquadopp.ooicore.driver 
+klass: InstrumentDriver
+event_port: 14005
+command_port: 15005
+port_agent_config:
+  addr: 128.6.240.37
+  port: 12005
+  cmd_port: 13005
+startup_config:
+  parameters:
+   deployment_name:'test'
+   wrap_moder:0
+   analog_input_address:6711
+   velocity_adjustment_factor:'Aj0ePTk9Uz1uPYg9oj27PdQ97T0GPh4+Nj5OPmU+fT6TPqo+wD7WPuw+Aj8XPyw/QT9VP2k/fT+RP6Q/uD/KP90/8D8CQBRAJkA3QElAWkBrQHxAjECcQKxAvEDMQNtA6kD5QAhBF0ElQTNBQkFPQV1BakF4QYVBkkGeQatBt0HDQc9B20HnQfJB/UEIQhNCHkIoQjNCPUJHQlFCW0JkQm5Cd0KAQolCkUKaQqJCqkKyQrpC'
+   file_comments:'this is a test'
+   filter_constants:'Cv/N/4sA5QDuAAsAhP89/w=='
+expected_particles:
+- velpt_velocity_data
+- velpt_hardware_configuration
+- velpt_head_configuration
+- velpt_user_configuration
+- velpt_clock_data
+- velpt_battery_voltage
+- velpt_identification_string
+starting_state: DRIVER_STATE_COMMAND
+#script:
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [execute, DRIVER_EVENT_ACQUIRE_SAMPLE]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

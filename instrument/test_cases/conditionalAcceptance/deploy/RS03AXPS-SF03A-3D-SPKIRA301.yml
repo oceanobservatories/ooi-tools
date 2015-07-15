@@ -1,0 +1,21 @@
+instrument: RS03AXPS-SF03A-3D-SPKIRA301
+module: mi.instrument.satlantic.ocr_507_icsw.ooicore.driver
+klass: SatlanticOCR507InstrumentDriver
+event_port: 14143
+command_port: 15143
+port_agent_config:
+  addr: uft20
+  port: 12143
+  cmd_port: 13143
+startup_config:
+  parameters:
+expected_particles:
+- spkir_data_record
+- spkir_a_configuration_record
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [sleep, 20]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 2]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

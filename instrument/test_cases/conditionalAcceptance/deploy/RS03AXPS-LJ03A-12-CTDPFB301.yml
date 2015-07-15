@@ -1,0 +1,25 @@
+instrument: RS03AXPS-LJ03A-12-CTDPFB301
+module: mi.instrument.seabird.sbe16plus_v2.ctdpf_jb.driver 
+klass: InstrumentDriver
+event_port: 14146
+command_port: 15146
+port_agent_config:
+  addr: uft20
+  port: 12146
+  cmd_port: 13146
+startup_config:
+  parameters:
+expected_particles:
+- ctdpf_optode_sample
+- ctdpf_optode_status
+- ctdpf_optode_calibration_coefficients
+- ctdpf_optode_hardware
+- ctdpf_optode_configuration
+- ctdpf_optode_settings
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [execute, DRIVER_EVENT_ACQUIRE_SAMPLE]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

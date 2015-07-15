@@ -1,0 +1,28 @@
+instrument: RS10ENGC-XX00X-00-PRESTA001
+module: mi.instrument.seabird.sbe54tps.driver 
+klass: SBE54PlusInstrumentDriver
+event_port: 14007
+command_port: 15007
+port_agent_config:
+  addr: 128.6.240.37
+  port: 12007
+  cmd_port: 13007
+startup_config:
+  parameters:
+expected_particles:
+- prest_real_time
+- pres_reference_oscillator
+- prest_configuration_data
+- prest_device_status
+- prest_event_counter
+- prest_hardware_data
+#starting_state: DRIVER_STATE_COMMAND
+#script:
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [sleep, 10]
+#- [execute, PROTOCOL_EVENT_SAMPLE_REFERENCE_OSCILLATOR]
+#- [sleep, 200]
+#- [execute, PROTOCOL_EVENT_TEST_EEPROM]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 10]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

@@ -1,0 +1,22 @@
+instrument: RS03INT1-MJ03C-10-TRHPHA301
+module: mi.instrument.uw.bars.ooicore.driver 
+klass: InstrumentDriver
+event_port: 14157
+command_port: 15157
+port_agent_config:
+  addr: uft20
+  port: 12157
+  cmd_port: 13157
+expected_particles:
+- trhph_sample 
+- trhph_status
+startup_config:
+  parameters:
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:
+#- [sleep, 10]
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [sleep, 20]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 20]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

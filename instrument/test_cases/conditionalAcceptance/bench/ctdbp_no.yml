@@ -1,0 +1,30 @@
+instrument: RS10ENGC-XX00X-00-CTDBPN001
+module: mi.instrument.seabird.sbe16plus_v2.ctdbp_no.driver
+klass: InstrumentDriver
+event_port: 14001
+command_port: 15001
+port_agent_config:
+  addr: uft21 
+  port: 12001
+  cmd_port: 13001
+expected_particles:
+- ctdbp_no_sample
+- ctdbp_no_status
+- ctdbp_no_calibration_coefficients
+- ctdbp_no_hardware
+- ctdbp_no_configuration
+- ctdbp_no_optode_settings
+startup_config:
+  parameters:
+starting_state: DRIVER_STATE_COMMAND
+#script:
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [sleep, 5]
+#- [execute, PROTOCOL_EVENT_GET_CONFIGURATION]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_ACQUIRE_SAMPLE]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 20]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+#- [sleep, 5]
