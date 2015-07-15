@@ -1,0 +1,32 @@
+instrument: RS10ENGC-XX00X-00-PCO2WB001
+module: mi.instrument.sunburst.sami2_pco2.pco2b.driver
+klass: InstrumentDriver
+event_port: 14011
+command_port: 15011
+port_agent_config: 
+  addr: 128.6.240.39
+  port: 12011
+  cmd_port: 13011
+startup_config:
+  parameters:
+   pco2w_b_dev1_data_record: 1
+   pco2w_b_configuration: 1
+   pco2w_b_regular_status: 1
+   pco2w_b_control_record: 1
+   pco2w_b_battery_voltage: 2
+   pco2w_b_thermistor_voltage: 2
+   pco2w_b_sami_data_record: 1
+expected_particles:
+- pco2w_b_dev1_data_record 
+- pco2w_b_configuration
+- pco2w_b_regular_status
+- pco2w_b_control_record
+- pco2w_b_battery_voltage
+- pco2w_b_thermistor_voltage
+- pco2w_b_sami_data_record
+starting_state: DRIVER_STATE_COMMAND
+#script:
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+#- [sleep, 5]

@@ -1,0 +1,28 @@
+instrument: RS03AXPS-LJ03A-05-HPIESA301
+module: mi.instrument.uw.hpies.ooicore.driver
+klass: InstrumentDriver
+event_port: 14147
+command_port: 15147
+port_agent_config:
+  addr: uft20
+  port: 12147
+  cmd_port: 13147
+startup_config:
+  parameters: {}
+expected_particles: 
+- hpies_data_header
+- horizontal_electric_field
+- motor_current
+- calibration_status
+- hpies_status
+- echo_sounding
+- stm_timestamp
+#ies_status - sent once daily at 2352 UTC
+#echo_sounding - sent once every 10 minutes
+#calibration_status - sent once every 2 minutes during autosample
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 14400]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+#- [sleep, 5]

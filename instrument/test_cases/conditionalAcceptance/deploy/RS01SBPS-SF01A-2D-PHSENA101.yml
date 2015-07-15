@@ -1,0 +1,13 @@
+instrument: RS01SBPS-SF01A-2D-PHSENA101
+module: mi.instrument.sunburst.sami2_ph.ooicore.driver
+klass: InstrumentDriver
+command_port: 14113
+event_port: 15113
+port_agent_config:
+  addr: uft20
+  port: 12113
+  cmd_port: 13113
+startup_config:
+  parameters: {} 
+expected_particles: [phsen_data_record, phsen_regular_status, phsen_battery_voltage, phsen_thermistor_voltage, phsen_configuration]
+starting_state: DRIVER_STATE_AUTOSAMPLE

@@ -1,0 +1,32 @@
+instrument: RS10ENGC-XX00X-00-NUTNRA001
+module: mi.instrument.satlantic.suna_deep.ooicore.driver
+klass: InstrumentDriver
+event_port: 14006
+command_port: 15006
+port_agent_config: 
+  addr: 128.6.240.37
+  port: 12006
+  cmd_port: 13006
+startup_config:
+  parameters:
+    nmlgtspl: 2
+    tlgtsmpl: 30
+    opermode: 'Polled'
+    operctrl: 'Samples'
+    lgtsmpls: 5
+    drksmpls: 1
+    lgtdurat: 10
+    drkdurat: 5
+expected_particles:
+- nutnr_a_sample
+- nutnr_a_status
+- nutnr_a_test
+starting_state: DRIVER_STATE_COMMAND
+#script:
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [execute, DRIVER_EVENT_ACQUIRE_SAMPLE]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+#- [sleep, 5]
+

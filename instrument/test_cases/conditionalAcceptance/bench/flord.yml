@@ -1,0 +1,20 @@
+instrument: RS10ENGC-XX00X-00-FLORDD001
+module: mi.instrument.wetlabs.fluorometer.flort_d.driver
+klass: InstrumentDriver
+event_port: 14002
+command_port: 15002
+port_agent_config:
+  addr: 128.6.240.37
+  port: 12002
+  cmd_port: 13002
+startup_config:
+  parameters:
+expected_particles: [flort_d_status, flort_d_data_record]
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [execute, DRIVER_EVENT_ACQUIRE_SAMPLE]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+#- [sleep, 5]

@@ -1,0 +1,22 @@
+instrument: RS10ENGC-XX00X-00-BOTPTA001
+module: mi.instrument.noaa.botpt.ooicore.driver
+klass: InstrumentDriver
+event_port: 14013
+command_port: 15013
+port_agent_config:
+  addr: 128.6.240.39
+  port: 12013
+  cmd_port: 13013
+startup_config:
+  parameters:
+    botpt_nano_sample: 20
+    botpt_lily_sample: 1
+    botpt_iris_sample: 1
+    botpt_heat_sample: 1
+    relevel_timeout: 600
+starting_state: DRIVER_STATE_AUTOSAMPLE
+#script:
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
+#- [sleep, 1]

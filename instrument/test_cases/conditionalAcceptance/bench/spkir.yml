@@ -1,0 +1,21 @@
+instrument: RS10ENGC-XX00X-00-SPKIRA001
+module: mi.instrument.satlantic.ocr_507_icsw.ooicore.driver
+klass: SatlanticOCR507InstrumentDriver
+event_port: 14008
+command_port: 15008
+port_agent_config:
+  addr: 128.6.240.37
+  port: 12008
+  cmd_port: 13008
+startup_config:
+  parameters:
+expected_particles:
+- spkir_data_record
+- spkir_a_configuration_record
+starting_state: DRIVER_STATE_COMMAND
+#script:
+#- [execute, DRIVER_EVENT_ACQUIRE_STATUS]
+#- [sleep, 20]
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 2]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]

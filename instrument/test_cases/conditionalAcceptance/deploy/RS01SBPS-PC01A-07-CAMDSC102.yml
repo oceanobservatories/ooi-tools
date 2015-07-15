@@ -1,0 +1,21 @@
+instrument: RS01SBPS-PC01A-07-CAMDSC102
+module: mi.instrument.kml.cam.camds.driver
+klass: InstrumentDriver
+event_port: 14101
+command_port: 15101
+port_agent_config:
+  addr: uft20
+  port: 12101
+  cmd_port: 13101
+startup_config:
+  parameters: {}
+expected_particles:
+- camds_video
+- camds_image_metadata
+- camds_health_status
+- camds_disk_status
+starting_state: DRIVER_STATE_COMMAND
+#script:
+#- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
+#- [sleep, 5]
+#- [execute, DRIVER_EVENT_STOP_AUTOSAMPLE]
