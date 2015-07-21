@@ -9,11 +9,12 @@ port_agent_config:
   cmd_port: 13013
 startup_config:
   parameters:
-    botpt_nano_sample: 20
-    botpt_lily_sample: 1
-    botpt_iris_sample: 1
-    botpt_heat_sample: 1
     relevel_timeout: 600
+    auto_relevel: false
+    heat_duration: 1
+    output_rate_hz: 20
+    xtilt_relevel_trigger: 300.00
+    ytilt_relevel_trigger: 300.00
 starting_state: DRIVER_STATE_AUTOSAMPLE
 #script:
 #- [execute, DRIVER_EVENT_START_AUTOSAMPLE]
