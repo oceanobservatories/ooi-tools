@@ -19,6 +19,8 @@ from docopt import docopt
 import sys
 import numpy
 import struct
+import traceback
+from cassandra import ReadTimeout, WriteTimeout
 
 
 def dump_data(directory, filter_string, contact_point, keyspace):
@@ -44,11 +46,14 @@ def dump_data(directory, filter_string, contact_point, keyspace):
     for table in sorted(set(tables)):
         print 'dumping table: %s' % table
         with open('%s.mpk' % table, 'wb') as fh:
-            for row in session.execute('select * from %s' % table, timeout=None):
-                for k in row:
-                    if type(row[k]) == uuid.UUID:
-                        row[k] = str(row[k])
-                fh.write(msgpack.packb(row))
+            try:
+                for row in session.execute('select * from %s' % table, timeout=None):
+                    for k in row:
+                        if type(row[k]) == uuid.UUID:
+                            row[k] = str(row[k])
+                    fh.write(msgpack.packb(row))
+            except ReadTimeout:
+                print traceback.format_exc()
     session.shutdown()
     cluster.shutdown()
 
@@ -64,29 +69,34 @@ def insert_data(directory, contact_point, keyspace, upgrade_id=None):
         print 'inserting records into table: %s' % tablename
         with open(mpk) as fh:
             unpacker = msgpack.Unpacker(fh)
-            first = True
             ps = None
-            for index, record in enumerate(unpacker):
-                if first:
-                    cols = cluster.metadata.keyspaces[keyspace].tables[tablename].columns
-                    keys = map(_clean_column_name, cols.keys())
-                    uuids = [k for k in keys if cols[k].typestring == 'uuid']
-                    ps = session.prepare('insert into %s (%s) values (%s)'
-                                         % (tablename, ','.join(keys), ','.join('?' for _ in keys)))
-                    first = False
-
-                for k in uuids:
-                    if record[k] is not None:
-                        record[k] = uuid.UUID(record[k])
-
-                if upgrade_id is not None:
-                    record = upgrade(record, upgrade_id, tablename)
-
-                session.execute(ps, record)
-
-                if (index + 1) % 100 == 0:
-                    sys.stdout.write('.')
-                    sys.stdout.flush()
+            try:
+                for index, record in enumerate(unpacker):
+                    if ps is None:
+                        cols = cluster.metadata.keyspaces[keyspace].tables[tablename].columns
+                        keys = map(_clean_column_name, cols.keys())
+                        uuids = [k for k in keys if cols[k].typestring == 'uuid']
+                        ps = session.prepare('insert into %s (%s) values (%s)'
+                                             % (tablename, ','.join(keys), ','.join('?' for _ in keys)))
+    
+                    for k in uuids:
+                        if record[k] is not None:
+                            record[k] = uuid.UUID(record[k])
+    
+                    if upgrade_id is not None:
+                        record = upgrade(record, upgrade_id, tablename)
+    
+                    # Remove columns that don't exist in current table schema
+                    for k in set(record.keys()) - set(keys):
+                        del record[k]
+    
+                    session.execute(ps, record)
+    
+                    if (index + 1) % 100 == 0:
+                        sys.stdout.write('.')
+                        sys.stdout.flush()
+            except WriteTimeout:
+                print traceback.format_exc()
             print
     session.shutdown()
     cluster.shutdown()
