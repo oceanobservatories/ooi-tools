@@ -12,6 +12,7 @@ Usage:
   instrument_control.py <host> <name> execute <capability>
 
 Options:
+  --driver_host=<driver_host>     The host running the driver              [default: localhost]
   --module=<module>               The module containing the driver class   [default: mi.instrument.virtual.driver]
   --klass=<klass>                 The name of the class to be instantiated [default: InstrumentDriver]
   --command_port=<command_port>   The port to host the command interface   [default: 10000]
@@ -62,8 +63,9 @@ def get_running(host):
 
 
 class Controller(object):
-    def __init__(self, host, name, module, klass, command_port, event_port):
+    def __init__(self, host, driver_host, name, module, klass, command_port, event_port):
         self.host = host
+        self.driver_host = driver_host
         self.name = name
         self.module = module
         self.klass = klass
@@ -77,7 +79,7 @@ class Controller(object):
 
     def start_driver(self):
         payload = {
-            'host': self.host,
+            'host': self.driver_host,
             'module': self.module,
             'class': self.klass,
             'commandPort': self.command_port,
@@ -234,6 +236,7 @@ def main():
 
     c = Controller(options['<host>'],
                    options['<name>'],
+                   options['--driver_host'],
                    options['--module'],
                    options['--klass'],
                    options['--command_port'],

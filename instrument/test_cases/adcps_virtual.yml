@@ -1,3 +1,4 @@
+host: 10.0.2.2
 instrument: adcps_virtual-rsn-driver
 module: mi.instrument.virtual.driver
 klass: InstrumentDriver

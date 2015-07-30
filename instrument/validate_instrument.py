@@ -32,6 +32,7 @@ RECORDS_PER_REQUEST = 1000
 class TestCase(object):
     def __init__(self, config):
         self.config = config
+        self.host = config.get('host', 'localhost')
         self.instrument = config.get('instrument')
         self.module = config.get('module')
         self.klass = config.get('klass')
@@ -144,6 +145,7 @@ def test(test_case, hostname):
     scorecard = {}
     log.debug('Processing test case: %s', test_case)
     controller = instrument_control.Controller(hostname,
+                                               test_case.host,
                                                test_case.instrument,
                                                test_case.module,
                                                test_case.klass,
