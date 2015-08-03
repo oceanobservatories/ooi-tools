@@ -1,3 +1,4 @@
+host: 10.0.2.2
 instrument: virtual-botpt-0001
 module: mi.instrument.virtual.driver
 klass: InstrumentDriver
