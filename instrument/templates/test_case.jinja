@@ -1,0 +1,11 @@
+host: portland-06.oceanobservatories.org
+instrument: {{refdes}}
+command_port: {{driver_command_port}}
+event_port: {{driver_event_port}}
+port_agent_config:
+  addr: {{port_agent_addr}}
+  port: {{data_port}}
+  cmd_port: {{command_port}}
+startup_config:
+  parameters:
+starting_state: DRIVER_STATE_UNKNOWN
