@@ -10,7 +10,6 @@ __author__ = 'petercable'
 
 import requests
 import docopt
-import logging
 from multiprocessing.pool import ThreadPool
 
 pool = ThreadPool(16)
@@ -24,11 +23,12 @@ def get_instruments(host):
     return response.json()
 
 def get_state(host, instrument):
-    url = get_base_url(host) + '/' + instrument
-    response = requests.get(url, timeout=2)
+
     try:
+        url = get_base_url(host) + '/' + instrument
+        response = requests.get(url, timeout=2)
         return response.json()
-    except JSONDecodeError:
+    except Exception:
         return {}
 
 def poll(host, instruments):
@@ -46,8 +46,6 @@ def poll(host, instruments):
         results.setdefault(subsite, {}).setdefault(node, {})[sensor] = result
 
     for subsite in sorted(results.keys()):
-        # print
-        # print subsite
         print
         for node in sorted(results[subsite].keys()):
             for sensor in sorted(results[subsite][node].keys()):
