@@ -5,6 +5,7 @@ lifted from ion.agent.instrument.driver_client, modified to remove ion dependenc
 """
 
 import time
+import consulate
 import zmq
 import logging
 
@@ -40,29 +41,32 @@ class ZmqDriverClient(object):
     thread for catching asynchronous driver events.
     """
 
-    def __init__(self, host, cmd_port):
+    def __init__(self, refdes):
         """
         Initialize members.
         @param host Host string address of the driver process.
         @param cmd_port Port number for the driver process command port.
         @param event_port Port number for the driver process event port.
         """
-        self.host = host
-        self.cmd_port = cmd_port
-
+        self.refdes = refdes
         self.context = zmq.Context()
         self.zmq_cmd_socket = None
-
         self._stopped = False
 
     def _connect_driver(self):
-        cmd_host_string = 'tcp://%s:%i' % (self.host, self.cmd_port)
+        consul_client = consulate.Consul()
+        health_client = consul_client.health.service('instrument_driver', tag=self.refdes, passing=True)
+        host = port = None
+        for node in health_client:
+            host = node['Node']['Address']
+            port = node['Service']['Port']
 
-        self.zmq_cmd_socket = self.context.socket(zmq.REQ)
-        self.zmq_evt_socket = self.context.socket(zmq.SUB)
-
-        self.zmq_cmd_socket.connect(cmd_host_string)
-        log.info('Driver client cmd socket connected to %s.', cmd_host_string)
+        if host and port:
+            cmd_host_string = 'tcp://%s:%i' % (host, port)
+            self.zmq_cmd_socket = self.context.socket(zmq.REQ)
+            self.zmq_evt_socket = self.context.socket(zmq.SUB)
+            self.zmq_cmd_socket.connect(cmd_host_string)
+            log.info('Driver client cmd socket connected to %s.', cmd_host_string)
 
     def start_messaging(self, callback=None):
         """
@@ -153,5 +157,5 @@ class ZmqDriverClient(object):
         return self._command('get_resource_state', *args, **kwargs)
 
     def set_init_params(self, *args, **kwargs):
-        return self._command('get_resource_state', *args, **kwargs)
+        return self._command('set_init_params', *args, **kwargs)
 

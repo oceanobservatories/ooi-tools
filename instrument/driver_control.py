@@ -46,18 +46,10 @@ def main():
     if config is not None:
         config = yaml.load(open(config))
 
-    target_id = 'instrument_driver_' + refdes
-    consul_client = consulate.Consul()
-    health_client = consul_client.health.service('instrument_driver')
-    z = None
-    for node in health_client:
-        if node['Service']['ID'] == target_id:
-            host = node['Node']['Address']
-            port = node['Service']['Port']
-            z = ZmqDriverClient(host, port)
-            z.start_messaging(callback)
-            z.ping()
-            embed()
+    z = ZmqDriverClient(refdes)
+    z.start_messaging(callback)
+    z.ping()
+    embed()
 
     if z is None:
         print 'not found'
