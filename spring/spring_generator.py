@@ -145,7 +145,7 @@ class Row(object):
         io = StringIO()
         writer = csv.writer(io)
         dropbox = '${edex.home}/data/ooi/%s_%s' % (self.name, self.suffix)
-        ingest = 'jms-durable:queue:Ingest.%s_%s' % (self.name, self.suffix)
+        ingest = 'jms-durable-ingest:queue:Ingest.%s_%s' % (self.name, self.suffix)
         if self.regex is None:
             self.regex = '.*'
         writer.writerow((dropbox, self.regex, self.sensor, self.suffix, ingest, 'true'))

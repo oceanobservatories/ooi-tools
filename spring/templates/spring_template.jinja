@@ -18,7 +18,7 @@
 {% for row in context.rows %}
 
         <route id="{{row.name}}_{{row.suffix}}Ingest">
-            <from uri="jms-durable:queue:Ingest.{{row.name}}_{{row.suffix}}?concurrentConsumers=1&amp;maxConcurrentConsumers=10&amp;disableReplyTo=true" />
+            <from uri="jms-durable-ingest:queue:Ingest.{{row.name}}_{{row.suffix}}?concurrentConsumers=1&amp;maxConcurrentConsumers=10&amp;disableReplyTo=true" />
             <doTry>
                 <pipeline>
                     <bean ref="{{row.name}}_{{row.suffix}}Processor" />
