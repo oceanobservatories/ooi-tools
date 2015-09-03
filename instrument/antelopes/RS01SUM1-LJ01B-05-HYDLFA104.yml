@@ -1,0 +1,9 @@
+startup_config:
+  parameters:
+    refdes: RS01SUM1-LJ01B-05-HYDLFA104
+    flush_interval: 300
+    source_regex: '.*HYS14_..H.*'
+    database_address: uft20
+    file_location: /san_data/antelope
+starting_state: DRIVER_STATE_AUTOSAMPLE
+instrument: RS01SUM1-LJ01B-05-HYDLFA104

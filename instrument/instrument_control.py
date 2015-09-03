@@ -63,71 +63,24 @@ def get_running(host):
 
 
 class Controller(object):
-    def __init__(self, host, driver_host, name, module, klass, command_port, event_port):
+    def __init__(self, host, name):
         self.host = host
-        self.driver_host = driver_host
         self.name = name
-        self.module = module
-        self.klass = klass
-        self.command_port = int(command_port)
-        self.event_port = int(event_port)
         self.base_url = 'http://%s:%d/%s/%s' % (self.host, instrument_agent_port, base_api_url, self.name)
-        self.event_url = 'tcp://%s:%d' % (self.host, self.event_port)
         self.state = None
         self.keeprunning = True
         self.samples = {}
-
-    def start_driver(self):
-        payload = {
-            'host': self.driver_host,
-            'module': self.module,
-            'class': self.klass,
-            'commandPort': self.command_port,
-            'eventPort': self.event_port
-        }
-        return requests.post(self.base_url, data=payload)
-
-    def start_event_thread(self):
-        context = zmq.Context()
-        context.setsockopt(zmq.LINGER, 0)
-        evt_socket = context.socket(zmq.SUB)
-
-        evt_socket.connect(self.event_url)
-        evt_socket.setsockopt(zmq.LINGER, 0)
-        evt_socket.setsockopt(zmq.SUBSCRIBE, '')
-
-        def loop():
-            while self.keeprunning:
-                try:
-                    evt = evt_socket.recv_json(flags=zmq.NOBLOCK)
-                    if evt.get('type') == 'DRIVER_ASYNC_EVENT_SAMPLE':
-                        sample = evt.get('value')
-                        del(sample['pkt_version'])
-                        del(sample['pkt_format_id'])
-                        if sample.get('internal_timestamp') is None:
-                            sample['internal_timestamp'] = 0.0
-                        stream_name = sample.get('stream_name')
-                        ts = sample.get(sample.get('preferred_timestamp', {}), 0.0)
-                        ts = '%12.3f' % ts
-                        if stream_name != 'raw' and ts > 0:
-                            self.samples.setdefault(stream_name, []).append(flatten(sample))
-                except zmq.ZMQError:
-                    time.sleep(.1)
-
-        t = threading.Thread(target=loop)
-        t.setDaemon(True)
-        t.start()
 
     def start_state_thread(self):
         def loop():
             self.get_state()
             while self.keeprunning:
                 try:
-                    r = self.get_state(True)
+                    r = self.get_state()
                     log.info('State updated: %s', r['value']['state'])
                 except Exception as e:
                     log.info('Exception: %s', e)
-                    time.sleep(.1)
+                time.sleep(2)
 
         t = threading.Thread(target=loop)
         t.setDaemon(True)
@@ -152,8 +105,8 @@ class Controller(object):
     def set_resource(self, **kwargs):
         return requests.post(self.base_url + '/resource', data={'resource': json.dumps(kwargs)})
 
-    def get_state(self, blocking=False):
-        r = requests.get(self.base_url, params={'blocking': blocking})
+    def get_state(self):
+        r = requests.get(self.base_url)
         reply = r.json()
         self.state = reply['value']
         return reply
@@ -161,23 +114,20 @@ class Controller(object):
     def execute(self, command):
         return requests.post(self.base_url + '/execute', data={'command': json.dumps(command)})
 
-    def initialize_driver(self, target_state, port_config, init_config, timeout=300):
-        self.start_driver()
-        self.start_event_thread()
+    def initialize_driver(self, target_state, init_config, timeout=300):
         self.get_state()
-        self.start_state_thread()
         end_time = time.time() + timeout
 
         while self.state['state'] != target_state:
             if self.state['state'] == 'DRIVER_STATE_UNCONFIGURED':
-                log.info('Configuring driver: %r %r', port_config, init_config)
-                self.configure(port_config)
+                log.info('Configuring driver: %r', init_config)
                 self.set_init_params(init_config)
             elif self.state['state'] == 'DRIVER_STATE_DISCONNECTED':
                 log.info('Connecting to instrument')
                 self.connect()
             elif self.state['state'] == 'DRIVER_STATE_UNKNOWN':
                 log.info('Calling discover')
+                self.set_init_params(init_config)
                 self.discover()
             elif self.state['state'] == 'DRIVER_STATE_COMMAND':
                 if target_state == 'DRIVER_STATE_AUTOSAMPLE':
@@ -185,6 +135,7 @@ class Controller(object):
             elif self.state['state'] == 'DRIVER_STATE_AUTOSAMPLE':
                 self.execute('DRIVER_EVENT_STOP_AUTOSAMPLE')
             self.get_state()
+            time.sleep(1)
 
             if time.time() > end_time:
                 raise Exception('Timed out transitioning to target state: %s' % target_state)
@@ -235,16 +186,9 @@ def main():
         sys.exit()
 
     c = Controller(options['<host>'],
-                   options['<name>'],
-                   options['--driver_host'],
-                   options['--module'],
-                   options['--klass'],
-                   options['--command_port'],
-                   options['--event_port'])
+                   options['<name>'])
 
-    if options['start']:
-        c.start_driver()
-    elif options['stop']:
+    if options['stop']:
         c.stop_driver()
     elif options['configure']:
         config = yaml.load(open(options['<config_file>']))

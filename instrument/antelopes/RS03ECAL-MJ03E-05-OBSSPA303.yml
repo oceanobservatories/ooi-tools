@@ -1,0 +1,9 @@
+startup_config:
+  parameters:
+    refdes: RS03ECAL-MJ03E-05-OBSSPA303
+    flush_interval: 300
+    source_regex: '.*AXEC1.*'
+    database_address: uft20
+    file_location: /san_data/antelope
+starting_state: DRIVER_STATE_AUTOSAMPLE
+instrument: RS03ECAL-MJ03E-05-OBSSPA303

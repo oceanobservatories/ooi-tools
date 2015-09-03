@@ -26,7 +26,7 @@ def get_state(host, instrument):
 
     try:
         url = get_base_url(host) + '/' + instrument
-        response = requests.get(url, timeout=2)
+        response = requests.get(url, timeout=4)
         return response.json()
     except Exception:
         return {}
