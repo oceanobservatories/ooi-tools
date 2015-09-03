@@ -1,0 +1,9 @@
+startup_config:
+  parameters:
+    refdes: CE04OSBP-LJ01C-11-HYDBBA105
+    flush_interval: 300
+    source_regex: '.*HYEA1.*'
+    database_address: uft20
+    file_location: /san_data/antelope
+starting_state: DRIVER_STATE_AUTOSAMPLE
+instrument: CE04OSBP-LJ01C-11-HYDBBA105
