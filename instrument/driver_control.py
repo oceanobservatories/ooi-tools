@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """
 Usage:
-    driver_control.py <config>
     driver_control.py <refdes>
+    driver_control.py <refdes> <config>
 """
 
 import time
@@ -45,7 +45,6 @@ def main():
     config = options['<config>']
     if config is not None:
         config = yaml.load(open(config))
-        refdes = config['refdes']
 
     z = ZmqDriverClient(refdes)
     z.start_messaging(callback)
