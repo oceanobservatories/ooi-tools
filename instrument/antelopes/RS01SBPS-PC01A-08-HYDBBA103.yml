@@ -3,7 +3,7 @@ startup_config:
     refdes: RS01SBPS-PC01A-08-HYDBBA103
     flush_interval: 300
     source_regex: '.*HYVM2.*'
-    database_address: uft20
+    database_address: uft21
     file_location: /san_data/antelope
 starting_state: DRIVER_STATE_AUTOSAMPLE
 instrument: RS01SBPS-PC01A-08-HYDBBA103

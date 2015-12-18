@@ -3,7 +3,7 @@ startup_config:
     refdes: RS03CCAL-MJ03F-06-OBSBBA301
     flush_interval: 300
     source_regex: '.*AXCC1_..[^H].*'
-    database_address: uft20
+    database_address: uft21
     file_location: /san_data/antelope
 starting_state: DRIVER_STATE_AUTOSAMPLE
 instrument: RS03CCAL-MJ03F-06-OBSBBA301

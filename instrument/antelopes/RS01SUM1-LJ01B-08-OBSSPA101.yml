@@ -3,7 +3,7 @@ startup_config:
     refdes: RS01SUM1-LJ01B-08-OBSSPA101
     flush_interval: 300
     source_regex: '.*HYS11.*'
-    database_address: uft20
+    database_address: uft21
     file_location: /san_data/antelope
 starting_state: DRIVER_STATE_AUTOSAMPLE
 instrument: RS01SUM1-LJ01B-08-OBSSPA101
