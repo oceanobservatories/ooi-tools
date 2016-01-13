@@ -1,63 +1,57 @@
+#!/usr/bin/env python
 """
 Delete a specific reference designator from cassandra
 
 Usage:
-    delete_stream.py refdes <refdes>
-    delete_stream.py subsite <subsite>
+    delete_stream.py <refdes> <contact_ip>...
 
 """
 
 from cassandra.cluster import Cluster
 
 
-cluster = Cluster(control_connection_timeout=60)
-session = cluster.connect('ooi')
+class Deleter(object):
+    def __init__(self, contacts, refdes):
+        self.contacts = contacts
+        self.refdes = refdes
+        self.subsite, self.node, self.sensor = self.parse_refdes(refdes)
+        self.cluster = Cluster(self.contacts, control_connection_timeout=60)
+        self.session = self.cluster.connect('ooi')
 
-lookup_stream_method = session.prepare('select stream, method, count from stream_metadata where subsite=? and node=? and sensor=?')
-del_metadata = session.prepare('delete from stream_metadata where subsite=? and node=? and sensor=? and method=? and stream=?')
-del_metadata_hourly = session.prepare('delete from stream_metadata_hourly where subsite=? and node=? and sensor=? and method=? and stream=?')
+        self.lookup_stream_method = self.session.prepare('select stream, method, count from stream_metadata where subsite=? and node=? and sensor=?')
+        self.del_metadata = self.session.prepare('delete from stream_metadata where subsite=? and node=? and sensor=? and method=? and stream=?')
+        self.del_p_metadata = self.session.prepare('delete from partition_metadata where stream=? and refdes=?')
+        self.select_p_metadata = self.session.prepare('select * from partition_metadata where stream=? and refdes=?')
 
-def delete_metadata(subsite, node, sensor, method, stream):
-    session.execute(del_metadata, (subsite, node, sensor, method, stream))
-    session.execute(del_metadata_hourly, (subsite, node, sensor, method, stream))
+    def delete_metadata(self, method, stream):
+        self.session.execute(self.del_metadata, (self.subsite, self.node, self.sensor, method, stream))
+        self.session.execute(self.del_p_metadata, (stream, self.refdes))
 
+    def delete_stream(self, stream):
+        delete_q = self.session.prepare('delete from %s where subsite=? and node=? and sensor=? and method=? and bin=?' % stream)
+        for row in self.session.execute(self.select_p_metadata, (stream, self.refdes)):
+            print '  Deleting: ', row
+            self.session.execute(delete_q, (self.subsite, self.node, self.sensor, row.method, row.bin))
 
-def delete_stream(subsite, node, sensor, stream):
-    prepared = session.prepare('delete from %s where subsite=? and node=? and sensor=?' % stream)
-    session.execute(prepared, (subsite, node, sensor))
+    @staticmethod
+    def parse_refdes(refdes):
+        return refdes.split('-', 2)
 
+    def find_stream_methods(self):
+        return self.session.execute(self.lookup_stream_method, (self.subsite, self.node, self.sensor))
 
-def parse_refdes(refdes):
-    return refdes.split('-', 2)
-
-
-def find_stream_methods(subsite, node, sensor):
-    return list(session.execute(lookup_stream_method, (subsite, node, sensor)))
-
-
-def find_subsite_desigs(subsite):
-    return [row for row in session.execute('select subsite, node, sensor from stream_metadata')
-            if row.subsite == subsite]
-
-
-def delete_refdes(subsite, node, sensor):
-    rows = find_stream_methods(subsite, node, sensor)
-    for row in rows:
-        print 'Deleting:', row
-        delete_metadata(subsite, node, sensor, row.method, row.stream)
-        delete_stream(subsite, node, sensor, row.stream)
+    def delete(self):
+        for row in self.find_stream_methods():
+            print 'Deleting:', row
+            self.delete_stream(row.stream)
+            self.delete_metadata(row.method, row.stream)
 
 
 def main():
     import docopt
     options = docopt.docopt(__doc__)
-    if options['subsite']:
-        for row in find_subsite_desigs(options['<subsite>']):
-            delete_refdes(row.subsite, row.node, row.sensor)
-
-    elif options['refdes']:
-        subsite, node, sensor = parse_refdes(options['<refdes>'])
-        delete_refdes(subsite, node, sensor)
+    deleter = Deleter(options['<contact_ip>'], options['<refdes>'])
+    deleter.delete()
 
 
 if __name__ == '__main__':
