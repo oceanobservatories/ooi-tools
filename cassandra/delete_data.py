@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """
-Delete a specific reference designator from cassandra
+Delete data for a specific reference designator from cassandra.
 
 Usage:
-    delete_stream.py <refdes> <contact_ip>...
+    delete_data.py <refdes> <contact_ip>...
 
 """
 
@@ -15,7 +15,9 @@ class Deleter(object):
         self.contacts = contacts
         self.refdes = refdes
         self.subsite, self.node, self.sensor = self.parse_refdes(refdes)
-        self.cluster = Cluster(self.contacts, control_connection_timeout=60)
+        # For now use version=3 against the current cassandra.
+        self.cluster = Cluster(self.contacts, control_connection_timeout=60, protocol_version=3)
+
         self.session = self.cluster.connect('ooi')
 
         self.lookup_stream_method = self.session.prepare('select stream, method, count from stream_metadata where subsite=? and node=? and sensor=?')
@@ -33,6 +35,17 @@ class Deleter(object):
             print '  Deleting: ', row
             self.session.execute(delete_q, (self.subsite, self.node, self.sensor, row.method, row.bin))
 
+    def delete_provenance(self, methods):
+        for method in methods:
+            print 'Deleting provenance:%s:%s' % (self.refdes, method)
+            # decide which table to delete from - note different refdes specification.
+            if 'streaming' == method:
+                del_provenance = self.session.prepare('delete from streaming_l0_provenance where refdes=? and method=?')
+                self.session.execute(del_provenance, (self.refdes, method))
+            else:
+                del_provenance = self.session.prepare('delete from dataset_l0_provenance where subsite=? and node=? and sensor=? and method=?')
+                self.session.execute(del_provenance, (self.subsite, self.node, self.sensor, method))
+
     @staticmethod
     def parse_refdes(refdes):
         return refdes.split('-', 2)
@@ -41,11 +54,14 @@ class Deleter(object):
         return self.session.execute(self.lookup_stream_method, (self.subsite, self.node, self.sensor))
 
     def delete(self):
+        # collect the methods that will need to be deleted from provenance.
+        methods = set()
         for row in self.find_stream_methods():
             print 'Deleting:', row
             self.delete_stream(row.stream)
             self.delete_metadata(row.method, row.stream)
-
+            methods.add(row.method)
+        self.delete_provenance(methods)
 
 def main():
     import docopt
