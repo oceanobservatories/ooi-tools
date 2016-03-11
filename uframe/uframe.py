@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import json
 import logging
 from collections import Counter, namedtuple
 
@@ -14,6 +15,8 @@ from requests.exceptions import ConnectTimeout
 from simplejson import JSONDecodeError
 
 HOST = 'portland-09.oceanobservatories.org'
+#HOST = 'uft21.ooi.rutgers.edu'
+#HOST = 'ooiufs01.ooi.rutgers.edu'
 BASE_URL = 'http://%s:12576/sensor' % HOST
 BASE_AM_URL = 'http://%s:12573' % HOST
 StreamInfo = namedtuple('Stream', 'subsite, node, sensor, method, stream start stop')
@@ -38,7 +41,7 @@ def get_logger(level):
     return logger
 
 
-log = get_logger(logging.DEBUG)
+log = get_logger(logging.INFO)
 
 
 def datetime_from_msecs(msecs, fill=0):
@@ -70,29 +73,95 @@ class AssetManagement(object):
         log.debug('AM query: %r', qurl)
         return requests.get(qurl).json()
 
-    def get_deployments(self, subsite, node, sensor):
-        deps = {}
-        for event in self._get_events(subsite, node, sensor):
+    @lru_cache(2)
+    def _get_all_events(self):
+        qurl = os.path.join(self.base_url, 'events')
+        log.debug('AM query: %r', qurl)
+        return requests.get(qurl).json()
+
+    @staticmethod
+    def get_assetid(event):
+        return event.get('asset', {}).get('assetId')
+
+    @staticmethod
+    def get_refdes(event):
+        refdes = event.get('referenceDesignator', {})
+        subsite = refdes.get('subsite')
+        node = refdes.get('node')
+        sensor = refdes.get('sensor')
+        if subsite and node and sensor:
+            return '-'.join((subsite, node, sensor))
+        elif subsite and node:
+            return '-'.join((subsite, node))
+        return subsite
+
+    def _get_tags(self, events):
+        tags = {}
+        for event in events:
+            if event.get('@class') == '.TagEvent':
+                tag = event.get('tag')
+                assetid = self.get_assetid(event)
+                if tag and assetid:
+                    tags[assetid] = tag
+        return tags
+
+    def get_tags_single(self, subsite, node, sensor):
+        return self._get_tags(self._get_events(subsite, node, sensor))
+
+    def get_tags_all(self):
+        return self._get_tags(self._get_all_events())
+
+    def _get_deployments(self, events):
+        deps = []
+        tags = self._get_tags(events)
+        for event in events:
             if event.get('@class') == '.DeploymentEvent':
+                refdes = self.get_refdes(event)
                 start = make_isoformat(datetime_from_msecs(event.get('startDate')))
                 stop = make_isoformat(datetime_from_msecs(event.get('endDate'), time.time()))
                 number = event.get('deploymentNumber', 0)
-                deps[number] = (start, stop)
+                tag = tags.get(self.get_assetid(event), 'NOT FOUND')
+                deps.append((tag, refdes, number, start, stop))
         return deps
 
-    def get_calibrations(self, subsite, node, sensor):
+    def get_deployments_single(self, subsite, node, sensor):
+        refdes = '-'.join((subsite, node, sensor))
+        events = self._get_events(subsite, node, sensor)
+        deps = self._get_deployments(events)
+        return [x for x in deps if x[1] == refdes]
+
+    def get_deployments_all(self):
+        return self._get_deployments(self._get_all_events())
+
+    def _get_calibrations(self, events):
         cals = []
-        for event in self._get_events(subsite, node, sensor):
+        tags = self._get_tags(events)
+        deps = self._get_deployments(events)
+        for event in events:
             if event.get('@class') == '.CalibrationEvent':
                 start = make_isoformat(datetime_from_msecs(event.get('startDate')))
                 stop = make_isoformat(datetime_from_msecs(event.get('endDate'), time.time()))
                 cc = event.get('calibrationCoefficient', 0)
-                cals.append((start, stop, cc))
+                tag = tags.get(self.get_assetid(event), 'NOT FOUND')
+                for dtag, refdes, dep, dstart, dstop in deps:
+                    if start == dstart and tag == dtag:
+                        for each in cc:
+                            cals.append((tag, refdes, dep, start, stop,
+                                         each['name'], json.dumps(each['values'])))
         return cals
+
+    def get_calibrations_single(self, subsite, node, sensor):
+        refdes = '-'.join((subsite, node, sensor))
+        events = self._get_events(subsite, node, sensor)
+        cals = self._get_calibrations(events)
+        return [x for x in cals if x[1] == refdes]
+
+    def get_calibrations_all(self):
+        return self._get_calibrations(self._get_all_events())
 
 
 class SensorInventory(object):
-    def __init__(self, concurrency=20):
+    def __init__(self, concurrency=5):
         self.base_url = os.path.join(BASE_URL, 'inv')
         self._concurrency = concurrency
 
@@ -215,7 +284,7 @@ class Fetcher(object):
             start = max(start, self.start)
         if self.stop:
             stop = min(stop, self.stop)
-        # log.error(am.get_calibrations(self.stream.subsite, self.stream.node, self.stream.sensor))
+        #log.debug(am.get_calibrations(self.stream.subsite, self.stream.node, self.stream.sensor))
 
         return urllib.urlencode({'endDT': stop,
                                  'beginDT': start,
@@ -223,7 +292,7 @@ class Fetcher(object):
 
     def query(self):
         qurl = self.make_query_url()
-        log.debug('Starting query: %r', qurl)
+        log.info('Starting query: %r', qurl)
         self.stats[self.QSTART] = time.time()
         response = requests.get(qurl)
         self.stats[self.QFIN] = time.time()
