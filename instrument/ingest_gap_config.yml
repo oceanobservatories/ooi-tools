@@ -1,0 +1,358 @@
+rsn_data_dir : /rsn_cabled/rsn_data/DVT_Data
+qpid_server  : ooiufs03
+logs_dir     : ./ingest_gap_logs
+instruments:
+    - refdes      : RS01SBPS-PC01A-4A-CTDPFA103
+      datatype    : datalog
+      driver      : mi.instrument.seabird.sbe16plus_v2.ctdpf_jb.driver
+      node_dir    : pc01a
+      file_prefix : CTDPFA103
+
+    - refdes      : RS01SBPS-PC01A-4B-PHSENA102
+      datatype    : datalog
+      driver      : mi.instrument.sunburst.sami2_ph.ooicore.driver
+      node_dir    : pc01a
+      file_prefix : PHSENA102
+
+    - refdes      : RS01SBPS-PC01A-4C-FLORDD103
+      datatype    : datalog
+      driver      : mi.instrument.wetlabs.fluorometer.flort_d.driver
+      node_dir    : pc01a
+      file_prefix : FLORDD103
+
+    - refdes      : RS01SBPS-PC01A-05-ADCPTD102
+      datatype    : datalog
+      driver      : mi.instrument.teledyne.workhorse.driver
+      node_dir    : pc01a
+      file_prefix : ADCPTD102
+
+    - refdes      : RS01SBPS-PC01A-06-VADCPA101
+      datatype    : datalog
+      driver      : mi.instrument.teledyne.workhorse.vadcp.playback5
+      node_dir    : pc01a
+      file_prefix : VADCPA101-5TH
+
+    - refdes      : RS01SBPS-PC01A-06-VADCPA101
+      datatype    : datalog
+      driver      : mi.instrument.teledyne.workhorse.vadcp.playback4
+      node_dir    : pc01a
+      file_prefix : VADCPA101MAIN
+
+    - refdes      : RS01SBPS-SF01A-2A-CTDPFA102
+      datatype    : datalog
+      driver      : mi.instrument.seabird.sbe16plus_v2.ctdpf_sbe43.driver
+      node_dir    : sf01a
+      file_prefix : CTDPFA102
+
+    - refdes      : RS01SBPS-SF01A-2D-PHSENA101
+      datatype    : datalog
+      driver      : mi.instrument.sunburst.sami2_ph.ooicore.driver
+      node_dir    : sf01a
+      file_prefix : PHSENA101
+
+    - refdes      : RS01SBPS-SF01A-3A-FLORTD101
+      datatype    : datalog
+      driver      : mi.instrument.wetlabs.fluorometer.flort_d.driver
+      node_dir    : sf01a
+      file_prefix : FLORTD101
+
+    - refdes      : RS01SBPS-SF01A-3C-PARADA101
+      datatype    : datalog
+      driver      : mi.instrument.satlantic.par_ser_600m.driver
+      node_dir    : sf01a
+      file_prefix : PARADA101
+
+    - refdes      : RS01SBPS-SF01A-3D-SPKIRA101
+      datatype    : datalog
+      driver      : mi.instrument.satlantic.ocr_507_icsw.ooicore.driver
+      node_dir    : sf01a
+      file_prefix : SPKIRA101
+
+    - refdes      : RS01SBPS-SF01A-4A-NUTNRA101
+      datatype    : datalog
+      driver      : mi.instrument.satlantic.suna_deep.ooicore.driver
+      node_dir    : sf01a
+      file_prefix : NUTNRA101
+
+    - refdes      : RS01SBPS-SF01A-4F-PCO2WA101
+      datatype    : datalog
+      driver      : mi.instrument.sunburst.sami2_pco2.pco2a.driver
+      node_dir    : sf01a
+      file_prefix : PCO2WA101
+
+    - refdes      : RS01SLBS-MJ01A-06-PRESTA101
+      datatype    : datalog
+      driver      : mi.instrument.seabird.sbe54tps.driver
+      node_dir    : mj01a
+      file_prefix : PRESTA101
+
+    - refdes      : RS01SLBS-MJ01A-12-VEL3DB101
+      datatype    : datalog
+      driver      : mi.instrument.nobska.mavs4.ooicore.driver
+      node_dir    : mj01a
+      file_prefix : VEL3DB101
+
+    - refdes      : RS01SLBS-LJ01A-05-HPIESA101
+      datatype    : datalog
+      driver      : mi.instrument.uw.hpies.ooicore.driver
+      node_dir    : lj01a
+      file_prefix : HPIESA101
+
+    - refdes      : RS01SLBS-LJ01A-10-ADCPTE101
+      datatype    : datalog
+      driver      : mi.instrument.teledyne.workhorse.driver
+      node_dir    : lj01a
+      file_prefix : ADCPTE101
+
+    - refdes      : RS01SLBS-LJ01A-11-OPTAAC103
+      datatype    : datalog
+      driver      : mi.instrument.wetlabs.ac_s.ooicore.driver
+      node_dir    : lj01a
+      file_prefix : OPTAAC103
+
+    - refdes      : RS01SLBS-LJ01A-12-CTDPFB101
+      datatype    : datalog
+      driver      : mi.instrument.seabird.sbe16plus_v2.ctdpf_jb.driver
+      node_dir    : lj01a
+      file_prefix : CTDPFB101
+
+    - refdes      : RS01SUM1-LJ01B-09-PRESTB102
+      datatype    : datalog
+      driver      : mi.instrument.seabird.sbe54tps.driver
+      node_dir    : lj01b
+      file_prefix : PRESTB102
+
+    - refdes      : RS01SUM1-LJ01B-12-VEL3DB104
+      datatype    : datalog
+      driver      : mi.instrument.nobska.mavs4.ooicore.driver
+      node_dir    : lj01b
+      file_prefix : VEL3DB104
+
+    - refdes      : RS01SUM2-MJ01B-12-ADCPSK101
+      datatype    : datalog
+      driver      : mi.instrument.teledyne.workhorse.driver
+      node_dir    : mj01b
+      file_prefix : ADCPSK101
+
+    - refdes      : RS03AXBS-MJ03A-06-PRESTA301
+      datatype    : datalog
+      driver      : mi.instrument.seabird.sbe54tps.driver
+      node_dir    : mj03a
+      file_prefix : PRESTA301
+
+    - refdes      : RS03AXBS-LJ03A-05-HPIESA301
+      datatype    : datalog
+      driver      : mi.instrument.uw.hpies.ooicore.driver
+      node_dir    : lj03a
+      file_prefix : HPIESA301
+
+    - refdes      : RS03AXBS-LJ03A-10-ADCPTE303
+      datatype    : datalog
+      driver      : mi.instrument.teledyne.workhorse.driver
+      node_dir    : lj03a
+      file_prefix : ADCPTE303
+
+    - refdes      : RS03AXBS-LJ03A-11-OPTAAC303
+      datatype    : datalog
+      driver      : mi.instrument.wetlabs.ac_s.ooicore.driver
+      node_dir    : lj03a
+      file_prefix : OPTAAC303
+
+    - refdes      : RS03AXBS-LJ03A-12-CTDPFB301
+      datatype    : datalog
+      driver      : mi.instrument.seabird.sbe16plus_v2.ctdpf_jb.driver
+      node_dir    : lj03a
+      file_prefix : CTDPFB301
+
+    - refdes      : RS03AXPS-PC03A-4A-CTDPFA303
+      datatype    : datalog
+      driver      : mi.instrument.seabird.sbe16plus_v2.ctdpf_jb.driver
+      node_dir    : pc03a
+      file_prefix : CTDPFA303
+
+    - refdes      : RS03AXPS-PC03A-4C-FLORDD303
+      datatype    : datalog
+      driver      : mi.instrument.wetlabs.fluorometer.flort_d.driver
+      node_dir    : pc03a
+      file_prefix : FLORDD303
+
+    - refdes      : RS03AXPS-PC03A-05-ADCPTD302
+      datatype    : datalog
+      driver      : mi.instrument.teledyne.workhorse.driver
+      node_dir    : pc03a
+      file_prefix : ADCPTD302
+
+    - refdes      : RS03AXPS-PC03A-06-VADCPA301
+      datatype    : datalog
+      driver      : mi.instrument.teledyne.workhorse.vadcp.playback5
+      node_dir    : pc03a
+      file_prefix : VADCPA301-5TH
+
+    - refdes      : RS03AXPS-PC03A-06-VADCPA301
+      datatype    : datalog
+      driver      : mi.instrument.teledyne.workhorse.vadcp.playback4
+      node_dir    : pc03a
+      file_prefix : VADCPA301MAIN
+
+    - refdes      : RS03AXPS-SF03A-2A-CTDPFA302
+      datatype    : datalog
+      driver      : mi.instrument.seabird.sbe16plus_v2.ctdpf_sbe43.driver
+      node_dir    : sf03a
+      file_prefix : CTDPFA302
+
+    - refdes      : RS03AXPS-SF03A-2D-PHSENA301
+      datatype    : datalog
+      driver      : mi.instrument.sunburst.sami2_ph.ooicore.driver
+      node_dir    : sf03a
+      file_prefix : PHSENA301
+
+    - refdes      : RS03AXPS-SF03A-3A-FLORTD301
+      datatype    : datalog
+      driver      : mi.instrument.wetlabs.fluorometer.flort_d.driver
+      node_dir    : sf03a
+      file_prefix : FLORTD301
+
+    - refdes      : RS03AXPS-SF03A-3D-SPKIRA301
+      datatype    : datalog
+      driver      : mi.instrument.satlantic.ocr_507_icsw.ooicore.driver
+      node_dir    : sf03a
+      file_prefix : SPKIRA301
+
+    - refdes      : RS03AXPS-SF03A-4A-NUTNRA301
+      datatype    : datalog
+      driver      : mi.instrument.satlantic.suna_deep.ooicore.driver
+      node_dir    : sf03a
+      file_prefix : NUTNRA301
+
+    - refdes      : RS03AXPS-SF03A-4F-PCO2WA301
+      datatype    : datalog
+      driver      : mi.instrument.sunburst.sami2_pco2.pco2a.driver
+      node_dir    : sf03a
+      file_prefix : PCO2WA301
+
+    - refdes      : RS03ASHS-MJ03B-07-TMPSFA301
+      datatype    : datalog
+      driver      : mi.instrument.rbr.xr_420_thermistor_24.ooicore.driver
+      node_dir    : mj03b
+      file_prefix : TMPSFA301
+
+    - refdes      : RS03CCAL-MJ03F-05-BOTPTA301
+      datatype    : chunky
+      driver      : mi.instrument.noaa.botpt.ooicore.driver
+      node_dir    : mj03f
+      file_prefix : BOTPTA301
+
+    - refdes      : RS03ECAL-MJ03E-06-BOTPTA302
+      datatype    : chunky
+      driver      : mi.instrument.noaa.botpt.ooicore.driver
+      node_dir    : mj03e
+      file_prefix : BOTPTA302
+
+    - refdes      : RS03INT1-MJ03C-10-TRHPHA301
+      datatype    : datalog
+      driver      : mi.instrument.uw.bars.ooicore.driver
+      node_dir    : mj03c
+      file_prefix : TRHPHA301
+
+    - refdes      : RS03INT2-MJ03D-06-BOTPTA303
+      datatype    : chunky
+      driver      : mi.instrument.noaa.botpt.ooicore.driver
+      node_dir    : mj03d
+      file_prefix : BOTPTA303
+
+    - refdes      : CE04OSPS-PC01B-4C-PCO2WA105
+      datatype    : datalog
+      driver      : mi.instrument.sunburst.sami2_pco2.pco2a.driver
+      node_dir    : pc01b
+      file_prefix : PCO2WA105
+
+    - refdes      : CE04OSPS-PC01B-4A-CTDPFA109
+      datatype    : datalog
+      driver      : mi.instrument.seabird.sbe16plus_v2.ctdpf_jb.driver
+      node_dir    : pc01b
+      file_prefix : CTDPFA109
+
+    - refdes      : CE04OSPS-SF01B-4A-NUTNRA102
+      datatype    : datalog
+      driver      : mi.instrument.satlantic.suna_deep.ooicore.driver
+      node_dir    : sf01b
+      file_prefix : NUTNRA102
+
+    - refdes      : CE04OSPS-SF01B-3A-FLORTD104
+      datatype    : datalog
+      driver      : mi.instrument.wetlabs.fluorometer.flort_d.driver
+      node_dir    : sf01b
+      file_prefix : FLORTD104
+
+    - refdes      : CE04OSPS-SF01B-2A-CTDPFA107
+      datatype    : datalog
+      driver      : mi.instrument.seabird.sbe16plus_v2.ctdpf_sbe43.driver
+      node_dir    : sf01b
+      file_prefix : CTDPFA107
+
+    - refdes      : CE04OSPS-SF01B-4F-PCO2WA102
+      datatype    : datalog
+      driver      : mi.instrument.sunburst.sami2_pco2.pco2a.driver
+      node_dir    : sf01b
+      file_prefix : PCO2WA102
+
+    - refdes      : CE04OSPS-SF01B-2B-PHSENA108
+      datatype    : datalog
+      driver      : mi.instrument.sunburst.sami2_ph.ooicore.driver
+      node_dir    : sf01b
+      file_prefix : PHSENA108
+
+    - refdes      : CE04OSBP-LJ01C-05-ADCPSI103
+      datatype    : datalog
+      driver      : mi.instrument.teledyne.workhorse.driver
+      node_dir    : lj01c
+      file_prefix : ADCPSI103
+
+    - refdes      : CE04OSBP-LJ01C-06-CTDBPO108
+      datatype    : datalog
+      driver      : mi.instrument.seabird.sbe16plus_v2.ctdbp_no.driver
+      node_dir    : lj01c
+      file_prefix : CTDBPO108
+
+    - refdes      : CE04OSBP-LJ01C-07-VEL3DC107
+      datatype    : datalog
+      driver      : mi.instrument.nortek.vector.ooicore.driver
+      node_dir    : lj01c
+      file_prefix : VEL3DC107
+
+    - refdes      : CE04OSBP-LJ01C-10-PHSEND107
+      datatype    : datalog
+      driver      : mi.instrument.sunburst.sami2_ph.ooicore.driver
+      node_dir    : lj01c
+      file_prefix : PHSEND107
+
+    - refdes      : CE02SHBP-LJ01D-05-ADCPTB104
+      datatype    : datalog
+      driver      : mi.instrument.teledyne.workhorse.driver
+      node_dir    : lj01d
+      file_prefix : ADCPTB104
+
+    - refdes      : CE02SHBP-LJ01D-06-CTDBPN106
+      datatype    : datalog
+      driver      : mi.instrument.seabird.sbe16plus_v2.ctdbp_no.driver
+      node_dir    : lj01d
+      file_prefix : CTDBPN106
+
+    - refdes      : CE02SHBP-LJ01D-07-VEL3DC108
+      datatype    : datalog
+      driver      : mi.instrument.nortek.vector.ooicore.driver
+      node_dir    : lj01d
+      file_prefix : VEL3DC108
+
+    - refdes      : CE02SHBP-LJ01D-09-PCO2WB103
+      datatype    : datalog
+      driver      : mi.instrument.sunburst.sami2_pco2.pco2b.driver
+      node_dir    : lj01d
+      file_prefix : PCO2WB103
+
+    - refdes      : CE02SHBP-LJ01D-10-PHSEND103
+      datatype    : datalog
+      driver      : mi.instrument.sunburst.sami2_ph.ooicore.driver
+      node_dir    : lj01d
+      file_prefix : PHSEND103
+
