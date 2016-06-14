@@ -4,6 +4,6 @@ startup_config:
     flush_interval: 300
     source_regex: '.*AXAS1.*'
     database_address: uft21
-    file_location: /san_data/antelope
+    file_location: /san_data
 starting_state: DRIVER_STATE_AUTOSAMPLE
 instrument: RS03ASHS-MJ03B-06-OBSSPA301

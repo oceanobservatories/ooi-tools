@@ -4,6 +4,6 @@ startup_config:
     flush_interval: 300
     source_regex: '.*AXBA1_..[^H].*'
     database_address: uft21
-    file_location: /san_data/antelope
+    file_location: /san_data
 starting_state: DRIVER_STATE_AUTOSAMPLE
 instrument: RS03AXBS-MJ03A-05-OBSBBA303
