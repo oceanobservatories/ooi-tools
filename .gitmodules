@@ -1,3 +1,6 @@
 [submodule "uframe/preload_database"]
 	path = uframe/preload_database
 	url = https://github.com/oceanobservatories/preload-database
+[submodule "metadata_service_api"]
+	path = metadata_service_api
+	url = https://github.com/oceanobservatories/ooi-metadata-service-api.git

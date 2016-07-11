@@ -3,70 +3,76 @@
 Delete data for a specific reference designator from cassandra.
 
 Usage:
-    delete_data.py <refdes> <contact_ip>...
-
+    delete_data.py <refdes> <uframe_ip> <cassandra_ip_list>...
 """
 
-from cassandra.cluster import Cluster
+import cassandra.cluster
+import docopt
+import os
+import sys
+
+# Add parent directory to python path to locate the metadata_service_api package
+sys.path.insert(0, '/'.join((os.path.dirname(os.path.realpath(__file__)), '..')))
+from metadata_service_api import MetadataServiceAPI
+
+STREAM_METADATA_SERVICE_URL_TEMPLATE = 'http://{0}:12571/streamMetadata'
+PARTITION_METADATA_SERVICE_URL_TEMPLATE = 'http://{0}:12571/partitionMetadata'
 
 
 class Deleter(object):
-    def __init__(self, contacts, refdes):
-        self.contacts = contacts
+
+    def __init__(self, refdes, uframe_ip, cassandra_ip_list):
         self.refdes = refdes
         self.subsite, self.node, self.sensor = self.parse_refdes(refdes)
         # For now use version=3 against the current cassandra.
-        self.cluster = Cluster(self.contacts, control_connection_timeout=60, protocol_version=3)
-
-        self.session = self.cluster.connect('ooi')
-
-        self.lookup_stream_method = self.session.prepare('select stream, method, count from stream_metadata where subsite=? and node=? and sensor=?')
-        self.del_metadata = self.session.prepare('delete from stream_metadata where subsite=? and node=? and sensor=? and method=? and stream=?')
-        self.del_p_metadata = self.session.prepare('delete from partition_metadata where stream=? and refdes=?')
-        self.select_p_metadata = self.session.prepare('select * from partition_metadata where stream=? and refdes=?')
-
-    def delete_metadata(self, method, stream):
-        self.session.execute(self.del_metadata, (self.subsite, self.node, self.sensor, method, stream))
-        self.session.execute(self.del_p_metadata, (stream, self.refdes))
-
-    def delete_stream(self, stream):
-        delete_q = self.session.prepare('delete from %s where subsite=? and node=? and sensor=? and method=? and bin=?' % stream)
-        for row in self.session.execute(self.select_p_metadata, (stream, self.refdes)):
-            print '  Deleting: ', row
-            self.session.execute(delete_q, (self.subsite, self.node, self.sensor, row.method, row.bin))
-
-    def delete_provenance(self, methods):
-        for method in methods:
-            print 'Deleting provenance:%s:%s' % (self.refdes, method)
-            # decide which table to delete from - note different refdes specification.
-            if 'streaming' == method:
-                del_provenance = self.session.prepare('delete from streaming_l0_provenance where refdes=? and method=?')
-                self.session.execute(del_provenance, (self.refdes, method))
-            else:
-                del_provenance = self.session.prepare('delete from dataset_l0_provenance where subsite=? and node=? and sensor=? and method=?')
-                self.session.execute(del_provenance, (self.subsite, self.node, self.sensor, method))
+        cluster = cassandra.cluster.Cluster(cassandra_ip_list, control_connection_timeout=60, protocol_version=3)
+        self.session = cluster.connect('ooi')
+        stream_url = STREAM_METADATA_SERVICE_URL_TEMPLATE.format(uframe_ip)
+        partition_url = PARTITION_METADATA_SERVICE_URL_TEMPLATE.format(uframe_ip)
+        self.metadata_service_api = MetadataServiceAPI(stream_url, partition_url)
 
     @staticmethod
     def parse_refdes(refdes):
         return refdes.split('-', 2)
 
-    def find_stream_methods(self):
-        return self.session.execute(self.lookup_stream_method, (self.subsite, self.node, self.sensor))
+    def get_stream_info(self):
+        result = {}
+        partition_metadata_record_list = self.metadata_service_api.get_partition_metadata_records(
+            self.subsite, self.node, self.sensor
+        )
+        for partition_metadata_record in partition_metadata_record_list:
+            result.setdefault(partition_metadata_record['stream'], []).append(partition_metadata_record['bin'])
+        return result
+
+    def delete_stream(self, stream, bins):
+        query = self.session.prepare('delete from %s where subsite=? and node=? and sensor=? and bin=?' % stream)
+        for bin in bins:
+            self.session.execute(query, (self.subsite, self.node, self.sensor, bin))
+
+    def delete_metadata(self):
+        self.metadata_service_api.delete_stream_metadata_records(self.subsite, self.node, self.sensor)
+        self.metadata_service_api.delete_partition_metadata_records(self.subsite, self.node, self.sensor)
+
+    def delete_provenance(self):
+        query = self.session.prepare('delete from dataset_l0_provenance where subsite=? and node=? and sensor=?')
+        self.session.execute(query, (self.subsite, self.node, self.sensor))
 
     def delete(self):
-        # collect the methods that will need to be deleted from provenance.
-        methods = set()
-        for row in self.find_stream_methods():
-            print 'Deleting:', row
-            self.delete_stream(row.stream)
-            self.delete_metadata(row.method, row.stream)
-            methods.add(row.method)
-        self.delete_provenance(methods)
+        for stream, bins in self.get_stream_info().iteritems():
+            self.delete_stream(stream, bins)
+        self.delete_metadata()
+        self.delete_provenance()
+
 
 def main():
-    import docopt
+    # Process command line arguments
     options = docopt.docopt(__doc__)
-    deleter = Deleter(options['<contact_ip>'], options['<refdes>'])
+    refdes = options['<refdes>']
+    uframe_ip = options['<uframe_ip>']
+    cassandra_ip_list = options['<cassandra_ip_list>']
+
+    # Execute deletion code
+    deleter = Deleter(refdes, uframe_ip, cassandra_ip_list)
     deleter.delete()
 
 
