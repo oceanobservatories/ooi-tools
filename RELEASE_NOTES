@@ -1,0 +1,5 @@
+Release 1.0.2
+
+Issue #11697
+- Updated delete_data.py script to mark affected DOIs as obsolete and created the retro_doi_builder.py script to create DOIs for data already ingested into OOI CI
+
