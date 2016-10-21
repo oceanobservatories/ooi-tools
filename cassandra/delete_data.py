@@ -11,12 +11,17 @@ import docopt
 import os
 import sys
 
-# Add parent directory to python path to locate the metadata_service_api package
-sys.path.insert(0, '/'.join((os.path.dirname(os.path.realpath(__file__)), '..')))
+# Add parent directory to python path to locate the
+# metadata_service_api package
+sys.path.insert(0, '/'.join(
+        (os.path.dirname(os.path.realpath(__file__)), '..')))
 from metadata_service_api import MetadataServiceAPI
+from doi_service_api.api import DOIServiceAPI
+
 
 STREAM_METADATA_SERVICE_URL_TEMPLATE = 'http://{0}:12571/streamMetadata'
 PARTITION_METADATA_SERVICE_URL_TEMPLATE = 'http://{0}:12571/partitionMetadata'
+DOI_SERVICE_URL_TEMPLATE = 'http://{0}:12588/doi'
 
 
 class Deleter(object):
@@ -25,11 +30,18 @@ class Deleter(object):
         self.refdes = refdes
         self.subsite, self.node, self.sensor = self.parse_refdes(refdes)
         # For now use version=3 against the current cassandra.
-        cluster = cassandra.cluster.Cluster(cassandra_ip_list, control_connection_timeout=60, protocol_version=3)
+        cluster = cassandra.cluster.Cluster(
+                cassandra_ip_list, control_connection_timeout=60,
+                protocol_version=3)
         self.session = cluster.connect('ooi')
-        stream_url = STREAM_METADATA_SERVICE_URL_TEMPLATE.format(uframe_ip)
-        partition_url = PARTITION_METADATA_SERVICE_URL_TEMPLATE.format(uframe_ip)
-        self.metadata_service_api = MetadataServiceAPI(stream_url, partition_url)
+        stream_url = STREAM_METADATA_SERVICE_URL_TEMPLATE.format(
+                uframe_ip)
+        partition_url = PARTITION_METADATA_SERVICE_URL_TEMPLATE.format(
+                uframe_ip)
+        self.metadata_service_api = MetadataServiceAPI(
+                stream_url, partition_url)
+        doi_url = DOI_SERVICE_URL_TEMPLATE.format(uframe_ip)
+        self.doi_service_api = DOIServiceAPI(doi_url)
 
     @staticmethod
     def parse_refdes(refdes):
@@ -37,31 +49,46 @@ class Deleter(object):
 
     def get_stream_info(self):
         result = {}
-        partition_metadata_record_list = self.metadata_service_api.get_partition_metadata_records(
-            self.subsite, self.node, self.sensor
-        )
+        partition_metadata_record_list = (
+                self.metadata_service_api.get_partition_metadata_records(
+                        self.subsite, self.node, self.sensor))
         for partition_metadata_record in partition_metadata_record_list:
-            result.setdefault(partition_metadata_record['stream'], []).append(partition_metadata_record['bin'])
+            result.setdefault(
+                    partition_metadata_record['stream'], []
+                    ).append(partition_metadata_record['bin'])
         return result
 
     def delete_stream(self, stream, bins):
-        query = self.session.prepare('delete from %s where subsite=? and node=? and sensor=? and bin=?' % stream)
+        query = self.session.prepare(
+                '''delete from %s where subsite=? and node=? and sensor=? and
+                 bin=?''' % stream)
         for bin in bins:
-            self.session.execute(query, (self.subsite, self.node, self.sensor, bin))
+            self.session.execute(query, (
+                    self.subsite, self.node, self.sensor, bin))
 
     def delete_metadata(self):
-        self.metadata_service_api.delete_stream_metadata_records(self.subsite, self.node, self.sensor)
-        self.metadata_service_api.delete_partition_metadata_records(self.subsite, self.node, self.sensor)
+        self.metadata_service_api.delete_stream_metadata_records(
+                self.subsite, self.node, self.sensor)
+        self.metadata_service_api.delete_partition_metadata_records(
+                self.subsite, self.node, self.sensor)
 
     def delete_provenance(self):
-        query = self.session.prepare('delete from dataset_l0_provenance where subsite=? and node=? and sensor=?')
-        self.session.execute(query, (self.subsite, self.node, self.sensor))
+        query = self.session.prepare(
+                '''delete from dataset_l0_provenance where subsite=? and
+                node=? and sensor=?''')
+        self.session.execute(
+                query, (self.subsite, self.node, self.sensor))
+
+    def obsolete_dois(self):
+        self.doi_service_api.mark_parsed_data_sets_obsolete(
+                self.subsite, self.node, self.sensor)
 
     def delete(self):
         for stream, bins in self.get_stream_info().iteritems():
             self.delete_stream(stream, bins)
         self.delete_metadata()
         self.delete_provenance()
+        self.obsolete_dois()
 
 
 def main():
