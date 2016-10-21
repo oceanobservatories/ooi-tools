@@ -14,9 +14,12 @@ import sys
 # Add parent directory to python path to locate the metadata_service_api package
 sys.path.insert(0, '/'.join((os.path.dirname(os.path.realpath(__file__)), '..')))
 from metadata_service_api import MetadataServiceAPI
+from doi_service_api.api import DOIServiceAPI
+
 
 STREAM_METADATA_SERVICE_URL_TEMPLATE = 'http://{0}:12571/streamMetadata'
 PARTITION_METADATA_SERVICE_URL_TEMPLATE = 'http://{0}:12571/partitionMetadata'
+DOI_SERVICE_URL_TEMPLATE = 'http://{0}:12588/doi'
 
 
 class Deleter(object):
@@ -30,6 +33,8 @@ class Deleter(object):
         stream_url = STREAM_METADATA_SERVICE_URL_TEMPLATE.format(uframe_ip)
         partition_url = PARTITION_METADATA_SERVICE_URL_TEMPLATE.format(uframe_ip)
         self.metadata_service_api = MetadataServiceAPI(stream_url, partition_url)
+        doi_url = DOI_SERVICE_URL_TEMPLATE.format(uframe_ip)
+        self.doi_service_api = DOIServiceAPI(doi_url)
 
     @staticmethod
     def parse_refdes(refdes):
@@ -57,11 +62,15 @@ class Deleter(object):
         query = self.session.prepare('delete from dataset_l0_provenance where subsite=? and node=? and sensor=?')
         self.session.execute(query, (self.subsite, self.node, self.sensor))
 
+    def obsolete_dois(self):
+        self.doi_service_api.mark_parsed_data_sets_obsolete(self.subsite, self.node, self.sensor)
+
     def delete(self):
         for stream, bins in self.get_stream_info().iteritems():
             self.delete_stream(stream, bins)
         self.delete_metadata()
         self.delete_provenance()
+        self.obsolete_dois()
 
 
 def main():
