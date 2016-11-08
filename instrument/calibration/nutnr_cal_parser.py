@@ -35,7 +35,7 @@ class NutnrCalibration:
                         if name == 'T_CAL':
                             self.cal_temp = float(value)
                 elif record_type == 'E':
-                    _, wavelength, eno3, eswa, di, _ = parts
+                    _, wavelength, eno3, eswa, _, di = parts
                     self.wavelengths.append(float(wavelength))
                     self.eno3.append(float(eno3))
                     self.eswa.append(float(eswa))
