@@ -11,12 +11,12 @@ Script for starting/stopping elemental server MP4 and ProRes recordings of the C
 
 Can be called with the following options:
 
----
+```
 --start   - starts recording (has no effect if a recording is already in progress)
 --stop    - stops the active recording (has no effect if no recording is in progress)
 --restart - stops and restarts the current recording (or starts a recording if there is not a recording in progress)
 --usage   - prints usage statement
----
+```
 
 Note the record script creates a .recording file to indicate when a recording has started. The file is removed when the recording is stopped. The
 creation time is used by the archive script to compare creation times with any movie files to determine if they will be archived.
@@ -40,12 +40,12 @@ synchronized (at least to a common ntp time service) to ensure video is not lost
 
 This file is loaded using the crontab utility using the following command:
 
----
+```
 crontab /data/server/camhd/archive.cron
----
+```
 
 To confirm the cron jobs have been loaded, use the following command:
 
----
+```
 crontab -l
----
+```
