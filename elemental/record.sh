@@ -3,6 +3,8 @@
 # Start, stop, or restart the video recording for CAMHD on elemental live
 # -------------------------------------------------------------------------
 
+LOG="/data/server/camhd/control.log"
+
 function usage {
         echo "record.sh (--start | --stop | --restart | --usage)"
 }
@@ -33,27 +35,23 @@ if [[ $# -eq 1 ]]; then
         esac
         shift
 else
-        echo "Error - missing required argument"
-        usage
-        exit 1
+	echo "Error - missing required argument"
+	usage
+	exit 1
 fi
 
 if [ $do_stop ]; then
-        if [ -f .recording ]; then
-                curl -X POST -H "Accept: application/xml" -H "Content-type: application/xml" -d "<group_id>27</group_id>" http://209.124.182.238/api/live_events/4/stop_output_group
-                rm .recording
-        else
-                echo "Warning - no recording to stop"
-        fi
+	echo `date` "Info - Stopping recording" >> $LOG
+	curl -X POST -H "Accept: application/xml" -H "Content-type: application/xml" -d "<group_id>27</group_id>" "http://209.124.182.238/api/live_events/4/stop_output_group" 2>&1 >> $LOG
+	if [ $do_start ]; then
+		# give the mp4 recording enough time to close out before starting again
+		sleep 10
+	fi
 fi
 
 if [ $do_start ]; then
-        if [ ! -f .recording ]; then
-                touch .recording
-                curl -X POST -H "Accept: application/xml" -H "Content-type: application/xml" -d "<group_id>27</group_id>" http://209.124.182.238/api/live_events/4/start_output_group
-        else
-                echo "Warning - recording already in progress - use --stop or --restart to interrupt"
-        fi
+	echo `date` "Info - Starting recording" >> $LOG
+	curl -X POST -H "Accept: application/xml" -H "Content-type: application/xml" -d "<group_id>27</group_id>" "http://209.124.182.238/api/live_events/4/start_output_group" 2>&1 >> $LOG
 fi
 
 exit 0
