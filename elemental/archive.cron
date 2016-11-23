@@ -1,6 +1,6 @@
 MAILTO=""
-00 * 1-3,10,20 * * /data/server/camhd/record.sh --restart >/dev/null
-10 * 1-3,10,20 * * /data/server/camhd/archive.sh >/dev/null
+00 00 1 * * /data/server/camhd/record.sh --start >/dev/null
+00 00 10,20 * * /data/server/camhd/record.sh --start >/dev/null
 00 00,03,06,09,12,15,18,21 4-9,11-19,21-31 * * /data/server/camhd/record.sh --restart >/dev/null
 14 00,03,06,09,12,15,18,21 4-9,11-19,21-31 * * /data/server/camhd/record.sh --stop >/dev/null
-16 00,03,06,09,12,15,18,21 4-9,11-19,21-31 * * /data/server/camhd/archive.sh >/dev/null
+*/20 * * * * /data/server/camhd/archive.py > /dev/null
