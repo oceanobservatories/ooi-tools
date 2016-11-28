@@ -18,9 +18,6 @@ Can be called with the following options:
 --usage   - prints usage statement
 ```
 
-Note the record script creates a .recording file to indicate when a recording has started. The file is removed when the recording is stopped. The
-creation time is used by the archive script to compare creation times with any movie files to determine if they will be archived.
-
 archive.sh
 ----------
 
