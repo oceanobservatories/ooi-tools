@@ -2,6 +2,10 @@
 import os
 import datetime
 import logging
+import hashlib
+import shlex
+
+import subprocess
 from tendo import singleton
 
 """
@@ -20,9 +24,7 @@ camera = 'CAMHDA301'
 date_format = '%Y%m%dT%H%M00'
 output_dir = '/data/server/camhd'
 user = 'asadev'
-#remote_host = 'aiad.ooi.rutgers.edu'
 remote_host = 'ciw-aiad.intra.oceanobservatories.org'
-#remote_dest = '/san_data/RS03ASHS-PN03B-06-CAMHDA301/'
 remote_dest = '/san_hdv/RS03ASHS-PN03B-06-CAMHDA301/'
 log_file = os.path.join(output_dir, 'control.log')
 
@@ -51,6 +53,79 @@ def notify(message_text):
     s.sendmail(msg['From'], [msg['To']], msg.as_string())
 
 
+def hash_bytestr_iter(bytesiter, hasher):
+    for block in bytesiter:
+        hasher.update(block)
+    return hasher.hexdigest()
+
+
+def file_as_blockiter(afile, blocksize=65536):
+    with afile:
+        block = afile.read(blocksize)
+        while len(block) > 0:
+            yield block
+            block = afile.read(blocksize)
+
+
+def generate_checksum(filename, create_file=False):
+    """
+    Generate an MD5 checksum and write to md5_filename (if supplied)
+    :param filename:  file to checksum
+    :param create_file:   if set, write a paired md5 output file
+    :return:  (checksum hex string, md5 filename)
+    """
+    md5_file = None
+    checksum = hash_bytestr_iter(file_as_blockiter(open(filename, 'rb')), hashlib.md5())
+    if create_file:
+        md5_file = filename + '.md5'
+        with open(md5_file, 'w') as f:
+            f.write(checksum)
+            f.write('\n')
+    return checksum, md5_file
+
+
+def execute(cmd):
+    args = shlex.split(cmd)
+    output = '{}'
+    try:
+        output = subprocess.check_output(args).decode('utf-8')
+    except subprocess.CalledProcessError as e:
+        logging.error('return failure (%s) executing command (%s)', e.returncode, cmd)
+    return output
+
+
+def publish_file(local_file, user, scp_host, remote_file):
+    """
+    Publish a file to production
+    :param local_file:  filename on local disk
+    :param user:  username for scp_host
+    :param scp_host:  hostname of the remote machine
+    :param remote_file:  filename to publish as
+    """
+    result = os.system('scp %s %s@%s:%s' % (local_file, user, scp_host, remote_file))
+    if result == 0:
+        message = 'Archiving %s to %s' % (local_file, remote_file)
+        logging.info(message)
+        os.remove(local_file)
+    else:
+        error = 'Failed to archive %s to %s' % (local_file, remote_file)
+        logging.error(error)
+        notify(error)
+
+
+def test_generate_checksum():
+    filename = '/Users/danmergens/camhd/CAMHDA301-20161231T000000Z.mp4'
+    checksum, md5_filename = generate_checksum(filename, create_file=True)
+    md5_cmd = 'md5 %s' % filename
+    md5_output = execute(md5_cmd).split(' ')[-1].strip()
+    assert checksum == md5_output
+    with open(md5_filename, 'r') as f:
+        checksum_from_file = f.readline().strip()
+        assert checksum_from_file == md5_output
+
+
+# test_generate_checksum()
+
 files = os.listdir(output_dir)
 
 for f in files:
@@ -76,12 +151,9 @@ for f in files:
             notify(error)
             break
 
-        result = os.system('scp %s %s@%s:%s' % (video_file, user, remote_host, archive_file))
-        if result == 0:
-            message = 'Archiving %s to %s' % (video_file, archive_file)
-            logging.info(message)
-            os.remove(video_file)
-        else:
-            error = 'Failed to archive %s to %s' % (video_file, archive_file)
-            logging.error(error)
-            notify(error)
+        _, md5_file = generate_checksum(video_file, create_file=True)
+        md5_remote_file = archive_file + '.md5'
+
+        publish_file(video_file, user, remote_host, archive_file)
+        publish_file(md5_file, user, remote_host, md5_remote_file)
+

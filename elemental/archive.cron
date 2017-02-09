@@ -1,6 +1,16 @@
-MAILTO=""
-00 00 1 * * /data/server/camhd/record.sh --start >/dev/null
-00 00 10,20 * * /data/server/camhd/record.sh --start >/dev/null
-00 00,03,06,09,12,15,18,21 4-9,11-19,21-31 * * /data/server/camhd/record.sh --restart >/dev/null
-14 00,03,06,09,12,15,18,21 4-9,11-19,21-31 * * /data/server/camhd/record.sh --stop >/dev/null
-*/20 * * * * /data/server/camhd/archive.py > /dev/null
+MAILTO="danmergens@gmail.com"
+# 72 collect on the 1st of the month
+# 24 collect every 10th and 20th
+# m        hr    day          M D script
+  0        0     1,10,20      * * /data/server/camhd/record.sh --start >/dev/null
+  */15     0     2,3          * * /data/server/camhd/record.sh --rollover >/dev/null
+  15,30,45 0     10,20        * * /data/server/camhd/record.sh --rollover >/dev/null
+  */15     1-23  1-3,10,20    * * /data/server/camhd/record.sh --rollover >/dev/null
+
+# normal schedule is record every 3rd hour for 15 minutes
+# m    hr                 day              M D script
+  0    0                  4,11,21          * * /data/server/camhd/record.sh --rollover >/dev/null
+  0    3,6,9,12,15,18,21  4,11,21          * * /data/server/camhd/record.sh --start >/dev/null
+  0    */3                5-9,12-19,22-31  * * /data/server/camhd/record.sh --start >/dev/null
+  15   */3                4-9,11-19,21-31  * * /data/server/camhd/record.sh --stop >/dev/null
+  30   *                  *                * * /data/server/camhd/archive.py > /dev/null
