@@ -6,7 +6,7 @@
 LOG="/data/server/camhd/control.log"
 
 function usage {
-        echo "record.sh (--start | --stop | --restart | --usage)"
+        echo "record.sh (--start | --stop | --restart | --rollover | --usage)"
 }
 
 if [[ $# -eq 1 ]]; then
