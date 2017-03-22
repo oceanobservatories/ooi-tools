@@ -44,7 +44,7 @@ def parse_toc(hostname):
 
 def write_query(query):
     fname = '{0.subsite}-{0.node}-{0.sensor}-{0.method}-{0.stream}.yml'.format(query)
-    yaml.safe_dump(query._asdict(), open(fname, 'w'), default_flow_style=False)
+    yaml.safe_dump(dict(query._asdict()), open(fname, 'w'), default_flow_style=False)
 
 
 def main():
