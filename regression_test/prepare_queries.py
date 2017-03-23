@@ -35,6 +35,11 @@ def parse_toc(hostname):
             start = start.strftime(time_format)
             stop = stop.strftime(time_format)
 
+            # skip any streams with equivalent start/stop times
+            # this usually indicates only a single data point exists
+            if start == stop:
+                continue
+
             method = str(stream['method'])
             name = str(stream['stream'])
             query = Query(hostname, subsite, node, sensor, method, name, start, stop)
