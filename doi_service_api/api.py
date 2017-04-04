@@ -67,6 +67,13 @@ class DOIServiceAPI(object):
     # DOI Record Methods #
     ######################
 
+    def test_connection(self):
+        try:
+            self.get_doi_record(1)
+            return True
+        except requests.exceptions.ConnectionError:
+            return False
+
     def mark_parsed_data_sets_obsolete(self, subsite, node, sensor):
         url = '/'.join((self.__doi_url, "obsolete", subsite, node, sensor))
         return self.__get_json(url, self.__session)
@@ -75,7 +82,7 @@ class DOIServiceAPI(object):
         return self.__get_json(self.__doi_url, self.__session)
 
     def get_doi_record(self, id):
-        url = '/'.join((self.__doi_url, id))
+        url = '/'.join((self.__doi_url, str(id)))
         try:
             return self.__get_json(url, self.__session)
         except DOIServiceException, e:
@@ -88,5 +95,5 @@ class DOIServiceAPI(object):
         return self.__post_json(url, doi_record, self.__session)
 
     def delete_doi_record(self, id):
-        url = '/'.join((self.__doi_url, id))
+        url = '/'.join((self.__doi_url, str(id)))
         return self.__delete_json(url, self.__session)

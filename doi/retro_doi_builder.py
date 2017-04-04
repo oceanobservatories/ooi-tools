@@ -8,6 +8,7 @@ Usage:
     retro_doi_builder.py <uframe_ip> <cassandra_ip_list>...
 """
 
+import re
 import csv
 import sqlite3
 import json
@@ -16,9 +17,11 @@ import sys
 import requests
 import cassandra.cluster
 import operator
-import datetime
+from datetime import datetime
 import docopt
 import traceback
+import time
+import multiprocessing
 
 # Add parent directory to python path to locate the
 # metadata_service_api package
@@ -32,6 +35,7 @@ RUTGERS_FILE_SERVER = 'https://rawdata.oceanobservatories.org:13580/'
 STREAMING_SENSOR_INVENTORY_SERVICE_TEMPLATE = 'http://{0}:12576/sensor/inv'
 
 NTP_UNIX_DELTA_SECONDS = 2208988800
+MILLIS_PER_DAY = 24 * 60 * 60 * 1000
 
 DATASET_L0_PROVENANCE_COLUMNS = [
         'subsite', 'node', 'sensor', 'method', 'deployment', 'id', 'fileName',
@@ -43,27 +47,144 @@ STREAM_METADATA_SERVICE_URL_TEMPLATE = 'http://{0}:12571/streamMetadata'
 PARTITION_METADATA_SERVICE_URL_TEMPLATE = 'http://{0}:12571/partitionMetadata'
 XASSET_SERVICE_URL_TEMPLATE = 'http://{0}:12587/'
 DOI_SERVICE_URL_TEMPLATE = 'http://{0}:12588/doi'
+PARSED_URL_TEMPLATE = """%s/sensor/inv/%s/%s/%s/%s/%s?beginDT=%s&endDT=%s&
+                      execDPA=false&user=doilookup"""
+DATE_REGEX = re.compile("""\\d{4}[_-]?(0[1-9]|1[0-2])[-_]?(0[1-9]|[12][0-9]|
+                        3[01])""")
+
+
+# Take a timestamp representing milliseconds since the UNIX epoch and return
+# an ISO8601 string representation of that time. For example, an integer input
+# of 1494524856000 would result in a string output of "2017-05-11T17:47:36".
+def convertMillisToIso8601(timestamp):
+        return datetime.utcfromtimestamp(timestamp/1000).isoformat()
+
+
+def streamed(method):
+    return 'streamed' in method
+
+
+def createDOIRecordsHelper(params):
+    (builder, row) = params
+    createDOIRecords(builder, row)
+
+
+def createDOIRecords(builder, row):
+    (subsite, node, sensor, method, deploymentNumber, parsername,
+     parserversion, version, start, stop, latitude, longitude, depth,
+     manufacturer, model, serialnumber, mio, name, uid, rawStreams) = row
+    if mio is None or mio == "":
+        mio = "OOI - Ocean Observatories Initiative"
+    streams = json.loads(rawStreams)
+    refdes = "-".join((subsite, node, sensor))
+
+    # make parser DOI
+    parserDOI = {}
+    parserDOI["@class"] = ".ParserDOIRecord"
+    parserDOI["doi"] = None
+    parserDOI["obsolete"] = False
+    parserDOI["error"] = None
+    parserDOI["doiType"] = "PARSER"
+    parserDOI["name"] = parsername
+    parserDOI["version"] = parserversion
+    parserDOI["language"] = "Python"
+    parserDOI["predecessor"] = None
+    # try to create parserDOI and store the JSON response
+    try:
+        response = builder.doi_service_api.create_doi_record(parserDOI)
+        parserDOI["id"] = response["id"]
+    except DOIServiceException as e:
+        pass
+    # if the creation succeeded or not, log the result
+    builder.log_result(json.dumps(parserDOI), response["statusCode"])
+
+    # make raw DOI
+    rawFileSetDOI = {}
+    rawFileSetDOI["@class"] = ".RawFileSetDOIRecord"
+    rawFileSetDOI["doi"] = None
+    rawFileSetDOI["obsolete"] = False
+    rawFileSetDOI["error"] = None
+    rawFileSetDOI["doiType"] = "RAW_FILE_SET"
+    rawFileSetDOI["sensorDOI"] = None
+    rawFileSetDOI["referenceDesignator"] = refdes
+    rawFileSetDOI["deployment"] = deploymentNumber
+    rawFileSetDOI["method"] = method
+
+    # TODO update URL structure once it is finalized
+    if streamed(method):
+        date = (datetime.utcfromtimestamp(start/1000.0)
+                .date().strftime('%Y%m%d'))
+        url = RUTGERS_FILE_SERVER + "_".join([refdes, method, date])
+    else:
+        url = RUTGERS_FILE_SERVER + "_".join(
+                (refdes, str(deploymentNumber), str(version), method))
+
+    # in the current implementation, the file mask and url are the same
+    rawFileSetDOI["uriMask"] = url
+    rawFileSetDOI["url"] = url
+    rawFileSetDOI["startTime"] = start
+    rawFileSetDOI["stopTime"] = stop
+    rawFileSetDOI["predecessor"] = None
+    # try to create rawFileSetDOI and store the JSON response
+    try:
+        response = builder.doi_service_api.create_doi_record(rawFileSetDOI)
+        rawFileSetDOI["id"] = response["id"]
+    except DOIServiceException as e:
+        pass
+    # if the creation succeeded or not, log the result
+    builder.log_result(json.dumps(rawFileSetDOI), response["statusCode"])
+
+    # make parsed DOI
+    parsedDataSetDOI = {}
+    parsedDataSetDOI["@class"] = ".ParsedDataSetDOIRecord"
+    parsedDataSetDOI["doi"] = None
+    parsedDataSetDOI["obsolete"] = False
+    parsedDataSetDOI["error"] = None
+    parsedDataSetDOI["doiType"] = "PARSED_DATA_SET"
+    parsedDataSetDOI["rawFileSetDOI"] = rawFileSetDOI
+    parsedDataSetDOI["parserDOI"] = parserDOI
+    parsedDataSetDOI["referenceDesignator"] = refdes
+    parsedDataSetDOI["streams"] = streams
+    parsedDataSetDOI["startTime"] = start
+    parsedDataSetDOI["stopTime"] = stop
+    parsedDataSetDOI["urls"] = builder.generateStreamUrls(parsedDataSetDOI,
+                                                          method)
+    parsedDataSetDOI["predecessor"] = None
+    # try to create parsedDataSetDOI and store the JSON response
+    try:
+        response = builder.doi_service_api.create_doi_record(parsedDataSetDOI)
+        parsedDataSetDOI["id"] = response["id"]
+    except DOIServiceException as e:
+        pass
+    # if the creation succeeded or not, log the result
+    builder.log_result(json.dumps(parsedDataSetDOI), response["statusCode"])
 
 
 class retroactiveDOIBuilder(object):
     def __init__(self, uframe_ip, cassandra_ip_list, database="retrodoi.db"):
         self.database = database
+        self.uframe_ip = uframe_ip
         self.cassandra_ip_list = cassandra_ip_list
+
         stream_url = STREAM_METADATA_SERVICE_URL_TEMPLATE.format(uframe_ip)
         partition_url = PARTITION_METADATA_SERVICE_URL_TEMPLATE.format(
                 uframe_ip)
         self.metadata_service_api = MetadataServiceAPI(
                 stream_url, partition_url)
+
         xasset_url = XASSET_SERVICE_URL_TEMPLATE.format(uframe_ip)
         self.xasset_service_api = XAssetServiceAPI(
                 xasset_url, requests.Session())
+
         doi_url = DOI_SERVICE_URL_TEMPLATE.format(uframe_ip)
         self.doi_service_api = DOIServiceAPI(doi_url, requests.Session())
-        self.streaming_sensor_inventory_service = (
-                STREAMING_SENSOR_INVENTORY_SERVICE_TEMPLATE.format(uframe_ip))
+
+        inventory_url = STREAMING_SENSOR_INVENTORY_SERVICE_TEMPLATE.format(
+                        uframe_ip)
+        self.streaming_sensor_inventory_service = (inventory_url)
 
     def log_result(self, json, statusCode):
-        now = datetime.datetime.now()
+        now = datetime.now()
         successLogFile = (
                 "./retro_doi_gen_pass_" + now.strftime("%Y%m%d") + ".log")
         failureLogFile = (
@@ -83,21 +204,6 @@ class retroactiveDOIBuilder(object):
         rows.sort(key=operator.itemgetter(*columns))
         return rows
 
-    # get the column names for a table
-    def getColumns(self, table):
-        with sqlite3.connect(self.database) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM " + table + ";")
-            return [x[0] for x in cursor.description]
-
-    def write_csv_file(self, filepath, data, columns):
-        '''Write data to specified CSV file.'''
-        with open(filepath, 'wb') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=columns)
-            writer.writeheader()
-            for row in data:
-                writer.writerow(row)
-
     def loadProvenance(self):
         cluster = cassandra.cluster.Cluster(
                 self.cassandra_ip_list, control_connection_timeout=60,
@@ -107,7 +213,65 @@ class retroactiveDOIBuilder(object):
                 session, ALL_DATASET_L0_PROVENANCE,
                 DATASET_L0_PROVENANCE_COLUMNS)
         cluster.shutdown()
-        return provenance
+
+        with sqlite3.connect(self.database) as conn:
+
+            def getStreamedStart(method, filename):
+                if not streamed(method):
+                    return None
+                match = re.search(DATE_REGEX, filename)
+                if match is None:
+                    return None
+                dateString = match.group().replace("-", "")
+                date = datetime.strptime(dateString, "%Y%m%d")
+                epoch = datetime(1970, 1, 1)
+                return (date - epoch).total_seconds() * 1000
+
+            def getStreamedStop(start):
+                if start is None:
+                    return None
+                return start + MILLIS_PER_DAY - 1
+
+            conn.create_function("getStreamedStart", 2, getStreamedStart)
+            conn.create_function("getStreamedStop", 1, getStreamedStop)
+
+            conn.execute("DROP TABLE IF EXISTS PROVENANCE")
+            conn.execute(
+                    """CREATE TABLE PROVENANCE (subsite TEXT, node TEXT,
+                     sensor TEXT, method TEXT, deployment INTEGER,
+                     rowid TEXT, filename TEXT, parsername TEXT,
+                     parserversion TEXT)""")
+
+            for row in provenance:
+                subsite = row['subsite']
+                node = row['node']
+                sensor = row['sensor']
+                method = row['method']
+                deployment = row['deployment']
+                rowid = str(row['id'])
+                filename = row['fileName']
+                parsername = row['parserName']
+                parserversion = row['parserVersion']
+
+                record = [subsite, node, sensor, method, deployment, rowid,
+                          filename, parsername, parserversion]
+
+                conn.execute(
+                        """INSERT INTO PROVENANCE (subsite, node, sensor,
+                        method, deployment, rowid, filename, parsername,
+                        parserversion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);""",
+                        record)
+
+            conn.execute("""ALTER TABLE PROVENANCE add column
+                         start INTEGER""")
+            conn.execute("""UPDATE PROVENANCE SET
+                         start=getStreamedStart(method, filename)""")
+            conn.execute("""ALTER TABLE PROVENANCE add column
+                         stop INTEGER""")
+            conn.execute("""UPDATE PROVENANCE SET
+                         stop=getStreamedStop(start)""")
+
+            conn.commit()
 
     def loadStreamMetadata(self):
         with sqlite3.connect(self.database) as conn:
@@ -133,237 +297,159 @@ class retroactiveDOIBuilder(object):
                          VALUES (?, ?, ?, ?, ?, ?, ?);""", record)
             conn.commit()
 
-    def getMatchingStreams(self, subsite, node, sensor, method, start, stop):
+    def loadDeployments(self):
         with sqlite3.connect(self.database) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                    '''SELECT stream FROM METADATA WHERE subsite = ? AND
-                    node = ? AND sensor = ? AND method = ? AND
-                    start < ? AND stop > ?''',
-                    (subsite, node, sensor, method, stop, start))
-            streams = cursor.fetchall()
-            # convert from list of tuples to JSON string representing
-            # list of strings
-            return json.dumps([streamTuple[0] for streamTuple in streams])
+            conn.execute("DROP TABLE IF EXISTS DEPLOYMENTS")
+            conn.execute(
+                    """CREATE TABLE DEPLOYMENTS (subsite TEXT, node TEXT,
+                     sensor TEXT, deployment INTEGER, version INTEGER,
+                     start INTEGER, stop INTEGER, latitude REAL,
+                     longitude REAL, depth REAL, manufacturer TEXT, model TEXT,
+                     serialnumber TEXT, mio TEXT, name TEXT, uid TEXT)""")
 
-    def augmentProvenance(self):
-        self.loadStreamMetadata()
-        provenance = self.loadProvenance()
-        with sqlite3.connect(self.database) as conn:
-            conn.execute("DROP TABLE IF EXISTS AUGMENTED_PROVENANCE")
-            conn.execute("""CREATE TABLE IF NOT EXISTS AUGMENTED_PROVENANCE
-                (subsite TEXT, node TEXT, sensor TEXT, method TEXT,
-                deployment INTEGER, filename TEXT, parsername TEXT,
-                parserversion TEXT, version INTEGER, start INTEGER,
-                stop INTEGER, latitude REAL, longitude REAL,
-                depth REAL, manufacturer TEXT, model TEXT,
-                serialnumber TEXT, mio TEXT, name TEXT, uid TEXT,
-                streams TEXT)""")
-            for row in provenance:
-                subsite = row['subsite']
-                node = row['node']
-                sensor = row['sensor']
-                method = row['method']
-                deploymentNumber = row['deployment']
-                filename = row['fileName']
-                parsername = row['parserName']
-                parserversion = row['parserVersion']
+            cursor = conn.cursor()
+            cursor.execute("""SELECT DISTINCT subsite, node, sensor, deployment
+                           FROM PROVENANCE;""")
+            for row in cursor:
+                subsite, node, sensor, deployment = row
+                if (deployment == 0):
+                    # use -1 to get all available deployment numbers
+                    deployment = -1
+                deployments = self.xasset_service_api.get_records(
+                              subsite, node, sensor, deployment)
 
                 # WARNING: This approach can potentially create DOIRecords
                 # whose deployment, version, refdes, and method do not
                 # correspond to existing data
-                deployments = self.xasset_service_api.get_records(
-                        subsite, node, sensor, deploymentNumber)
-                for deployment in deployments:
-                    if deployment["sensor"] is not None:
-                        version = deployment["versionNumber"]
-                        start = deployment["eventStartTime"]
-                        stop = deployment["eventStopTime"]
-                        ingestInfo = deployment["ingestInfo"]
-                        latitude = deployment["location"]["latitude"]
-                        longitude = deployment["location"]["longitude"]
-                        depth = deployment["location"]["depth"]
-                        manufacturer = deployment["sensor"]["manufacturer"]
-                        model = deployment["sensor"]["modelNumber"]
-                        serialnumber = deployment["sensor"]["serialNumber"]
-                        mio = deployment["sensor"]["owner"]
-                        name = deployment["sensor"]["name"]
-                        uid = deployment["sensor"]["uid"]
-                        streams = self.getMatchingStreams(
-                                subsite, node, sensor, method, start, stop)
 
-                        record = [subsite, node, sensor, method,
-                                  deploymentNumber, filename, parsername,
-                                  parserversion, version, start, stop,
-                                  latitude, longitude, depth, manufacturer,
-                                  model, serialnumber, mio, name, uid, streams]
-                        conn.execute("""INSERT INTO AUGMENTED_PROVENANCE
-                            (subsite, node, sensor, method, deployment,
-                            filename, parsername, parserversion, version,
-                            start, stop, latitude, longitude, depth,
-                            manufacturer, model, serialnumber, mio, name,
-                            uid, streams) VALUES (?, ?, ?, ?, ?, ?, ?, ?,
-                            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);""", record)
+                for deploymentEvent in deployments:
+                    deployment = deploymentEvent["deploymentNumber"]
+                    version = deploymentEvent["versionNumber"]
+                    start = deploymentEvent["eventStartTime"]
+                    stop = deploymentEvent["eventStopTime"]
+                    latitude = deploymentEvent["location"]["latitude"]
+                    longitude = deploymentEvent["location"]["longitude"]
+                    depth = deploymentEvent["location"]["depth"]
+                    manufacturer = deploymentEvent["sensor"]["manufacturer"]
+                    model = deploymentEvent["sensor"]["modelNumber"]
+                    serialnumber = deploymentEvent["sensor"]["serialNumber"]
+                    mio = deploymentEvent["sensor"]["owner"]
+                    name = deploymentEvent["sensor"]["name"]
+                    uid = deploymentEvent["sensor"]["uid"]
 
-                conn.commit()
+                    record = [subsite, node, sensor, deployment, version,
+                              start, stop, latitude, longitude, depth,
+                              manufacturer, model, serialnumber, mio, name,
+                              uid]
 
-    def createDOIRecords(self, row):
-        subsite = row[0]
-        node = row[1]
-        sensor = row[2]
-        method = row[3]
-        deploymentNumber = row[4]
-        filename = row[5]
-        parsername = row[6]
-        parserversion = row[7]
-        version = row[8]
-        start = row[9]
-        stop = row[10]
-        latitude = row[11]
-        longitude = row[12]
-        depth = row[13]
-        manufacturer = row[14]
-        model = row[15]
-        serialnumber = row[16]
-        mio = row[17]
-        name = row[18]
-        uid = row[19]
-        streams = json.loads(row[20])
+                    conn.execute(
+                            """INSERT INTO DEPLOYMENTS (subsite, node,
+                            sensor, deployment, version, start, stop,
+                            latitude, longitude, depth, manufacturer, model,
+                            serialnumber, mio, name, uid) VALUES
+                            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                            ?, ?);""", record)
+        conn.commit()
 
-        # make parser DOI
-        parserDOI = {}
-        parserDOI["@class"] = ".ParserDOIRecord"
-        parserDOI["doi"] = None
-        parserDOI["dirty"] = False
-        parserDOI["obsolete"] = False
-        parserDOI["error"] = None
-        parserDOI["doiType"] = "PARSER"
-        parserDOI["name"] = parsername
-        parserDOI["version"] = parserversion
-        parserDOI["language"] = "Python"
-        parserDOI["predecessor"] = None
-        # try to create parserDOI and store the JSON response
-        try:
-            response = self.doi_service_api.create_doi_record(parserDOI)
-            parserDOI["id"] = response["id"]
-        except DOIServiceException as e:
-            pass
-        # if the creation succeeded or not, log the result
-        self.log_result(json.dumps(parserDOI), response["statusCode"])
+    def augmentProvenance(self):
+        self.loadProvenance()
+        self.loadStreamMetadata()
+        self.loadDeployments()
+        with sqlite3.connect(self.database) as conn:
+            def getMatchingStreams(subsite, node, sensor, method, start, stop):
+                cursor = conn.cursor()
+                cursor.execute(
+                    '''SELECT stream FROM METADATA WHERE subsite = ? AND
+                    node = ? AND sensor = ? AND method = ? AND
+                    start < ? AND stop > ?''',
+                    (subsite, node, sensor, method, stop, start))
+                streams = cursor.fetchall()
+                # convert from list of tuples to JSON string representing
+                # list of strings
+                return json.dumps([streamTuple[0] for streamTuple in streams])
 
-        # make sensor DOI
-        sensorDOI = {}
-        sensorDOI["@class"] = ".SensorDOIRecord"
-        sensorDOI["doi"] = None
-        sensorDOI["dirty"] = False
-        sensorDOI["obsolete"] = False
-        sensorDOI["error"] = None
-        sensorDOI["doiType"] = "SENSOR"
-        sensorDOI["uid"] = uid
-        sensorDOI["referenceDesignator"] = "-".join((subsite, node, sensor))
-        sensorDOI["deployment"] = deploymentNumber
-        sensorDOI["version"] = version
-        sensorDOI["deployed"] = start
-        sensorDOI["recovered"] = stop
-        sensorDOI["location"] = (
-                "POINT (" + str(latitude) + " " + str(longitude) + ")")
-        sensorDOI["latitude"] = latitude
-        sensorDOI["longitude"] = longitude
-        sensorDOI["depth"] = depth
-        sensorDOI["manufacturer"] = manufacturer
-        sensorDOI["model"] = model
-        sensorDOI["serialNumber"] = serialnumber
-        sensorDOI["mio"] = mio
-        sensorDOI["name"] = name
-        sensorDOI["displayName"] = name
-        sensorDOI["nodeDOI"] = None
-        # try to create sensorDOI and store the JSON response
-        try:
-            response = self.doi_service_api.create_doi_record(sensorDOI)
-            sensorDOI["id"] = response["id"]
-        except DOIServiceException as e:
-            pass
-        # if the creation succeeded or not, log the result
-        self.log_result(json.dumps(sensorDOI), response["statusCode"])
+            conn.create_function("getMatchingStreams", 6, getMatchingStreams)
 
-        # make raw DOI
-        rawFileSetDOI = {}
-        rawFileSetDOI["@class"] = ".RawFileSetDOIRecord"
-        rawFileSetDOI["doi"] = None
-        rawFileSetDOI["dirty"] = False
-        rawFileSetDOI["obsolete"] = False
-        rawFileSetDOI["error"] = None
-        rawFileSetDOI["doiType"] = "RAW_FILE_SET"
-        rawFileSetDOI["sensorDOI"] = sensorDOI
-        rawFileSetDOI["referenceDesignator"] = "-".join(
-                (subsite, node, sensor))
-        rawFileSetDOI["deployment"] = deploymentNumber
-        rawFileSetDOI["method"] = method
-        # in the current implementation, the file mask and url are the same
-        refdes = "-".join((subsite, node, sensor))
-        url = RUTGERS_FILE_SERVER + "_".join(
-                (refdes, str(deploymentNumber), str(version), method))
-        rawFileSetDOI["uriMask"] = url
-        rawFileSetDOI["url"] = url
-        rawFileSetDOI["startTime"] = start
-        rawFileSetDOI["stopTime"] = stop
-        rawFileSetDOI["predecessor"] = None
-        # try to create rawFileSetDOI and store the JSON response
-        try:
-            response = self.doi_service_api.create_doi_record(rawFileSetDOI)
-            rawFileSetDOI["id"] = response["id"]
-        except DOIServiceException as e:
-            pass
-        # if the creation succeeded or not, log the result
-        self.log_result(json.dumps(rawFileSetDOI), response["statusCode"])
+            conn.execute("DROP TABLE IF EXISTS AUGMENTED_PROVENANCE")
 
-        # make parsed DOI
-        parsedDataSetDOI = {}
-        parsedDataSetDOI["@class"] = ".ParsedDataSetDOIRecord"
-        parsedDataSetDOI["doi"] = None
-        parsedDataSetDOI["dirty"] = False
-        parsedDataSetDOI["obsolete"] = False
-        parsedDataSetDOI["error"] = None
-        parsedDataSetDOI["doiType"] = "PARSED_DATA_SET"
-        parsedDataSetDOI["rawFileSetDOI"] = rawFileSetDOI
-        parsedDataSetDOI["parserDOI"] = parserDOI
-        parsedDataSetDOI["referenceDesignator"] = "-".join(
-                (subsite, node, sensor))
-        parsedDataSetDOI["streams"] = streams
-        parsedDataSetDOI["urls"] = self.generateStreamUrls(
-                subsite, node, sensor, method, streams)
-        parsedDataSetDOI["startTime"] = start
-        parsedDataSetDOI["stopTime"] = stop
-        parsedDataSetDOI["predecessor"] = None
-        # try to create parsedDataSetDOI and store the JSON response
-        try:
-            response = self.doi_service_api.create_doi_record(parsedDataSetDOI)
-            parsedDataSetDOI["id"] = response["id"]
-        except DOIServiceException as e:
-            pass
-        # if the creation succeeded or not, log the result
-        self.log_result(json.dumps(parsedDataSetDOI), response["statusCode"])
+            conn.execute(
+                """CREATE TABLE AUGMENTED_PROVENANCE AS
+                SELECT PROVENANCE.subsite, PROVENANCE.node,
+                PROVENANCE.sensor, PROVENANCE.method,
+                PROVENANCE.deployment, PROVENANCE.parsername,
+                PROVENANCE.parserversion, DEPLOYMENTS.version,
+                DEPLOYMENTS.start, DEPLOYMENTS.stop, DEPLOYMENTS.latitude,
+                DEPLOYMENTS.longitude, DEPLOYMENTS.depth,
+                DEPLOYMENTS.manufacturer, DEPLOYMENTS.model,
+                DEPLOYMENTS.serialnumber, DEPLOYMENTS.mio,
+                DEPLOYMENTS.name, DEPLOYMENTS.uid
+                FROM PROVENANCE JOIN DEPLOYMENTS
+                ON (PROVENANCE.subsite = DEPLOYMENTS.subsite
+                AND PROVENANCE.node = DEPLOYMENTS.node
+                AND PROVENANCE.sensor = DEPLOYMENTS.sensor
+                AND PROVENANCE.deployment = DEPLOYMENTS.deployment)
 
-    def generateStreamUrls(self, subsite, node, sensor, method, streams):
+                UNION
+
+                SELECT PROVENANCE.subsite, PROVENANCE.node,
+                PROVENANCE.sensor, PROVENANCE.method,
+                DEPLOYMENTS.deployment, PROVENANCE.parsername,
+                PROVENANCE.parserversion, DEPLOYMENTS.version,
+                PROVENANCE.start, PROVENANCE.stop, DEPLOYMENTS.latitude,
+                DEPLOYMENTS.longitude, DEPLOYMENTS.depth,
+                DEPLOYMENTS.manufacturer, DEPLOYMENTS.model,
+                DEPLOYMENTS.serialnumber, DEPLOYMENTS.mio,
+                DEPLOYMENTS.name, DEPLOYMENTS.uid
+                FROM PROVENANCE JOIN DEPLOYMENTS
+                ON (PROVENANCE.subsite = DEPLOYMENTS.subsite
+                AND PROVENANCE.node = DEPLOYMENTS.node
+                AND PROVENANCE.sensor = DEPLOYMENTS.sensor
+                AND PROVENANCE.method = 'streamed'
+                AND (PROVENANCE.start < DEPLOYMENTS.stop OR
+                DEPLOYMENTS.stop IS NULL)
+                AND (PROVENANCE.stop > DEPLOYMENTS.start OR
+                PROVENANCE.stop IS NULL));""")
+
+            conn.execute("""ALTER TABLE AUGMENTED_PROVENANCE add column
+                         streams TEXT""")
+            conn.execute("""UPDATE AUGMENTED_PROVENANCE SET
+                         streams=getMatchingStreams(subsite, node, sensor,
+                         method, start, stop)""")
+            conn.commit()
+
+    def generateStreamUrls(self, parsedDataSetDOI, method):
+        streams = parsedDataSetDOI['streams']
+        refdes = parsedDataSetDOI['referenceDesignator'].split('-', 2)
+        start = convertMillisToIso8601(parsedDataSetDOI['startTime'])
+        stop = convertMillisToIso8601(parsedDataSetDOI['stopTime'])
+
         urls = []
         for stream in streams:
-            urls.append("/".join((self.streaming_sensor_inventory_service,
-                                  subsite, node, sensor, method,
-                                  stream + "?user=doilookup&execDPA=false")))
+            urls.append(
+                        PARSED_URL_TEMPLATE %
+                        (self.streaming_sensor_inventory_service, refdes[0],
+                         refdes[1], refdes[2], method, stream, start, stop))
+
         return urls
 
     def generateDOIs(self):
         with sqlite3.connect(self.database) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM AUGMENTED_PROVENANCE;")
-            for row in cursor:
-                try:
-                    self.createDOIRecords(row)
-                except Exception as e:
-                    self.log_result(json.dumps(row), str(e))
-                    trace = sys.exc_info()[2]
-                    print(e)
-                    traceback.print_tb(trace)
+            cursor.execute("SELECT DISTINCT * FROM AUGMENTED_PROVENANCE;")
+
+            pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
+            pool.map(createDOIRecordsHelper, [(self, row) for row in cursor])
+            pool.close()
+            pool.join()
+
+    def writeTable(self, table):
+        with sqlite3.connect(self.database) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM " + table + ";")
+            with open(table.lower() + ".csv", 'wb') as outputFile:
+                outputWriter = csv.writer(outputFile)
+                outputWriter.writerow([i[0] for i in cursor.description])
+                outputWriter.writerows(cursor)
 
 
 def main():

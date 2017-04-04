@@ -80,8 +80,14 @@ class Deleter(object):
                 query, (self.subsite, self.node, self.sensor))
 
     def obsolete_dois(self):
-        self.doi_service_api.mark_parsed_data_sets_obsolete(
-                self.subsite, self.node, self.sensor)
+        # check that the DOI service is available before proceeding
+        if (self.doi_service_api.test_connection()):
+            self.doi_service_api.mark_parsed_data_sets_obsolete(
+                    self.subsite, self.node, self.sensor)
+        else:
+            print("WARNING: DOI web service unavailable - skipping DOI "
+                  "obsolescence. Ignore this warning if DOI plugins are "
+                  "disabled.")
 
     def delete(self):
         for stream, bins in self.get_stream_info().iteritems():
