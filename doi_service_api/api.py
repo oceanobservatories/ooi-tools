@@ -6,7 +6,7 @@ class DOIServiceException(Exception):
 
     def __init__(self, status_code):
         message = 'DOI Service request failed with status: {0}'.format(
-                status_code)
+            status_code)
         super(DOIServiceException, self).__init__(message)
         self.status_code = status_code
 
@@ -24,41 +24,40 @@ class DOIServiceAPI(object):
 
     @staticmethod
     def __get_json(url, session=None):
-        if session is None:
-            response = requests.get(url)
-        else:
+        if session:
             response = session.get(url)
+        else:
+            response = requests.get(url)
         if response.status_code != requests.codes.ok:
             raise DOIServiceException(response.status_code)
         return response.json()
 
     @staticmethod
     def __post_json(url, json, session=None):
-        if session is None:
-            response = requests.post(url, json=json)
-        else:
+        if session:
             response = session.post(url, json=json)
-        if response.status_code not in [
-                requests.codes.created, requests.codes.ok]:
+        else:
+            response = requests.post(url, json=json)
+        if response.status_code not in [requests.codes.created, requests.codes.ok]:
             raise DOIServiceException(response.status_code)
         return response.json()
 
     @staticmethod
     def __put_json(url, json, session=None):
-        if session is None:
-            response = requests.put(url, json=json)
-        else:
+        if session:
             response = session.put(url, json=json)
+        else:
+            response = requests.put(url, json=json)
         if response.status_code != requests.codes.ok:
             raise DOIServiceException(response.status_code)
         return response.json()
 
     @staticmethod
     def __delete_json(url, session=None):
-        if session is None:
-            response = requests.delete(url)
-        else:
+        if session:
             response = session.delete(url)
+        else:
+            response = requests.delete(url)
         if response.status_code != requests.codes.ok:
             raise DOIServiceException(response.status_code)
         return response.json()
