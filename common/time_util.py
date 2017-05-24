@@ -35,16 +35,16 @@ def ntp_to_java_time(ntp_time):
     Convert a double timestamp representing Network Time Protocol (NTP) time to a long timestamp representing
     milliseconds since the UNIX epoch. E.g. an input of 3606226616.774 results in an output of 1397237817000L.
     :param ntp_time: a double timestamp representing NTP time
-    :return: a long representing the input time as seconds since the UNIX epoch
+    :return: a long representing the input time as milliseconds since the UNIX epoch
     """
     return long(round(ntp_time - NTP_UNIX_DELTA_SECONDS) * 1000)
 
 
 def parse_basic_iso8601_date(parse_string):
     """
-
-    :param parse_string:
-    :return:
+    Parse an ISO8601 date from a given string and return a datetime object for that date
+    :param parse_string: an input string suspected of containing an ISO8601 date string
+    :return: a datetime object or None if no date string was found
     """
     match = re.search(EXTENDED_ISO8601_DATE_REGEX, parse_string)
     if not match:
@@ -56,8 +56,8 @@ def parse_basic_iso8601_date(parse_string):
 
 def java_time_from_basic_iso8601_date(date):
     """
-
-    :param date_string:
-    :return:
+    Convert a datetime object into an integer timestamp representing milliseconds since the UNIX epoch
+    :param date: the datetime object to convert
+    :return: an integer representing the input time as milliseconds since the UNIX epoch
     """
     return (date - UNIX_EPOCH_DATETIME).total_seconds() * 1000

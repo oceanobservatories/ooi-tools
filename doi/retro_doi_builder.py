@@ -210,7 +210,7 @@ class RetroactiveDOIBuilder(object):
                 date = time_util.parse_basic_iso8601_date(filename)
                 if not date:
                     return None
-                return time_util.javatime_from_basic_iso8601_date(date)
+                return time_util.java_time_from_basic_iso8601_date(date)
 
             def get_streamed_stop(start):
                 if not start:
@@ -396,7 +396,7 @@ class RetroactiveDOIBuilder(object):
             conn.execute("""ALTER TABLE AUGMENTED_PROVENANCE ADD COLUMN
                          streams TEXT""")
             conn.execute("""UPDATE AUGMENTED_PROVENANCE SET
-                         streams=getMatchingStreams(subsite, node, sensor,
+                         streams=get_matching_streams(subsite, node, sensor,
                          method, start, stop)""")
             conn.commit()
 
@@ -443,7 +443,7 @@ def main():
 
     # Execute retroactive DOI generation code
     retro_doi_generator = RetroactiveDOIBuilder(uframe_ip, cassandra_ip_list)
-    retro_doi_generator.augmentProvenance()
+    retro_doi_generator.augment_provenance()
     retro_doi_generator.generate_dois()
 
 
