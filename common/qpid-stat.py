@@ -57,4 +57,161 @@ class QpidQueueStats(object):
 
     def _get_diff(self, deque_name):
         vals = list(self.deques[deque_name])
-        if len(vals) < 2:                                                                                                                                                                                                                                                                                     1,1           Top
+        if len(vals) < 2:
+            return 0
+        return vals[-1] - vals[0]
+
+    def get_rate(self, deque_name):
+        elapsed = self.elapsed
+        if elapsed == 0:
+            return 0.0
+ 
+        diff = self._get_diff(deque_name)
+        return float(diff) / elapsed
+
+    @property
+    def bound(self):
+        return self._get_last_value('bound')
+
+    @property
+    def consumers(self):
+        return self._get_last_value('consumers')
+
+    @property
+    def bytes(self):
+        return self._get_last_value('bytes')
+
+    @property
+    def bytes_in(self):
+        return self._get_last_value('bytes_in')
+
+    @property
+    def bytes_out(self):
+        return self._get_last_value('bytes_out')
+
+    @property
+    def msgs(self):
+        return self._get_last_value('msgs')
+
+    @property
+    def msgs_in(self):
+        return self._get_last_value('msgs_in')
+
+    @property
+    def msgs_out(self):
+        return self._get_last_value('msgs_out')
+
+    @property
+    def elapsed(self):
+        times = list(self.times)
+        if len(times) < 2:
+            return 0
+        return (times[-1] - times[0]).total_seconds()
+
+    @property
+    def bytes_in_rate(self):
+        return self.get_rate('bytes_in')
+
+    @property
+    def msgs_in_rate(self):
+        return self.get_rate('msgs_in')
+
+    def __repr__(self):
+        return str(self.__dict__)
+
+
+class QpidQueue(object):
+    # queueFlowResumeSizeBytes
+    # exclusive
+    # alertThresholdMessageAge
+    # alertThresholdQueueDepthBytes
+    # bindings
+    # maximumDeliveryAttempts
+    # statistics
+    # queueFlowControlSizeBytes
+    # consumers
+    # type
+    # durable
+    # alertRepeatGap
+    # alertThresholdMessageSize
+    # state
+    # alertThresholdQueueDepthMessages
+    # lifetimePolicy
+    # queueFlowStopped
+    def __init__(self, rest_response):
+        self.id = rest_response['id']
+        self.name = rest_response['name']
+        self.type = rest_response['type']
+        self.exclusive = rest_response['exclusive']
+        self.durable = rest_response['durable']
+        self.stats = QpidQueueStats()
+
+    def update(self, rest_response, data_time):
+        self.stats.update(rest_response['statistics'], data_time)
+
+    def _display_dict(self):
+        return {
+            'name': self.name,
+            'durable': 'Y' if self.durable else 'N',
+            'exclusive': 'Y' if self.exclusive else 'N',
+            'msgs': human_readable(self.stats.msgs),
+            'msgs_in': human_readable(self.stats.msgs_in),
+            'msgs_out': human_readable(self.stats.msgs_out),
+            'msgs_in_rate': human_readable(self.stats.msgs_in_rate),
+            'bytes': human_readable(self.stats.bytes),
+            'bytes_in': human_readable(self.stats.bytes_in),
+            'bytes_out': human_readable(self.stats.bytes_out),
+            'bytes_in_rate': human_readable(self.stats.bytes_in_rate),
+            'consumers': self.stats.consumers,
+            'bound': self.stats.bound,
+        }
+
+    def __repr__(self):
+        return ('{name:40s} {durable:s} {exclusive:s} '
+                '{msgs:>12s}{msgs_in:>12s}{msgs_out:>12s}{msgs_in_rate:>12s}'
+                '{bytes:>12s}{bytes_in:>12s}{bytes_out:>12s}{bytes_in_rate:>12s}'
+                '{consumers:4d} {bound:4d}'
+                ).format(**self._display_dict())
+
+    @staticmethod
+    def header():
+        return ('{name:40s} {durable:s} {exclusive:s} '
+                '{msgs:>12s}{msgs_in:>12s}{msgs_out:>12s}{msgs_in_rate:>12s}'
+                '{bytes:>12s}{bytes_in:>12s}{bytes_out:>12s}{bytes_in_rate:>12s}'
+                '{consumers:>4s} {bound:>4s}'
+                ).format(name='name', durable='d', exclusive='e', msgs='msgs', msgs_in='msgs_in', msgs_out='msgs_out',
+                         msgs_in_rate='msg_rate', bytes='bytes', bytes_in='bytes_in', bytes_out='bytes_out',
+                         bytes_in_rate='byte_rate', consumers='con', bound='bnd')
+
+
+def parse_queue(queue_dict, data_time):
+    name = queue_dict['name']
+    if name not in queues:
+        queues[name] = QpidQueue(queue_dict)
+
+    queues[name].update(queue_dict, data_time)
+
+
+def get_queues(base_url):
+    while True:
+        data = requests.get(os.path.join(base_url, 'queue')).json()
+        # pickle.dump(data, open('qpid.data', 'w'))
+        data_time = datetime.datetime.now()
+        # data = pickle.load(open('qpid.data'))
+        for each in data:
+            parse_queue(each, data_time)
+
+        print (chr(27) + "[2J")
+        print data_time
+        print QpidQueue.header()
+        for each in sorted(queues):
+            qq = queues[each]
+            if qq.stats.bytes_in > 0:
+                print qq
+
+        print
+        time.sleep(2)
+
+
+#get_queues('http://ooiufs03.ooi.rutgers.edu:8180/rest')
+get_queues('http://localhost:8180/rest')
