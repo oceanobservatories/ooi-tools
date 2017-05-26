@@ -19,6 +19,11 @@ Can be called with the following options:
 --usage    - prints usage statement
 ```
 
+auth.sh
+-------
+
+Defines `ELEMENTAL_USER` and `ELEMENTAL_KEY` authentication tokens which are now required to run the `record.sh` script. This file is local to the machine on which it runs and is not committed to the source respository. See `auth-template.sh` for an example.
+
 archive.py
 ----------
 
@@ -52,7 +57,8 @@ crontab -l
 
 # Revision History
 
+* 2017-05-26 - Updated to use authentication to send commands to Elemental API.
 * 2017-02-15 - Corrected problem with 15 minute video clips being split into two parts.
 * 2017-02-09 - Added MD5 checksum
-* 2016-12-02 - Restructured video recording. Added 72/24 hour collects and extended short recordings from
-fourteen (14) to fifteen (15) minutes. 
+* 2016-12-02 - Restructured video recording. Added 72/24 hour collects and extended short recordings from fourteen (14) to fifteen (15) minutes. 
+
