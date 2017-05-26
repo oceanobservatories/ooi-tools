@@ -1,0 +1,4 @@
+#!/bin/bash
+
+export ELEMENTAL_USER="user"
+export ELEMENTAL_KEY="XXXXXXXXXXXXXXXXX"
