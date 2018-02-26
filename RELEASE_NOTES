@@ -1,3 +1,8 @@
+Release 1.1.0
+
+Issue #11514
+- added generate_spectrogram to create a movie clip from hydrophone data (with spectrogram overlay)
+
 Release 1.0.2
 
 Issue #11697

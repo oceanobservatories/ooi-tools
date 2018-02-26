@@ -31,6 +31,7 @@ ooi-tools
 - scripts to start/stop CAMHD recording as well as archive the video files
 
 ## instrument
+- `generate_spectrogram.py` - create an MP4 clip from mseed file
 - various tools to work with cabled instruments
 
 ## metadata_migration_tool
