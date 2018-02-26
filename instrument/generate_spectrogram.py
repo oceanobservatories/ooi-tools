@@ -5,7 +5,7 @@ Description:
     high-pass filter audio file converted the mseed file.
 
 Usage:
-    generate_spectrogram.py [--highpass=<freq>] FILE
+    generate_spectrogram.py [--highpass=<freq>] [--samplerate=<rate>] FILE
     generate_spectrogram.py -h | --help
     generate_spectrogram.py --version
 
@@ -13,8 +13,9 @@ Arguments:
     FILE    mseed hydrophone data filename
 
 Options:
-    -h --help          Display usage statement.
-    --highpass=<freq>  Frequency of the highpass filter in Hz [default: 1000].
+    -h --help            Display usage statement.
+    --highpass=<freq>    Frequency of the highpass filter in Hz [default: 1000].
+    --samplerate=<rate>  Sample rate [default: 64000].
 """
 
 import os
@@ -49,7 +50,7 @@ def get_logger():
     return logger
 
 
-def generate_spectrogram(mseed_file, highpass):
+def generate_spectrogram(mseed_file, highpass, samplerate):
     """
     Execute a high pass filter on the meed input. Create a still image movie of the spectrogram with the resulting
     flac audio.
@@ -60,7 +61,6 @@ def generate_spectrogram(mseed_file, highpass):
     """
 
     root, ext = os.path.splitext(mseed_file)
-    print root, ext
     if ext != '.mseed':
         log.error('input file (%s) must be mseed format' % mseed_file)
         return None
@@ -76,7 +76,7 @@ def generate_spectrogram(mseed_file, highpass):
     # generate audio file
     audio = '%s.flac' % root
     filtered.normalize()
-    with SoundFile(audio, 'w', 64000, 1) as f:
+    with SoundFile(audio, 'w', samplerate, 1) as f:
         f.write(filtered[0].data)
 
     # generate movie clip
@@ -109,7 +109,14 @@ def main():
                   (options['--highpass'], e))
         return 1
 
-    generate_spectrogram(options['FILE'], highpass)
+    samplerate = options['--samplerate']
+    try:
+        samplerate = int(samplerate)
+    except ValueError as e:
+        log.error('invalid samplerate (%r) supplied for --samplerate: must be of type int - %r' %
+                  (options['--samplerate'], e))
+
+    generate_spectrogram(options['FILE'], highpass, samplerate)
 
 
 if __name__ == '__main__':
