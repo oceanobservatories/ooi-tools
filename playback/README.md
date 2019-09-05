@@ -59,6 +59,8 @@ config_prod = {
 user = 'joe@whoi.edu'
 ```
 
+The M2M credentials are found in the Data Portal under _User Profile_ option in the user menu. 
+
 ### Machine to Machine Interface
 The following class provides convenience methods for utilizing the M2M interface:
 
@@ -180,11 +182,6 @@ class MachineToMachine(object):
 Using your credentials, instantiate an M2M object for use:
 
 ```python
-# configuration parameters must be valid credentials from the Data Portal of an authorized user, e.g.:
-config = {
-    'url': 'https://ooinet.oceanobservatories.org',
-    'apiname': 'OOIAPI-XXXXX',
-    'apikey': 'XXXXXXX'}
 m2m = MachineToMachine(config['url'], config['apiname'], config['apikey'])
 ```
 
@@ -288,7 +285,7 @@ mi.instrument.teledyne.workhorse.vadcp.playback4
 mi.instrument.teledyne.workhorse.vadcp.playback5
 ```
 
-Creation of the playback payload uses the format, driver, and data ranges. Here is a class that will create the payload for the ingestion request:
+Creation of the playback payload uses the format, driver, and data ranges. Here is a class that will create the payload for an ingest request:
 
 ```python
 def cabledRequestFactory(username, refdes, filemasks, file_range=None, data_range=None, force=False, priority=5, 
@@ -342,7 +339,18 @@ def cabledRequestFactory(username, refdes, filemasks, file_range=None, data_rang
     return request
 ```
 
-Note that the class will require the data range
+The following helper function will configure and execute the playback call with the payload:
+
+```python
+def run_playback(user, refdes, file_range=None, data_range=None, force=False):
+    filemasks = create_filemasks(refdes)
+    request = cabledRequestFactory(user, refdes, filemasks, file_range=file_range, 
+                                   data_range=data_range, force=force)
+    # print(json.dumps(request, indent=4))
+    response = m2m.playback(request)
+    return response
+```
+
 ## Playback
 Execute playback using the following steps:
 1. Establish the Data Gap
@@ -370,16 +378,100 @@ you check using the data plotting interface of OOINet which will provide visual 
 
 ### Configure Playback
 
-To construct the playback command, the data range, associated date range and file masks are passed to the request generator. A few items to note:
+To construct the playback command, the data range, associated date range and filemasks are passed to the request generator. A few items to note:
 
 * In the file range, which specifies the limit of files to be considered for parsing, second date is exclusive (it is the day after the end date of the range).
 * For the file mask, dates before July 2016 have a different location and therefore a different mask is required.
 
 E.g.: 
-
-
+```python
+data_gap = ('2019-07-26T11:17:12.000Z', '2019-07-29T16:04:42.000Z')
+gap_dates = ('2019-07-26', '2019-07-30')
+```
 
 ### Test Playback
+
+The first execution of playback should occur on a test machine (e.g. ooinet-dev-03.oceanobservatories.org). The following code will execute the playback on all the cabled instruments:
+
+```python
+for refdes in cabled_refdes:
+    response = run_playback(user, refdes, file_range=gap_dates, data_range=data_gap, force=False)
+    if response:
+        print(refdes, response.json())
+    else:
+        print('no response for playback request of %s' % refdes)
+```
+
+Returning results similar to the following:
+
+```
+CE02SHBP-LJ01D-05-ADCPTB104 {'message': 'Element created successfully.', 'id': 385, 'statusCode': 'CREATED'}
+CE02SHBP-LJ01D-06-CTDBPN106 {'message': 'Element created successfully.', 'id': 386, 'statusCode': 'CREATED'}
+```
+
+The `id` return is used to check the status of each ingest request:
+
+```python
+for job in range(385, 386):
+    #print(job, [x['status'] for x in m2m.ingest_jobs(job).json()])   # debug
+    #print(job, json.dumps(m2m.ingest_jobs(job).json(), indent=4))    # debug
+    #print(job, json.dumps(m2m.ingest_status(job).json(), indent=4))  # debug
+    counts = {}
+    job_status = m2m.ingest_jobs(job).json()
+    for x in job_status:
+        status = x['status']
+        prev_count = counts.get(status, None)
+        if prev_count is None:
+            counts[status] = 1
+        else:
+            counts[status] = prev_count + 1
+        if status in [u'ERROR', u'WARNING']:
+            print(x['status'], x['filePath'])
+    print(job, counts)
+```
+
+Returning a summary of the ingest job. Ingest will take a while to run. Wait for the results to indicate either `ERROR` or `COMPLETE`:
+
+```
+ERROR /rsn_cabled/rsn_data/DVT_Data/lj01d/ADCPTB104/2019/07/ADCPTB104_10.33.14.5_2101_20190727T0000_UTC.dat
+ERROR /rsn_cabled/rsn_data/DVT_Data/lj01d/ADCPTB104/2019/07/ADCPTB104_10.33.14.5_2101_20190728T0000_UTC.dat
+ERROR /rsn_cabled/rsn_data/DVT_Data/lj01d/ADCPTB104/2019/07/ADCPTB104_10.33.14.5_2101_20190726T0000_UTC.dat
+385 {'ERROR': 3}
+386 {'COMPLETE': 3}
+```
+
+Additional information on the results of the ingest can be found in the ingest handler log file on the test machine. For example, on `uframe-3-test` navigate to the `~asadev/miniconda2/envs/engine/ingest_engine/logs` directory and examine `playback_ingesthandlererrors.log`. If there are multiple errors, view `playback_ingesthandler.log` which will provide  context for the errors.
+
 ### Verify Playback
-### Execute Playback
+
+The first check is to rerun the availability check for the starting date of the data gap. However, this only checks the first day of the data gap. To be sure, check all dates in the data gap range. 
+
+```python
+gap_dates = ['2019-07-26', '2019-07-27', '2019-07-28', '2019-07-29']
+
+for refdes in cabled_refdes:
+    avail = m2m.availability(refdes)
+    dp_avail = [x['data'] for x in avail['availability'] if 'Data Products' in x['measure']][0]
+    print(refdes, [x for x in dp_avail if 'Missing' in x and any(g in x[0] for g in gap_dates)])
+```
+
+If no data gaps are present that start on the provided dates, the result should be an empty list:
+```
+CE02SHBP-LJ01D-05-ADCPTB104 []
+...
+```
+
+Otherwise, the start date for the data gap is reported:
+```
+CE02SHBP-LJ01D-06-CTDBPN106 [['2019-07-28 23:59:59', 'Missing', '2019-08-27 18:00:37']]
+```
+
+This can also be verified using the Data Portal and plotting the time range for the data stream using a scatter plot. 
+
+### Execute Playback on Production
+
+Repeat the playback commands on production after updating the M2M URL and credentials.
+
 ### Verify Playback
+
+The same process for verification on the test server can be performed with the exception that the the ingest handler log files must be downloaded from the production log host: http://logs-prod.intra.oceanobservatories.org/ingest_handler/
