@@ -60,7 +60,7 @@ user = 'joe@whoi.edu'
 ```
 
 ### Machine to Machine Interface
-The following class will assist in making M2M requests:
+The following class provides convenience methods for utilizing the M2M interface:
 
 ```python
 class MachineToMachine(object):
@@ -180,6 +180,11 @@ class MachineToMachine(object):
 Using your credentials, instantiate an M2M object for use:
 
 ```python
+# configuration parameters must be valid credentials from the Data Portal of an authorized user, e.g.:
+config = {
+    'url': 'https://ooinet.oceanobservatories.org',
+    'apiname': 'OOIAPI-XXXXX',
+    'apikey': 'XXXXXXX'}
 m2m = MachineToMachine(config['url'], config['apiname'], config['apikey'])
 ```
 
@@ -357,12 +362,23 @@ avail = m2m.availability('CE02SHBP-LJ01D-06-CTDBPN106')
 dp_avail = [x['data'] for x in avail['availability'] if 'Data Products' in x['measure']][0]
 [x for x in dp_avail if 'Missing' in x and '2019-07-26' in x[0]]
 ```
+The result will be the gap(s) starting on the provided date to the nearest second. As some sensors produce data points more frequently than that, this will result in some redundant data points being added to the database. Note that stream engine will filter out duplicate data points (data for the same time point) and return only one value for the time (although it is not deterministic which point will be returned in cases where the associated data differs). In the case where it is determined that previous data are invalid, they should be purged from the system and reingested. 
 
 Note here that we provided a start date for the known gap and then filtered the results to show just that gap. This same 
 command can be used after the data are ingested to confirm the data gap has been resolved, although it is recommended that 
 you check using the data plotting interface of OOINet which will provide visual confirmation. 
 
-### Cnfigure Playback
+### Configure Playback
+
+To construct the playback command, the data range, associated date range and file masks are passed to the request generator. A few items to note:
+
+* In the file range, which specifies the limit of files to be considered for parsing, second date is exclusive (it is the day after the end date of the range).
+* For the file mask, dates before July 2016 have a different location and therefore a different mask is required.
+
+E.g.: 
+
+
+
 ### Test Playback
 ### Verify Playback
 ### Execute Playback
