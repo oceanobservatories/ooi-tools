@@ -287,6 +287,39 @@ mi.instrument.teledyne.workhorse.vadcp.playback4
 mi.instrument.teledyne.workhorse.vadcp.playback5
 ```
 
+
+File mask creation is handled by the following code:
+```python
+# FILEMASK FORMAT for CABLED ARCHIVE FILES
+remapped_sensors = {
+    'D1000A301': 'RASFLA301_D1000',
+    'VADCPA101': ['VADCPA101MAIN', 'VADCPA101-5TH'],
+    'VADCPA301': ['VADCPA301MAIN', 'VADCPA301-5TH']
+}
+
+# prior to 2017-08-10, files are stored in the top level directory
+filemask_glob_old = '/rsn_cabled/rsn_data/DVT_Data/{node}/{sensor}*.dat'
+filemask_glob_new = '/rsn_cabled/rsn_data/DVT_Data/{node}/{sensor}/*/*/{sensor}*_UTC.dat'
+filemask_glob_dosta = '/san_data/ARCHIVE/{refdes}/*/*/{refdes}.datalog.*'
+
+def create_filemasks(refdes):
+    """file globs specific to the sub-range from the most recent outage"""
+    _, node, _, sensor = refdes.split('-', 3)
+    filemasks = []
+    if sensor in remapped_sensors.keys():
+        sensor = remapped_sensors[sensor]
+    if type(sensor) != list:
+        sensor = [sensor]
+    # print(sensor)
+    for s in sensor:
+        if 'DOSTA' in s:
+            filemasks.append(filemask_glob_dosta.format(refdes=refdes))
+        else:
+            filemasks.append(filemask_glob_new.format(node=node.lower(), sensor=s))
+    return filemasks
+```
+
+
 Creation of the playback payload uses the format, driver, and data ranges. Here is a class that will create the payload for an ingest request:
 
 ```python
@@ -307,11 +340,21 @@ def cabledRequestFactory(username, refdes, filemasks, file_range=None, data_rang
     request['options']['format'] = playback_format(refdes)
 
     driver = parser_driver(refdes)
-    if driver is None:
+    if driver is None and 'VADCP' not in refdes:
         print('unable to find driver for sensor: ', refdes)
         return None
 
     for mask in filemasks:
+    
+        if 'VADCP' in refdes:
+            if 'MAIN' in mask:
+                driver = parser_driver(refdes + 'MAIN')
+            elif '-5TH' in mask:
+                driver = parser_driver(refdes + '-5TH')
+            else:
+                print('unable to find driver for sensor: ', refdes)
+                return None
+    
         request['ingestRequestFileMasks'].append(
         {
             'dataSource': 'streamed',
