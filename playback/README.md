@@ -250,6 +250,8 @@ parser_drivers = {
     'RS01SBPS-PC01A-4A-CTDPFA103': 'mi.instrument.seabird.sbe16plus_v2.ctdpf_jb.driver',
     'RS01SBPS-PC01A-06-VADCPA101MAIN': 'mi.instrument.teledyne.workhorse.vadcp.playback4',
     'RS01SBPS-PC01A-06-VADCPA101-5TH': 'mi.instrument.teledyne.workhorse.vadcp.playback5',
+    'RS03AXPS-PC03A-06-VADCPA301MAIN': 'mi.instrument.teledyne.workhorse.vadcp.playback4',
+    'RS03AXPS-PC03A-06-VADCPA301-5TH': 'mi.instrument.teledyne.workhorse.vadcp.playback5',
 }
 
 def parser_driver(refdes):
